@@ -1,0 +1,102 @@
+{
+  "name": "postore.desktop.app",
+  "version": "0.4.0",
+  "description": "POStore Desktop App - Offline-first POS system",
+  "main": "src/main.js",
+  "author": "Keith Kelly Baraka - keithkelly986@gmail.com",
+  "homepage": "./",
+  "proxy": "https://pos.upendoapps.com",
+  "scripts": {
+    "dev": "concurrently \"npm run react-dev\" \"node src/launch.js\"",
+    "react-dev": "cross-env PORT=3001 BROWSER=none react-app-rewired start",
+    "build-react": "react-app-rewired build",
+    "build-electron": "electron-builder --win --publish=always",
+    "react-build": "npm run build-react && npm run build-electron",
+    "start": "concurrently \"npm run react-dev\" \"node src/launch.js\""
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "bcryptjs": "^2.4.3",
+    "electron-log": "^5.1.7",
+    "electron-store": "^7.0.3",
+    "lucide-react": "^0.356.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.1",
+    "sql.js": "^1.14.1",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "buffer": "^6.0.3",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "crypto-browserify": "^3.12.1",
+    "electron": "^32.3.3",
+    "electron-builder": "^26.8.1",
+    "electron-rebuild": "^3.2.9",
+    "react-app-rewired": "^2.2.1",
+    "react-scripts": "5.0.1",
+    "smart-buffer": "^4.2.0",
+    "stream-browserify": "^3.0.0",
+    "vm-browserify": "^1.1.2",
+    "wait-on": "^7.0.1"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "build": {
+    "appId": "com.postore.desktop",
+    "productName": "POStore Desktop App",
+     "win": {
+      "icon": "./public/assets/logo.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "extends": null,
+    "asar": true,
+    "asarUnpack": [
+     "node_modules/bindings/**/*",
+    "node_modules/file-uri-to-path/**/*",
+    "node_modules/sql.js/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets",
+      "output": "dist"
+    },
+    "files": [
+      "build/**/*",
+      "src/main.js",
+      "src/preload.js",
+      "src/db/**/*",
+      "src/utils/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
