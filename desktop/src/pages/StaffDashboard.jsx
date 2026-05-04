@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
+import UpdateBanner from "../components/UpdateBanner";
 
 const SunIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -317,6 +318,7 @@ export default function StaffDashboard({ user, onLogout }) {
 
   return (
     <div className="pos-layout">
+     <UpdateBanner />
       <header className="pos-header">
         <div className="pos-brand">
           <svg width="20" height="20" viewBox="0 0 32 32" fill="none" style={{ color: "var(--accent)" }}>

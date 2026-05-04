@@ -20,4 +20,24 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Window
   loginSuccess: () => ipcRenderer.send("login-success"),
+
+checkForUpdate: () => ipcRenderer.invoke("check-for-update"),
+downloadUpdate: (url) => ipcRenderer.invoke("download-update", url),
+ignoreUpdate: () => ipcRenderer.invoke("ignore-update"),
+getPendingUpdate: () => ipcRenderer.invoke("get-pending-update"),
+getAppVersion: () => ipcRenderer.invoke("get-app-version"),
+ 
+// Listen for update events from main process
+onUpdateAvailable: (callback) => {
+  ipcRenderer.on("update-available", (_event, data) => callback(data));
+},
+onUpdateCheckResult: (callback) => {
+  ipcRenderer.on("update-check-result", (_event, data) => callback(data));
+},
+// Remove listeners when component unmounts
+removeUpdateListeners: () => {
+  ipcRenderer.removeAllListeners("update-available");
+  ipcRenderer.removeAllListeners("update-check-result");
+},
+
 });

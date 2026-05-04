@@ -7,6 +7,7 @@ import Orders from "./admin/Orders";
 import Reports from "./admin/Reports";
 import Settings from "./admin/Settings";
 import { SettingsIcon } from "../components/Icons";
+import UpdateBanner from "../components/UpdateBanner";
 
 const SunIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -216,6 +217,7 @@ export default function AdminDashboard({ user, onLogout }) {
 
   return (
     <div className="app-layout">
+      <UpdateBanner />
       <aside className="sidebar">
         <div className="sidebar-header">
           <span className="sidebar-logo">⬡</span>

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, Menu } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const { checkForUpdate, registerUpdaterHandlers } = require("./updater");
 
 process.on("uncaughtException", (error) => {
   try {
@@ -45,6 +46,16 @@ function createWindow() {
 
   log.info("Loading URL:", startURL);
   mainWindow.loadURL(startURL);
+
+  mainWindow.webContents.on("did-finish-load", () => {
+    // Register all updater IPC handlers
+    registerUpdaterHandlers(mainWindow);
+ 
+    // Auto-check for updates on startup (silent = true means no "you're up to date" toast)
+    setTimeout(() => {
+      checkForUpdate(mainWindow, true);
+    }, 3000); // wait 3s after load so UI is ready
+  });
 
   if (isDev) {
     mainWindow.webContents.openDevTools({ mode: "detach" });
