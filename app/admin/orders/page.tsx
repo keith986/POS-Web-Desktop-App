@@ -285,9 +285,9 @@ function OrderPanel({
                 <div key={item.id || i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderBottom: i < order.items.length - 1 ? "1px solid #e2e0d8" : "none" }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 500 }}>{item.name || item.product_name}</div>
-                    <div style={{ fontSize: 11, color: "#9a9a8e" }}>×{item.qty || item.quantity} @ {formatCurrency(item.price || item.unit_price)}</div>
+                    <div style={{ fontSize: 11, color: "#9a9a8e" }}>×{item.qty || item.quantity} @ {formatCurrency(item.price ?? item.unit_price ?? 0)}</div>
                   </div>
-                  <div style={{ fontWeight: 500, fontSize: 13 }}>{formatCurrency((item.price || item.unit_price) * (item.qty || item.quantity))}</div>
+                  <div style={{ fontWeight: 500, fontSize: 13 }}>{formatCurrency((item.price ?? item.unit_price ?? 0) * (item.qty ?? item.quantity ?? 0))}</div>
                 </div>
               ))}
             </div>
