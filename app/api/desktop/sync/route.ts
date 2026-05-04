@@ -165,6 +165,18 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
     const adminId = adminRows[0].id;
 
+    // Normalize items array — handle both desktop and web field names
+    const normalizedItems = (items ?? []).map((item: Record<string, unknown>) => ({
+      id: item.id,
+      name: item.name || item.product_name,
+      product_name: item.product_name || item.name,
+      qty: item.qty || item.quantity,
+      quantity: item.quantity || item.qty,
+      price: item.price || item.unit_price,
+      unit_price: item.unit_price || item.price,
+      total_price: item.total_price || (Number(item.unit_price || item.price) * Number(item.quantity || item.qty)),
+    }));
+
     await pool.query(
       `INSERT IGNORE INTO orders 
         (id, order_number, customer_name, customer_email, items, subtotal, tax, total, 
@@ -173,7 +185,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
       [
         order.id,
         order.order_number,
-        JSON.stringify(items ?? []),
+        JSON.stringify(normalizedItems),
         order.subtotal,
         order.tax,
         order.total,
@@ -183,6 +195,38 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
         order.created_at ?? new Date().toISOString(),
       ]
     );
+
+    // Check if auto-deduct inventory is enabled for this admin
+    const [settRows] = await pool.query(
+      "SELECT auto_deduct_inventory FROM settings WHERE admin_id = ? LIMIT 1",
+      [adminId]
+    );
+
+    const setting = (settRows as Record<string, unknown>[])[0];
+    const autoDeduct = Boolean(setting?.auto_deduct_inventory ?? false);
+
+    // Deduct inventory if setting is enabled
+    if (autoDeduct && normalizedItems.length > 0) {
+      for (const item of normalizedItems) {
+        if (!item.id || !item.quantity) continue;
+
+        // Deduct stock — never below 0
+        await pool.query(
+          `UPDATE products
+             SET stock = GREATEST(stock - ?, 0), updated_at = NOW()
+           WHERE id = ? AND admin_id = ?`,
+          [Number(item.quantity), item.id, adminId]
+        );
+
+        // Log to stock_movements for audit trail
+        await pool.query(
+          `INSERT INTO stock_movements 
+            (id, product_id, admin_id, quantity, reason, created_at)
+           VALUES (UUID(), ?, ?, ?, ?, NOW())`,
+          [item.id, adminId, -Number(item.quantity), `Desktop sync: Order ${order.order_number}`]
+        );
+      }
+    }
 
     return NextResponse.json({ success: true },{ headers: corsHeaders() });
   } catch (error) {

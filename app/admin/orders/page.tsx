@@ -279,12 +279,12 @@ function OrderPanel({
             <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>Items</div>
             <div style={{ border: "1px solid #e2e0d8", borderRadius: 10, overflow: "hidden" }}>
               {order.items.map((item, i) => (
-                <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderBottom: i < order.items.length - 1 ? "1px solid #e2e0d8" : "none" }}>
+                <div key={item.id || i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderBottom: i < order.items.length - 1 ? "1px solid #e2e0d8" : "none" }}>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{item.name}</div>
-                    <div style={{ fontSize: 11, color: "#9a9a8e" }}>×{item.qty} @ {formatCurrency(item.price)}</div>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{item.name || item.product_name}</div>
+                    <div style={{ fontSize: 11, color: "#9a9a8e" }}>×{item.qty || item.quantity} @ {formatCurrency(item.price || item.unit_price)}</div>
                   </div>
-                  <div style={{ fontWeight: 500, fontSize: 13 }}>{formatCurrency(item.price * item.qty)}</div>
+                  <div style={{ fontWeight: 500, fontSize: 13 }}>{formatCurrency((item.price || item.unit_price) * (item.qty || item.quantity))}</div>
                 </div>
               ))}
             </div>
@@ -604,7 +604,7 @@ export default function AdminOrdersPage() {
                     <td style={{ padding: "0.85rem 1.25rem", color: "#4a4a40", maxWidth: 160 }}>
                       <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {Array.isArray(o.items)
-                          ? o.items.map(i => `${i.name} ×${i.qty}`).join(", ")
+                          ? o.items.map(i => `${i.name || i.product_name} ×${i.qty || i.quantity}`).join(", ")
                           : "—"}
                       </div>
                       <div style={{ fontSize: 11, color: "#9a9a8e", marginTop: 1 }}>
