@@ -5,7 +5,7 @@ export default function Products() {
   const [products, setProducts] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", price: "", cost: "", stock: "", category: "", sku: "" });
+  const [form, setForm] = useState({ name: "", price: "", stock: "", category: "", sku: "" });
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -83,8 +83,8 @@ export default function Products() {
 
           // Save everything except stock (keep old stock until approved)
           result = await window.electronAPI.executeDatabase(
-            "UPDATE products SET name=?, price=?, cost=?, category=?, sku=?, updated_at=datetime('now') WHERE id=?",
-            [form.name, parseFloat(form.price), parseFloat(form.cost || 0), form.category, form.sku, editing.id]
+            "UPDATE products SET name=?, price=?, category=?, sku=?, updated_at=datetime('now') WHERE id=?",
+            [form.name, parseFloat(form.price), form.category, form.sku, editing.id]
           );
         } else {
           // Auto mode or no stock change: save everything including stock immediately
@@ -106,15 +106,15 @@ export default function Products() {
           }
 
           result = await window.electronAPI.executeDatabase(
-            "UPDATE products SET name=?, price=?, cost=?, stock=?, category=?, sku=?, updated_at=datetime('now') WHERE id=?",
-            [form.name, parseFloat(form.price), parseFloat(form.cost || 0), newStock, form.category, form.sku, editing.id]
+            "UPDATE products SET name=?, price=?, stock=?, category=?, sku=?, updated_at=datetime('now') WHERE id=?",
+            [form.name, parseFloat(form.price), newStock, form.category, form.sku, editing.id]
           );
         }
       } else {
         // New product — always insert with given stock
         result = await window.electronAPI.executeDatabase(
-          "INSERT INTO products (id, name, price, cost, stock, category, sku) VALUES (?, ?, ?, ?, ?, ?, ?)",
-          [uuidv4(), form.name, parseFloat(form.price), parseFloat(form.cost || 0), newStock, form.category, form.sku]
+          "INSERT INTO products (id, name, price, stock, category, sku) VALUES (?, ?, ?, ?, ?, ?)",
+          [uuidv4(), form.name, parseFloat(form.price), newStock, form.category, form.sku]
         );
       }
 
@@ -126,7 +126,7 @@ export default function Products() {
 
       setShowForm(false);
       setEditing(null);
-      setForm({ name: "", price: "", cost: "", stock: "", category: "", sku: "" });
+      setForm({ name: "", price: "", stock: "", category: "", sku: "" });
       setApprovalReason("");
       loadProducts();
     } catch (err) {
@@ -142,7 +142,6 @@ export default function Products() {
     setForm({
       name: product.name,
       price: product.price,
-      cost: product.cost,
       stock: product.stock,
       category: product.category || "",
       sku: product.sku || "",
@@ -173,7 +172,7 @@ export default function Products() {
           onClick={() => {
             setShowForm(true);
             setEditing(null);
-            setForm({ name: "", price: "", cost: "", stock: "", category: "", sku: "" });
+            setForm({ name: "", price: "", stock: "", category: "", sku: "" });
             setError("");
             setApprovalReason("");
           }}
@@ -213,15 +212,6 @@ export default function Products() {
                     value={form.price}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
                     required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Cost (Ksh)</label>
-                  <input
-                    className="form-input"
-                    type="number"
-                    value={form.cost}
-                    onChange={(e) => setForm({ ...form, cost: e.target.value })}
                   />
                 </div>
                 <div className="form-group">

@@ -5,11 +5,14 @@ import { useStore } from "@/app/_lib/StoreContext";
 
 /* ── Types ── */
 interface OrderItem {
-  id:         string;
-  product_id: string;
-  name:       string;
-  qty:        number;
-  price:      number;
+  id?:           string;
+  product_id?:   string;
+  name?:         string;
+  product_name?: string;  // From synced orders
+  qty?:          number;
+  quantity?:     number;  // From synced orders
+  price?:        number;
+  unit_price?:   number;  // From synced orders
 }
 
 interface Order {

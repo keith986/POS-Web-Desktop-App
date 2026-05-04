@@ -225,7 +225,7 @@ export default function Orders() {
       <td style="text-align:right;">Ksh ${Number(order.subtotal).toLocaleString()}</td>
     </tr>
     <tr class="tax-row">
-      <td>Tax (16%)</td>
+      <td>Tax</td>
       <td style="text-align:right;">Ksh ${Number(order.tax).toFixed(2)}</td>
     </tr>
     <tr class="total-row">

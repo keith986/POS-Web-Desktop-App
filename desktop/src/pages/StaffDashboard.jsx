@@ -1,6 +1,26 @@
 import React, { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 
+const SunIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <circle cx="12" cy="12" r="5"/>
+    <line x1="12" y1="1" x2="12" y2="3"/>
+    <line x1="12" y1="21" x2="12" y2="23"/>
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+    <line x1="1" y1="12" x2="3" y2="12"/>
+    <line x1="21" y1="12" x2="23" y2="12"/>
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+  </svg>
+);
+
+const MoonIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+);
+
 const printReceipt = (order, user, taxSettings) => {
   const win = window.open("", "_blank", "width=320,height=600");
   if (!win) return;
@@ -124,6 +144,11 @@ export default function StaffDashboard({ user, onLogout }) {
   const [orderComplete, setOrderComplete] = useState(false);
   const [lastOrder, setLastOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("postore-theme") || "dark"
+  );
+  const [animating, setAnimating] = useState(false);
 
   // Tax loaded from admin settings — default to 16% VAT as fallback
   const [taxSettings, setTaxSettings] = useState({
@@ -132,6 +157,20 @@ export default function StaffDashboard({ user, onLogout }) {
     taxInclusive: false,
   });
   const [inventoryMode, setInventoryMode] = useState("auto");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("postore-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    if (animating) return;
+    setAnimating(true);
+    setTimeout(() => {
+      setTheme(t => t === "dark" ? "light" : "dark");
+      setTimeout(() => setAnimating(false), 800);
+    }, 100);
+  };
 
   useEffect(() => {
     loadProducts();
@@ -287,11 +326,26 @@ export default function StaffDashboard({ user, onLogout }) {
           <span>POStore POS</span>
         </div>
         <div className="pos-header-right">
+          <button
+            className={`sky-toggle ${theme === "light" ? "sky-toggle--light" : "sky-toggle--dark"} ${animating ? "sky-toggle--animating" : ""}`}
+            onClick={toggleTheme}
+            title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            style={{ marginRight: "16px" }}
+          >
+            <span className="sky-toggle__arc">
+              <span className="sky-toggle__celestial">
+                {theme === "light" ? <SunIcon /> : <MoonIcon />}
+              </span>
+            </span>
+            <span className="sky-toggle__label">
+              {theme === "light" ? "Light" : "Dark"}
+            </span>
+          </button>
           <span className="pos-staff">
             <span className="pos-avatar">{user.name[0]}</span>
             {user.name}
           </span>
-          <button className="pos-logout" onClick={onLogout}>Sign out</button>
+          <button className="pos-logout" onClick={() => setShowLogoutConfirm(true)}>Sign out</button>
         </div>
       </header>
 
@@ -475,6 +529,37 @@ export default function StaffDashboard({ user, onLogout }) {
           )}
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2 className="modal-title">Sign Out</h2>
+            <p style={{ textAlign: "center", marginBottom: "20px", color: "#666" }}>
+              Are you sure you want to sign out?
+            </p>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                className="btn-secondary"
+                onClick={() => setShowLogoutConfirm(false)}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-primary"
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  onLogout();
+                }}
+                style={{ flex: 1, background: "#ef4444" }}
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

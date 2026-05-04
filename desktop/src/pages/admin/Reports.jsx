@@ -7,7 +7,17 @@ export default function Reports() {
   useEffect(() => { loadReports(); }, [period]);
 
   const loadReports = async () => {
-    const dateFilter = period === "week" ? "datetime('now', '-7 days')" : period === "month" ? "datetime('now', '-30 days')" : "datetime('now', '-1 day')";
+    let dateFilter;
+    if (period === "week") {
+      dateFilter = "datetime('now', '-7 days')";
+    } else if (period === "month") {
+      dateFilter = "datetime('now', '-30 days')";
+    } else if (period === "today") {
+      dateFilter = "datetime('now', '-1 day')";
+    } else {
+      // "all" — no date filter
+      dateFilter = "datetime('1970-01-01')";
+    }
 
     const revenue = await window.electronAPI.queryDatabase(
       `SELECT COALESCE(SUM(total), 0) as total, COUNT(*) as count FROM orders WHERE created_at >= ${dateFilter}`
@@ -48,7 +58,7 @@ export default function Reports() {
       <div className="page-header">
         <h1 className="page-title">Reports</h1>
         <div className="filter-tabs">
-          {["today", "week", "month"].map((p) => (
+          {["today", "week", "month", "all"].map((p) => (
             <button key={p} className={`filter-tab ${period === p ? "filter-active" : ""}`} onClick={() => setPeriod(p)}>
               {p.charAt(0).toUpperCase() + p.slice(1)}
             </button>

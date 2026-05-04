@@ -8,6 +8,26 @@ import Reports from "./admin/Reports";
 import Settings from "./admin/Settings";
 import { SettingsIcon } from "../components/Icons";
 
+const SunIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <circle cx="12" cy="12" r="5"/>
+    <line x1="12" y1="1" x2="12" y2="3"/>
+    <line x1="12" y1="21" x2="12" y2="23"/>
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+    <line x1="1" y1="12" x2="3" y2="12"/>
+    <line x1="21" y1="12" x2="23" y2="12"/>
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+  </svg>
+);
+
+const MoonIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+);
+
 const ADS = [
   {
     badge: "POStore Web",
@@ -146,6 +166,24 @@ export default function AdminDashboard({ user, onLogout }) {
   const [syncStatus, setSyncStatus] = useState("idle");
   const [lastSync, setLastSync] = useState(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("postore-theme") || "dark"
+  );
+  const [animating, setAnimating] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("postore-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    if (animating) return;
+    setAnimating(true);
+    setTimeout(() => {
+      setTheme(t => t === "dark" ? "light" : "dark");
+      setTimeout(() => setAnimating(false), 800);
+    }, 100);
+  };
 
   const handleSync = async () => {
     setSyncStatus("syncing");
@@ -224,6 +262,23 @@ export default function AdminDashboard({ user, onLogout }) {
               <button className="logout-btn" onClick={() => setShowLogoutConfirm(true)}>Sign out</button>
             </div>
           </div>
+
+          {/* Sky arc toggle */}
+          <button
+            className={`sky-toggle ${theme === "light" ? "sky-toggle--light" : "sky-toggle--dark"} ${animating ? "sky-toggle--animating" : ""}`}
+            onClick={toggleTheme}
+            title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            style={{ marginTop: "12px", width: "100%" }}
+          >
+            <span className="sky-toggle__arc">
+              <span className="sky-toggle__celestial">
+                {theme === "light" ? <SunIcon /> : <MoonIcon />}
+              </span>
+            </span>
+            <span className="sky-toggle__label">
+              {theme === "light" ? "Light" : "Dark"}
+            </span>
+          </button>
         </div>
       </aside>
 
