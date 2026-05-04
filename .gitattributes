@@ -1,5 +1,1 @@
-desktop/dist/*.exe filter=lfs diff=lfs merge=lfs -text
-desktop/dist/*.blockmap filter=lfs diff=lfs merge=lfs -text
-*.exe !text !filter !merge !diff
-*.dll !text !filter !merge !diff
-*.bin !text !filter !merge !diff
+*.exe filter=lfs diff=lfs merge=lfs -text
