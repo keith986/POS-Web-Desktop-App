@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useStore } from "@/app/_lib/StoreContext";
 import WeeklyRevenueChart from "@/app/admin/WeeklyRevenueChart";
-import AdCarousel from "@/app/components/AdCarousel";
 import Link from "next/link";
 
 /* ── Types ── */
@@ -588,8 +587,6 @@ if (!checked) return (
             ))}
           </div>
 
-          {/* ── Promotional Ad Banner ── */}
-          <AdCarousel />
 
           {/* ── Weekly chart + Payment methods ── */}
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
