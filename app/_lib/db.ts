@@ -2,7 +2,7 @@ import mysql, { Pool } from "mysql2/promise";
 import { initDb } from "./initDb";
 
 let pool:        Pool | null = null;
-let initialized: boolean     = false;
+let initialized: boolean     = true;
 
 export async function getPool(): Promise<Pool> {
   if (!initialized) {
