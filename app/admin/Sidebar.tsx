@@ -81,10 +81,18 @@ const BASE_STORE: NavItem[] = [
   { href: "/admin/settings", icon: "cog",   label: "Settings" },
 ];
 
+const POS_FEATURES: NavItem[] = [
+  { href: "/admin/barcodes",   icon: "zap",   label: "Barcode Scanning" },
+  { href: "/admin/discounts",  icon: "tag",   label: "Discounts"        },
+  { href: "/admin/returns",    icon: "switch", label: "Returns/Refunds"  },
+  { href: "/admin/receipts",   icon: "clipboard", label: "Receipts"      },
+];
+
 const NAV_CONFIG: Record<PosType, NavSection[]> = {
   retail: [
     { title: "Main",  items: BASE_MAIN },
     { title: "Store", items: BASE_STORE },
+    { title: "POS Features", items: POS_FEATURES },
   ],
   restaurant: [
     { title: "Main", items: [
@@ -95,6 +103,7 @@ const NAV_CONFIG: Record<PosType, NavSection[]> = {
       { href: "/admin/menu", icon: "clipboard", label: "Menu" },
       ...BASE_STORE,
     ]},
+    { title: "POS Features", items: POS_FEATURES },
   ],
   salon: [
     { title: "Main", items: [
@@ -108,6 +117,7 @@ const NAV_CONFIG: Record<PosType, NavSection[]> = {
       { href: "/admin/services", icon: "scissors", label: "Services" },
       ...BASE_STORE,
     ]},
+    { title: "POS Features", items: POS_FEATURES },
   ],
   wholesale: [
     { title: "Main",      items: BASE_MAIN },
@@ -117,6 +127,7 @@ const NAV_CONFIG: Record<PosType, NavSection[]> = {
       { href: "/admin/price-tiers", icon: "layers", label: "Price Tiers" },
       ...BASE_STORE.slice(1),
     ]},
+    { title: "POS Features", items: POS_FEATURES },
   ],
   pharmacy: [
     { title: "Main", items: [
@@ -131,6 +142,7 @@ const NAV_CONFIG: Record<PosType, NavSection[]> = {
       { href: "/admin/prescriptions", icon: "flask", label: "Prescriptions" },
       ...BASE_STORE.slice(1),
     ]},
+    { title: "POS Features", items: POS_FEATURES },
   ],
 };
 

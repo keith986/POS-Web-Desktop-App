@@ -6,6 +6,10 @@ import Staff from "./admin/Staff";
 import Orders from "./admin/Orders";
 import Reports from "./admin/Reports";
 import Settings from "./admin/Settings";
+import Barcodes from "./admin/Barcodes";
+import Discounts from "./admin/Discounts";
+import Returns from "./admin/Returns";
+import Receipts from "./admin/Receipts";
 import { SettingsIcon } from "../components/Icons";
 import UpdateBanner from "../components/UpdateBanner";
 
@@ -212,6 +216,10 @@ export default function AdminDashboard({ user, onLogout }) {
     { to: "/admin/products", label: "Products", icon: "◧" },
     { to: "/admin/staff", label: "Staff", icon: "◉" },
     { to: "/admin/reports", label: "Reports", icon: "◎" },
+    { to: "/admin/barcodes", label: "Barcodes", icon: "⊙" },
+    { to: "/admin/discounts", label: "Discounts", icon: "◉" },
+    { to: "/admin/returns", label: "Returns", icon: "◎" },
+    { to: "/admin/receipts", label: "Receipts", icon: "◨" },
     { to: "/admin/settings", label: "Settings", icon: null, svgIcon: SettingsIcon },
   ];
 
@@ -292,6 +300,10 @@ export default function AdminDashboard({ user, onLogout }) {
           <Route path="products" element={<Products />} />
           <Route path="staff" element={<Staff />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="barcodes" element={<Barcodes />} />
+          <Route path="discounts" element={<Discounts />} />
+          <Route path="returns" element={<Returns />} />
+          <Route path="receipts" element={<Receipts />} />
           <Route path="settings" element={<Settings user={user} onLogout={onLogout} />} />
           <Route path="*" element={<Navigate to="overview" replace />} />
         </Routes>

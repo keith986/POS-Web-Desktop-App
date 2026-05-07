@@ -428,6 +428,102 @@ export async function initDb(): Promise<void> {
   `);
   console.log('✅ Table: site_analytics');
 
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS barcodes (
+      id            VARCHAR(36)   NOT NULL PRIMARY KEY,
+      product_id    VARCHAR(36)   NOT NULL,
+      barcode       VARCHAR(100)  NOT NULL UNIQUE,
+      barcode_type  ENUM('ean13','ean8','code128','qr','upca') NOT NULL DEFAULT 'ean13',
+      is_primary    TINYINT(1)    NOT NULL DEFAULT 0,
+      admin_id      VARCHAR(36)   NOT NULL,
+      created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+      INDEX idx_product_id (product_id),
+      INDEX idx_barcode (barcode),
+      INDEX idx_admin_id (admin_id)
+    )
+  `);
+  console.log("✅ Table: barcodes");
+
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS discounts (
+      id               VARCHAR(36)   NOT NULL PRIMARY KEY,
+      name             VARCHAR(255)  NOT NULL,
+      description      TEXT          NULL,
+      discount_type    ENUM('percentage','fixed','buy_x_get_y') NOT NULL DEFAULT 'percentage',
+      discount_value   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      max_discount     DECIMAL(10,2) NULL,
+      min_order_qty    INT           NOT NULL DEFAULT 1,
+      min_order_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+      applies_to       ENUM('all','category','product') NOT NULL DEFAULT 'all',
+      category_ids     JSON          NULL,
+      product_ids      JSON          NULL,
+      code             VARCHAR(50)   UNIQUE NULL,
+      usage_limit      INT           NULL,
+      usage_count      INT           NOT NULL DEFAULT 0,
+      valid_from       DATETIME      NULL,
+      valid_until      DATETIME      NULL,
+      is_active        TINYINT(1)    NOT NULL DEFAULT 1,
+      admin_id         VARCHAR(36)   NOT NULL,
+      created_at       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_admin_id (admin_id),
+      INDEX idx_code (code),
+      INDEX idx_is_active (is_active),
+      INDEX idx_valid_until (valid_until)
+    )
+  `);
+  console.log("✅ Table: discounts");
+
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS returns (
+      id             VARCHAR(36)   NOT NULL PRIMARY KEY,
+      order_id       VARCHAR(36)   NOT NULL,
+      return_number  VARCHAR(50)   NOT NULL UNIQUE,
+      product_id     VARCHAR(36)   NOT NULL,
+      quantity       INT           NOT NULL,
+      reason         VARCHAR(255)  NOT NULL,
+      condition      ENUM('unopened','opened','damaged','defective') NOT NULL DEFAULT 'unopened',
+      refund_amount  DECIMAL(12,2) NOT NULL,
+      refund_method  ENUM('full','partial','exchange') NOT NULL DEFAULT 'full',
+      status         ENUM('pending','approved','rejected','refunded','exchanged') NOT NULL DEFAULT 'pending',
+      notes          TEXT          NULL,
+      approved_by    VARCHAR(255)  NULL,
+      approved_at    DATETIME      NULL,
+      refunded_at    DATETIME      NULL,
+      admin_id       VARCHAR(36)   NOT NULL,
+      created_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+      INDEX idx_admin_id (admin_id),
+      INDEX idx_order_id (order_id),
+      INDEX idx_status (status),
+      INDEX idx_created_at (created_at)
+    )
+  `);
+  console.log("✅ Table: returns");
+
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS receipts (
+      id           VARCHAR(36)   NOT NULL PRIMARY KEY,
+      order_id     VARCHAR(36)   NOT NULL UNIQUE,
+      receipt_number VARCHAR(50) NOT NULL UNIQUE,
+      receipt_html LONGTEXT      NOT NULL,
+      receipt_text TEXT          NOT NULL,
+      printed_at   DATETIME      NULL,
+      email_sent_at DATETIME     NULL,
+      sent_to      VARCHAR(255)  NULL,
+      admin_id     VARCHAR(36)   NOT NULL,
+      created_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+      INDEX idx_admin_id (admin_id),
+      INDEX idx_order_id (order_id),
+      INDEX idx_printed_at (printed_at)
+    )
+  `);
+  console.log("✅ Table: receipts");
+
   
   // ── SAFE MIGRATIONS (adds columns to existing tables without breaking them) ──
 
@@ -456,6 +552,26 @@ export async function initDb(): Promise<void> {
       table:  "products",
       column: "emoji",
       sql:    "ALTER TABLE products ADD COLUMN emoji VARCHAR(10) NULL DEFAULT NULL",
+    },
+    {
+      table:  "products",
+      column: "barcode",
+      sql:    "ALTER TABLE products ADD COLUMN barcode VARCHAR(100) NULL DEFAULT NULL UNIQUE",
+    },
+    {
+      table:  "products",
+      column: "cost",
+      sql:    "ALTER TABLE products ADD COLUMN cost DECIMAL(10,2) NULL DEFAULT NULL",
+    },
+    {
+      table:  "orders",
+      column: "discount_amount",
+      sql:    "ALTER TABLE orders ADD COLUMN discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER subtotal",
+    },
+    {
+      table:  "orders",
+      column: "discount_code",
+      sql:    "ALTER TABLE orders ADD COLUMN discount_code VARCHAR(50) NULL AFTER discount_amount",
     },
   ];
 
