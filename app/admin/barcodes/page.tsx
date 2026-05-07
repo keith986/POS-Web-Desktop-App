@@ -24,8 +24,16 @@ interface Barcode {
 
 const BARCODE_TYPES = ["ean13", "ean8", "code128", "qr", "upca"];
 
+function getStoredUser() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
 export default function BarcodesPage() {
-  const { user } = useStore();
+  const [adminUser] = useState(() => getStoredUser());
   const [barcodes, setBarcodes] = useState<Barcode[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +44,7 @@ export default function BarcodesPage() {
   const [barcodeType, setBarcodeType] = useState<string>("ean13");
   const [isPrimary, setIsPrimary] = useState(false);
 
-  const admin_id = user?.id || "";
+  const admin_id = adminUser?.id || "";
 
   useEffect(() => {
     if (admin_id) {
