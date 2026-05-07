@@ -20,7 +20,6 @@ function getStoredUser() {
   } catch { return null; }
 }
 
-
 export default function ReceiptsPage() {
   const [adminUser] = useState(() => getStoredUser());
   const [receipts, setReceipts] = useState<Receipt[]>([]);

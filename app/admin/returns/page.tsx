@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useStore } from "@/app/_lib/StoreContext";
 
 interface Return {
   id: string;
@@ -25,14 +24,22 @@ const CONDITION_OPTIONS = ["unopened", "opened", "damaged", "defective"];
 const STATUS_OPTIONS = ["pending", "approved", "rejected", "refunded", "exchanged"];
 const REFUND_METHODS = ["full", "partial", "exchange"];
 
+function getStoredUser() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
 export default function ReturnsPage() {
-  const { user } = useStore();
+  const [adminUser] = useState(() => getStoredUser());
   const [returns, setReturns] = useState<Return[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReturn, setSelectedReturn] = useState<Return | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  const admin_id = user?.id || "";
+  const admin_id = adminUser?.id || "";
 
   useEffect(() => {
     fetchReturns();
@@ -64,7 +71,7 @@ export default function ReturnsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: newStatus,
-          approved_by: approvedBy || user?.full_name || "Admin",
+          approved_by: approvedBy || adminUser?.full_name || "Admin",
         }),
       });
 
