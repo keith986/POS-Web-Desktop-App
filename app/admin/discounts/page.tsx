@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useStore } from "@/app/_lib/StoreContext";
-
 interface Discount {
   id: string;
   name: string;
@@ -37,8 +35,16 @@ const DISCOUNT_TYPES = [
   { value: "buy_x_get_y", label: "Buy X Get Y" },
 ];
 
+function getStoredUser() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
 export default function DiscountsPage() {
-  const { user } = useStore();
+  const [adminUser] = useState(() => getStoredUser());
   const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -55,7 +61,7 @@ export default function DiscountsPage() {
     valid_until: "",
   });
 
-  const admin_id = user?.id || "";
+  const admin_id = adminUser?.id || "";
 
   useEffect(() => {
     fetchDiscounts();
@@ -244,7 +250,7 @@ export default function DiscountsPage() {
                 <label className="block text-sm font-medium mb-1">Type *</label>
                 <select
                   value={formData.discount_type}
-                  onChange={(e) => setFormData({ ...formData, discount_type: e.target.value as any })}
+                  onChange={(e) => setFormData({ ...formData, discount_type: e.target.value as "percentage" | "fixed" | "buy_x_get_y" })}
                   className="w-full px-3 py-2 border rounded"
                 >
                   {DISCOUNT_TYPES.map((type) => (
