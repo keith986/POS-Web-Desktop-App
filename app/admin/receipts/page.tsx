@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useStore } from "@/app/_lib/StoreContext";
 
 interface Receipt {
   id: string;
@@ -13,15 +12,24 @@ interface Receipt {
   created_at: string;
 }
 
+function getStoredUser() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+
 export default function ReceiptsPage() {
-  const { user } = useStore();
+  const [adminUser] = useState(() => getStoredUser());
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
   const [receiptHTML, setReceiptHTML] = useState<string>("");
   const [showPreview, setShowPreview] = useState(false);
 
-  const admin_id = user?.id || "";
+  const admin_id = adminUser?.id || "";
 
   useEffect(() => {
     if (admin_id) {
