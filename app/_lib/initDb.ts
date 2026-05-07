@@ -483,7 +483,7 @@ export async function initDb(): Promise<void> {
       product_id     VARCHAR(36)   NOT NULL,
       quantity       INT           NOT NULL,
       reason         VARCHAR(255)  NOT NULL,
-      condition      ENUM('unopened','opened','damaged','defective') NOT NULL DEFAULT 'unopened',
+      condition    ENUM('unopened','opened','damaged','defective') NOT NULL DEFAULT 'unopened',
       refund_amount  DECIMAL(12,2) NOT NULL,
       refund_method  ENUM('full','partial','exchange') NOT NULL DEFAULT 'full',
       status         ENUM('pending','approved','rejected','refunded','exchanged') NOT NULL DEFAULT 'pending',
