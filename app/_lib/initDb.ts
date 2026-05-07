@@ -468,7 +468,7 @@ export async function initDb(): Promise<void> {
       created_at       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       INDEX idx_admin_id (admin_id),
-      INDEX idx_code (code),
+      INDEX idx_code (code),  
       INDEX idx_is_active (is_active),
       INDEX idx_valid_until (valid_until)
     )
