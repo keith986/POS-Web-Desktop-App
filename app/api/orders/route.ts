@@ -77,7 +77,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           items, subtotal, discount_amount, discount_code, tax, total,
           status, payment_method, payment_status,
           staff_name, note, admin_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, order_number,
         customer_id ?? null, customer_name, customer_email ?? "",
