@@ -58,6 +58,37 @@ interface StoreSettings {
   currency:      string;
 }
 
+interface Discount {
+  id:             string;
+  name:           string;
+  description?:   string;
+  discount_type:  "percentage" | "fixed" | "buy_x_get_y";
+  discount_value: number;
+  max_discount?:  number;
+  code?:          string;
+  usage_limit?:   number;
+  usage_count:    number;
+  is_active:      boolean;
+  valid_from?:    string;
+  valid_until?:   string;
+  created_at:     string;
+}
+
+interface Sale {
+  id:               string;
+  order_number:     string;
+  items:            SaleItem[] | string;
+  subtotal:         number;
+  discount_amount:  number;
+  tax:              number;
+  total:            number;
+  payment_method:   string;
+  status:           string;
+  staff_name:       string | null;
+  discount_code?:   string | null;
+  created_at:       string;
+}
+
 function formatCurrency(n: number, currency = "KES"): string {
   return `${currency} ${Number(n).toLocaleString("en-KE", { minimumFractionDigits: 2 })}`;
 }
@@ -161,6 +192,125 @@ const SearchIcon = () => (
   </svg>
 );
 
+/* ── Print Receipt Function ── */
+const printReceipt = (order: { orderNumber: string; items: CartItem[]; subtotal: number; discount_amount: number; discount_code?: string | null; tax: number; total: number }) => {
+  const win = window.open("", "_blank", "width=320,height=600");
+  if (!win) return;
+
+  const itemLines = order.items.map(
+    (item) =>
+      `<tr>
+        <td style="padding:2px 0;font-size:12px;">${item.name}</td>
+        <td style="text-align:center;padding:2px 4px;font-size:12px;">${item.qty}</td>
+        <td style="text-align:right;padding:2px 0;font-size:12px;">KES ${(item.price * item.qty).toLocaleString()}</td>
+      </tr>`
+  ).join("");
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'DM Mono', monospace; font-size: 12px; width: 280px; margin: 0 auto; padding: 16px 8px; }
+    .center { text-align: center; }
+    .divider { border-top: 1px dashed #aaa; margin: 8px 0; }
+    .brand { font-size: 20px; font-weight: 700; }
+    table { width: 100%; }
+    .total-row td { font-size: 13px; font-weight: 700; padding-top: 6px; }
+    .footer { font-size: 10px; color: #888; margin-top: 12px; }
+    .discount-row { color: #d946ef; }
+  </style>
+</head>
+<body>
+  <div class="center">
+    <div class="brand">POStore</div>
+    <div class="sub">${new Date().toLocaleString()}</div>
+    <div class="sub">${order.orderNumber}</div>
+  </div>
+  <div class="divider"></div>
+  <table>
+    <thead><tr><th align="left">Item</th><th align="center">Qty</th><th align="right">Total</th></tr></thead>
+    <tbody>${itemLines}</tbody>
+  </table>
+  <div class="divider"></div>
+  <table>
+    <tr><td>Subtotal</td><td align="right">KES ${order.subtotal.toLocaleString()}</td></tr>
+    ${order.discount_amount > 0 ? `<tr class="discount-row"><td>Discount ${order.discount_code ? `(${order.discount_code})` : ''}</td><td align="right">-KES ${order.discount_amount.toLocaleString()}</td></tr>` : ''}
+    <tr><td>VAT (16%)</td><td align="right">KES ${order.tax.toFixed(2)}</td></tr>
+    <tr class="total-row"><td>TOTAL</td><td align="right">KES ${order.total.toFixed(2)}</td></tr>
+  </table>
+  <div class="center" style="margin-top:15px;">
+    <div class="footer">Thank you for shopping with us!</div>
+  </div>
+  <script>window.onload = () => { window.print(); window.onafterprint = () => window.close(); }<\/script>
+</body>
+</html>`;
+  win.document.write(html);
+  win.document.close();
+};
+
+const printSaleReceipt = (sale: Sale, staffName: string) => {
+  const win = window.open("", "_blank", "width=320,height=600");
+  if (!win) return;
+
+  const items = Array.isArray(sale.items) ? sale.items : [];
+  const itemLines = items.map(
+    (item: SaleItem) =>
+      `<tr>
+        <td style="padding:2px 0;font-size:12px;">${item.name}</td>
+        <td style="text-align:center;padding:2px 4px;font-size:12px;">${item.quantity}</td>
+        <td style="text-align:right;padding:2px 0;font-size:12px;">KES ${(item.price * item.quantity).toLocaleString()}</td>
+      </tr>`
+  ).join("");
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'DM Mono', monospace; font-size: 12px; width: 280px; margin: 0 auto; padding: 16px 8px; }
+    .center { text-align: center; }
+    .divider { border-top: 1px dashed #aaa; margin: 8px 0; }
+    .brand { font-size: 20px; font-weight: 700; }
+    table { width: 100%; }
+    .total-row td { font-size: 13px; font-weight: 700; padding-top: 6px; }
+    .footer { font-size: 10px; color: #888; margin-top: 12px; }
+    .discount-row { color: #d946ef; }
+  </style>
+</head>
+<body>
+  <div class="center">
+    <div class="brand">POStore</div>
+    <div class="sub">${new Date(sale.created_at).toLocaleString()}</div>
+    <div class="sub">${sale.order_number}</div>
+  </div>
+  <div class="divider"></div>
+  <table>
+    <thead><tr><th align="left">Item</th><th align="center">Qty</th><th align="right">Total</th></tr></thead>
+    <tbody>${itemLines}</tbody>
+  </table>
+  <div class="divider"></div>
+  <table>
+    <tr><td>Subtotal</td><td align="right">KES ${sale.subtotal.toLocaleString()}</td></tr>
+    ${sale.discount_amount > 0 ? `<tr class="discount-row"><td>Discount</td><td align="right">-KES ${sale.discount_amount.toLocaleString()}</td></tr>` : ''}
+    <tr><td>VAT (16%)</td><td align="right">KES ${sale.tax.toFixed(2)}</td></tr>
+    <tr class="total-row"><td>TOTAL</td><td align="right">KES ${sale.total.toFixed(2)}</td></tr>
+  </table>
+  <div class="center" style="margin-top:15px;">
+    <div>Served by: ${staffName}</div>
+    <div class="footer">Thank you for shopping with us!</div>
+  </div>
+  <script>window.onload = () => { window.print(); window.onafterprint = () => window.close(); }<\/script>
+</body>
+</html>`;
+  win.document.write(html);
+  win.document.close();
+};
+
 /* ─────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────── */
@@ -171,6 +321,8 @@ export default function StaffDashboard() {
   const [activeTab,   setActiveTab]   = useState("Dashboard");
   const [products,    setProducts]    = useState<Product[]>([]);
   const [sales,       setSales]       = useState<Sale[]>([]);
+  const [discounts,   setDiscounts]   = useState<Discount[]>([]);
+  const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
   const [settings,    setSettings]    = useState<StoreSettings>({ tax_enabled: true, tax_rate: 16, tax_name: "VAT", tax_inclusive: false, currency: "KES" });
   const [cart,        setCart]        = useState<CartItem[]>([]);
   const [payMethod,   setPayMethod]   = useState("Card");
@@ -243,15 +395,17 @@ useEffect(() => {
     if (!staff?.admin_id) return;
     setFetching(true);
     try {
-      const [prodRes, settRes, salesRes] = await Promise.all([
+      const [prodRes, settRes, salesRes, discRes] = await Promise.all([
         fetch(`/api/products?admin_id=${staff.admin_id}`),
         fetch(`/api/settings?admin_id=${staff.admin_id}`),
         fetch(`/api/orders?admin_id=${staff.admin_id}&staff_id=${staff.id}&today=true`),
+        fetch(`/api/discounts?admin_id=${staff.admin_id}`),
       ]);
 
       const prodData  = await prodRes.json();
       const settData  = await settRes.json();
       const salesData = await salesRes.json();
+      const discData  = await discRes.json();
 
       if (Array.isArray(prodData))
         setProducts(prodData.filter((p: Product) => p.status === "active"));
@@ -264,6 +418,9 @@ useEffect(() => {
           tax_inclusive: Boolean(settData.tax_inclusive),
           currency:      settData.currency || "KES",
         });
+
+      if (Array.isArray(discData))
+        setDiscounts(discData.filter((d: Discount) => d.is_active));
 
       if (Array.isArray(salesData)) {
         const parsed = salesData.map((s: Sale) => ({
@@ -310,10 +467,22 @@ useEffect(() => {
 
   /* ── Totals ── */
   const subtotal  = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  let discountAmount = 0;
+  if (selectedDiscount) {
+    if (selectedDiscount.discount_type === "percentage") {
+      discountAmount = subtotal * (selectedDiscount.discount_value / 100);
+    } else {
+      discountAmount = selectedDiscount.discount_value;
+    }
+    if (selectedDiscount.max_discount && discountAmount > selectedDiscount.max_discount) {
+      discountAmount = selectedDiscount.max_discount;
+    }
+  }
+  const discountedSubtotal = Math.max(0, subtotal - discountAmount);
   const taxAmount = settings.tax_enabled && !settings.tax_inclusive
-    ? subtotal * (settings.tax_rate / 100)
+    ? discountedSubtotal * (settings.tax_rate / 100)
     : 0;
-  const total     = subtotal + taxAmount;
+  const total     = discountedSubtotal + taxAmount;
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
   /* ── Complete sale ── */
@@ -328,6 +497,8 @@ useEffect(() => {
         body: JSON.stringify({
           items,
           subtotal,
+          discount_amount: discountAmount,
+          discount_code:   selectedDiscount?.code || null,
           tax:            taxAmount,
           total,
           payment_method: payMethod.toLowerCase(),
@@ -342,7 +513,20 @@ useEffect(() => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       showToast(`Sale ${data.order_number} completed — ${formatCurrency(total, settings.currency)}`);
+      
+      // Print receipt automatically
+      printReceipt({
+        orderNumber: data.order_number,
+        items: cart,
+        subtotal,
+        discount_amount: discountAmount,
+        discount_code: selectedDiscount?.code || null,
+        tax: taxAmount,
+        total,
+      });
+
       setCart([]);
+      setSelectedDiscount(null);
       fetchAll(); // refresh sales list
     } catch (err) {
       showToast((err as Error).message || "Failed to complete sale", "err");
@@ -598,6 +782,31 @@ useEffect(() => {
                     <span className="label">Subtotal</span>
                     <span>{formatCurrency(subtotal, settings.currency)}</span>
                   </div>
+
+                  <div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 500 }}>
+                      Apply Discount
+                    </div>
+                    <select className="payment-select" value={selectedDiscount?.id || ""} onChange={e => {
+                      const disc = discounts.find(d => d.id === e.target.value);
+                      setSelectedDiscount(disc || null);
+                    }}>
+                      <option value="">No discount</option>
+                      {discounts.map(d => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} {d.discount_type === "percentage" ? `(${d.discount_value}%)` : `(KES ${d.discount_value})`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {discountAmount > 0 && (
+                    <div className="summary-row" style={{ color: "#d946ef" }}>
+                      <span className="label">Discount</span>
+                      <span>-{formatCurrency(discountAmount, settings.currency)}</span>
+                    </div>
+                  )}
+
                   {settings.tax_enabled && !settings.tax_inclusive && (
                     <div className="summary-row">
                       <span className="label">{settings.tax_name} ({settings.tax_rate}%)</span>
@@ -716,7 +925,7 @@ useEffect(() => {
               ) : (
                 <table className="tbl">
                   <thead>
-                    <tr><th>Order</th><th>Time</th><th>Items</th><th>Total</th><th>Method</th><th>Status</th></tr>
+                    <tr><th>Order</th><th>Time</th><th>Items</th><th>Total</th><th>Method</th><th>Status</th><th>Actions</th></tr>
                   </thead>
                   <tbody>
                     {sales.map(s => {
@@ -735,6 +944,20 @@ useEffect(() => {
                               <span className="badge-dot" />
                               {s.status === "completed" ? "Completed" : s.status}
                             </span>
+                          </td>
+                          <td>
+                            <button onClick={() => printSaleReceipt(s, staff?.full_name || "Staff")} style={{ 
+                              fontSize: 11, 
+                              padding: "4px 8px", 
+                              background: "var(--accent)", 
+                              color: "#fff", 
+                              border: "none", 
+                              borderRadius: 4, 
+                              cursor: "pointer", 
+                              fontFamily: "inherit" 
+                            }}>
+                              Print
+                            </button>
                           </td>
                         </tr>
                       );

@@ -265,33 +265,15 @@ export default function StaffDashboard({ user, onLogout }) {
           <span>POStore POS</span>
         </div>
         <div className="pos-header-right">
-          <button
-
-className={`sky-toggle ${theme === "light" ? "sky-toggle--light" : "sky-toggle--dark"} ${animating ? "sky-toggle--animating" : ""}`}
-
-onClick={toggleTheme}
-
-title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-
-style={{ marginRight: "16px" }}
-
->
-
-<span className="sky-toggle__arc">
-
-<span className="sky-toggle__celestial">
-
-{theme === "light" ? <SunIcon /> : <MoonIcon />}
-
-</span>
-
-</span>
-
-<span className="sky-toggle__label">
-
-{theme === "light" ? "Light" : "Dark"}
-
-</span>
+          <button className={`sky-toggle ${theme === "light" ? "sky-toggle--light" : "sky-toggle--dark"} ${animating ? "sky-toggle--animating" : ""}`}
+          onClick={toggleTheme}
+          title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+          style={{ marginRight: "16px" }}
+          >
+        <span className="sky-toggle__arc">
+        <span className="sky-toggle__celestial">{theme === "light" ? <SunIcon /> : <MoonIcon />}</span>
+        </span>
+        <span className="sky-toggle__label">{theme === "light" ? "Light" : "Dark"}</span>
 
           </button>
           <span className="pos-staff"><span className="pos-avatar">{user.name[0]}</span>{user.name}</span>
