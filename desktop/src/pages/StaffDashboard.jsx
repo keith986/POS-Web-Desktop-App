@@ -2,24 +2,41 @@ import React, { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import UpdateBanner from "../components/UpdateBanner";
 
+// Icons
 const SunIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <circle cx="12" cy="12" r="5"/>
-    <line x1="12" y1="1" x2="12" y2="3"/>
-    <line x1="12" y1="21" x2="12" y2="23"/>
-    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-    <line x1="1" y1="12" x2="3" y2="12"/>
-    <line x1="21" y1="12" x2="23" y2="12"/>
-    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-  </svg>
+
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+
+<circle cx="12" cy="12" r="5"/>
+
+<line x1="12" y1="1" x2="12" y2="3"/>
+
+<line x1="12" y1="21" x2="12" y2="23"/>
+
+<line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+
+<line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+
+<line x1="1" y1="12" x2="3" y2="12"/>
+
+<line x1="21" y1="12" x2="23" y2="12"/>
+
+<line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+
+<line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+
+</svg>
+
 );
 
 const MoonIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-  </svg>
+
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+
+<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+
+</svg>
+
 );
 
 const printReceipt = (order, user, taxSettings) => {
@@ -35,102 +52,49 @@ const printReceipt = (order, user, taxSettings) => {
       </tr>`
   ).join("");
 
-  const taxLabel = taxSettings ? `${taxSettings.taxName} (${taxSettings.taxRate}%)` : "Tax (16%)";
+  const taxLabel = taxSettings ? `${taxSettings.taxName} (${taxSettings.taxRate}%)` : "VAT (16%)";
 
   const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Receipt - ${order.orderNumber}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
     * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: 'DM Mono', 'Courier New', monospace;
-      font-size: 12px;
-      color: #111;
-      background: #fff;
-      width: 280px;
-      margin: 0 auto;
-      padding: 16px 8px;
-    }
+    body { font-family: 'DM Mono', monospace; font-size: 12px; width: 280px; margin: 0 auto; padding: 16px 8px; }
     .center { text-align: center; }
-    .divider { border: none; border-top: 1px dashed #aaa; margin: 8px 0; }
-    .brand { font-size: 20px; font-weight: 700; letter-spacing: 2px; margin-bottom: 2px; }
-    .sub { font-size: 10px; color: #555; margin-bottom: 4px; }
-    table { width: 100%; border-collapse: collapse; }
-    th { font-size: 10px; color: #888; text-transform: uppercase; padding: 4px 0; border-bottom: 1px dashed #ccc; }
+    .divider { border-top: 1px dashed #aaa; margin: 8px 0; }
+    .brand { font-size: 20px; font-weight: 700; }
+    table { width: 100%; }
     .total-row td { font-size: 13px; font-weight: 700; padding-top: 6px; }
-    .tax-row td { font-size: 11px; color: #555; }
     .footer { font-size: 10px; color: #888; margin-top: 12px; }
-    .order-num { font-size: 10px; color: #888; }
-    .payment-badge {
-      display: inline-block;
-      background: #111;
-      color: #fff;
-      font-size: 10px;
-      padding: 2px 8px;
-      border-radius: 3px;
-      letter-spacing: 1px;
-      margin-top: 4px;
-    }
-    @media print {
-      body { width: 280px; }
-      button { display: none; }
-    }
   </style>
 </head>
 <body>
   <div class="center">
     <div class="brand">POStore</div>
-    <div class="sub">Point of Sale Receipt</div>
     <div class="sub">${new Date().toLocaleString()}</div>
-    <div class="sub order-num">${order.orderNumber}</div>
+    <div class="sub">${order.orderNumber}</div>
   </div>
-
   <hr class="divider"/>
-
   <table>
-    <thead>
-      <tr>
-        <th style="text-align:left;">Item</th>
-        <th style="text-align:center;">Qty</th>
-        <th style="text-align:right;">Total</th>
-      </tr>
-    </thead>
+    <thead><tr><th align="left">Item</th><th align="center">Qty</th><th align="right">Total</th></tr></thead>
     <tbody>${lines}</tbody>
   </table>
-
   <hr class="divider"/>
-
   <table>
-    <tr class="tax-row">
-      <td>Subtotal</td>
-      <td style="text-align:right;">Ksh ${order.subtotal.toLocaleString()}</td>
-    </tr>
-    <tr class="tax-row">
-      <td>${taxLabel}</td>
-      <td style="text-align:right;">Ksh ${order.tax.toFixed(2)}</td>
-    </tr>
-    <tr class="total-row">
-      <td>TOTAL</td>
-      <td style="text-align:right;">Ksh ${order.total.toFixed(2)}</td>
-    </tr>
+    <tr><td>Subtotal</td><td align="right">Ksh ${order.subtotal.toLocaleString()}</td></tr>
+    ${order.discount_applied > 0 ? `<tr><td style="color: #d946ef;">Discount</td><td align="right" style="color: #d946ef;">-Ksh ${order.discount_applied.toLocaleString()}</td></tr>` : ''}
+    <tr><td>${taxLabel}</td><td align="right">Ksh ${order.tax.toFixed(2)}</td></tr>
+    <tr class="total-row"><td>TOTAL</td><td align="right">Ksh ${order.total.toFixed(2)}</td></tr>
   </table>
-
-  <hr class="divider"/>
-
-  <div class="center">
-    <div class="sub">Served by: <strong>${user.name}</strong></div>
-    <div><span class="payment-badge">${order.paymentMethod.toUpperCase()}</span></div>
-    <div class="footer" style="margin-top:10px;">Thank you for shopping with us!</div>
-    <div class="footer">POStore &bull; pos.upendoapps.com</div>
+  <div class="center" style="margin-top:15px;">
+    <div>Served by: ${user.name}</div>
+    <div class="footer">Thank you for shopping with us!</div>
   </div>
-
   <script>window.onload = () => { window.print(); window.onafterprint = () => window.close(); }<\/script>
 </body>
 </html>`;
-
   win.document.write(html);
   win.document.close();
 };
@@ -138,6 +102,9 @@ const printReceipt = (order, user, taxSettings) => {
 export default function StaffDashboard({ user, onLogout }) {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
+  const [availableDiscounts, setAvailableDiscounts] = useState([]);
+  const [selectedDiscount, setSelectedDiscount] = useState(null);
+  const [applyBeforeVAT, setApplyBeforeVAT] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [categories, setCategories] = useState([]);
@@ -146,23 +113,54 @@ export default function StaffDashboard({ user, onLogout }) {
   const [lastOrder, setLastOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem("postore-theme") || "dark"
-  );
+  const [theme, setTheme] = useState(() => localStorage.getItem("postore-theme") || "dark");
   const [animating, setAnimating] = useState(false);
-
-  // Tax loaded from admin settings — default to 16% VAT as fallback
-  const [taxSettings, setTaxSettings] = useState({
-    taxName: "VAT",
-    taxRate: 16,
-    taxInclusive: false,
-  });
+  const [taxSettings, setTaxSettings] = useState({ taxName: "VAT", taxRate: 16, taxInclusive: false });
   const [inventoryMode, setInventoryMode] = useState("auto");
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("postore-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    loadProducts();
+    loadTaxSettings();
+    loadInventoryMode();
+    loadDiscounts();
+  }, []);
+
+  const loadDiscounts = () => {
+    const stored = localStorage.getItem("postore-discounts");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setAvailableDiscounts(parsed.filter(d => d.is_active));
+    }
+  };
+
+  const loadTaxSettings = async () => {
+    try {
+      const stored = await window.electronAPI.getStoreData("taxSettings");
+      if (stored && typeof stored.taxRate === "number") setTaxSettings(stored);
+    } catch (err) { console.error(err); }
+  };
+
+  const loadInventoryMode = async () => {
+    try {
+      const stored = await window.electronAPI.getStoreData("inventoryMode");
+      if (stored) setInventoryMode(stored);
+    } catch (err) { console.error(err); }
+  };
+
+  const loadProducts = async () => {
+    setLoading(true);
+    const result = await window.electronAPI.queryDatabase("SELECT * FROM products WHERE is_active = 1 ORDER BY name");
+    if (result.success) {
+      setProducts(result.data);
+      setCategories([...new Set(result.data.map((p) => p.category).filter(Boolean))]);
+    }
+    setLoading(false);
+  };
 
   const toggleTheme = () => {
     if (animating) return;
@@ -173,51 +171,6 @@ export default function StaffDashboard({ user, onLogout }) {
     }, 100);
   };
 
-  useEffect(() => {
-    loadProducts();
-    loadTaxSettings();
-    loadInventoryMode();
-  }, []);
-
-  const loadTaxSettings = async () => {
-    try {
-      const stored = await window.electronAPI.getStoreData("taxSettings");
-      if (stored && typeof stored.taxRate === "number") {
-        setTaxSettings(stored);
-      }
-    } catch (err) {
-      console.error("Failed to load tax settings:", err);
-    }
-  };
-
-  const loadInventoryMode = async () => {
-    try {
-      const stored = await window.electronAPI.getStoreData("inventoryMode");
-      if (stored) setInventoryMode(stored);
-    } catch (err) {
-      console.error("Failed to load inventory mode:", err);
-    }
-  };
-
-  const loadProducts = async () => {
-    setLoading(true);
-    const result = await window.electronAPI.queryDatabase(
-      "SELECT * FROM products WHERE is_active = 1 ORDER BY name"
-    );
-    if (result.success) {
-      setProducts(result.data);
-      const cats = [...new Set(result.data.map((p) => p.category).filter(Boolean))];
-      setCategories(cats);
-    }
-    setLoading(false);
-  };
-
-  const filteredProducts = products.filter((p) => {
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
-    const matchCat = category === "all" || p.category === category;
-    return matchSearch && matchCat;
-  });
-
   const addToCart = (product) => {
     setCart((prev) => {
       const existing = prev.find((i) => i.id === product.id);
@@ -227,204 +180,159 @@ export default function StaffDashboard({ user, onLogout }) {
   };
 
   const updateQty = (id, delta) => {
-    setCart((prev) =>
-      prev.map((i) => i.id === id ? { ...i, qty: i.qty + delta } : i).filter((i) => i.qty > 0)
-    );
+    setCart((prev) => prev.map((i) => i.id === id ? { ...i, qty: i.qty + delta } : i).filter((i) => i.qty > 0));
   };
 
-  // ── Dynamic tax calculation based on admin settings ──
+  // --- CALCULATIONS ---
   const taxRate = taxSettings.taxRate / 100;
+  const rawCartTotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
 
-  const subtotal = taxSettings.taxInclusive
-    // If tax-inclusive: subtotal = price / (1 + rate), tax = price - subtotal
-    ? cart.reduce((sum, i) => sum + (i.price * i.qty) / (1 + taxRate), 0)
-    : cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+  let discountVal = 0;
+  if (selectedDiscount) {
+    if (selectedDiscount.discount_type === "percentage") {
+      discountVal = rawCartTotal * (selectedDiscount.discount_value / 100);
+    } else {
+      discountVal = selectedDiscount.discount_value;
+    }
+    if (selectedDiscount.max_discount && discountVal > selectedDiscount.max_discount) {
+      discountVal = selectedDiscount.max_discount;
+    }
+  }
 
-  const tax = taxSettings.taxInclusive
-    ? cart.reduce((sum, i) => sum + (i.price * i.qty) - (i.price * i.qty) / (1 + taxRate), 0)
-    : subtotal * taxRate;
+  let finalTax = 0;
+  let finalTotal = 0;
+  let subtotalForReceipt = rawCartTotal;
 
-  const total = subtotal + tax;
+  if (applyBeforeVAT) {
+    const discountedSubtotal = Math.max(0, rawCartTotal - discountVal);
+    finalTax = discountedSubtotal * taxRate;
+    finalTotal = discountedSubtotal + finalTax;
+    subtotalForReceipt = discountedSubtotal;
+  } else {
+    const standardTax = rawCartTotal * taxRate;
+    finalTax = standardTax;
+    finalTotal = Math.max(0, (rawCartTotal + standardTax) - discountVal);
+  }
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
-
     const orderId = uuidv4();
     const orderNumber = `ORD-${Date.now()}`;
 
-    // 1. Insert the order first and confirm it succeeded
+    // Standardized database key: "discount_applied"
     const orderResult = await window.electronAPI.executeDatabase(
-      `INSERT INTO orders (id, order_number, staff_id, staff_name, subtotal, tax, total, payment_method, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed')`,
-      [orderId, orderNumber, user.id, user.name, subtotal, tax, total, paymentMethod]
+      `INSERT INTO orders (id, order_number, staff_id, staff_name, subtotal, discount_applied, tax, total, payment_method, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')`,
+      [orderId, orderNumber, user.id, user.name, subtotalForReceipt, discountVal, finalTax, finalTotal, paymentMethod]
     );
 
-    if (!orderResult.success) {
-      alert("Failed to save order. Please try again.");
-      return;
-    }
+    if (!orderResult.success) return alert("Error saving order. Make sure 'discount_applied' column exists in database schema.");
 
-    // 2. Insert order items linked to the confirmed orderId
     for (const item of cart) {
       await window.electronAPI.executeDatabase(
         `INSERT INTO order_items (id, order_id, product_id, product_name, quantity, unit_price, total_price)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [uuidv4(), orderId, item.id, item.name, item.qty, item.price, item.price * item.qty]
       );
-
-      // 3. Only deduct stock automatically if inventoryMode is "auto"
       if (inventoryMode === "auto") {
-        await window.electronAPI.executeDatabase(
-          "UPDATE products SET stock = stock - ? WHERE id = ?",
-          [item.qty, item.id]
-        );
-      } else {
-        // Manual mode: queue a pending approval for the deduction
-        try {
-          const approvals = await window.electronAPI.getStoreData("inventoryApprovals") || [];
-          approvals.push({
-            id: uuidv4(),
-            productId: item.id,
-            productName: item.name,
-            quantity: -item.qty, // negative = deduction
-            reason: `Sale from order ${orderNumber}`,
-            status: "pending",
-            createdAt: new Date().toISOString(),
-          });
-          await window.electronAPI.setStoreData("inventoryApprovals", approvals);
-        } catch (err) {
-          console.error("Failed to queue inventory approval:", err);
-        }
+        await window.electronAPI.executeDatabase("UPDATE products SET stock = stock - ? WHERE id = ?", [item.qty, item.id]);
       }
     }
 
-    const completedOrder = {
-      orderNumber,
-      subtotal,
-      tax,
-      total,
-      paymentMethod,
-      items: cart.map((i) => ({ name: i.name, qty: i.qty, price: i.price })),
-    };
-
-    setLastOrder(completedOrder);
+    setLastOrder({
+      orderNumber, subtotal: subtotalForReceipt, tax: finalTax, total: finalTotal, 
+      discount_applied: discountVal, paymentMethod, items: cart.map(i => ({ ...i }))
+    });
     setCart([]);
+    setSelectedDiscount(null);
     setOrderComplete(true);
     loadProducts();
     setTimeout(() => setOrderComplete(false), 6000);
   };
 
-  const taxLabel = `${taxSettings.taxName} (${taxSettings.taxRate}%)`;
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(search.toLowerCase()) && (category === "all" || p.category === category)
+  );
 
   return (
     <div className="pos-layout">
-     <UpdateBanner />
+      <UpdateBanner />
       <header className="pos-header">
         <div className="pos-brand">
           <svg width="20" height="20" viewBox="0 0 32 32" fill="none" style={{ color: "var(--accent)" }}>
             <polygon points="16,2 28,9 28,23 16,30 4,23 4,9" stroke="currentColor" strokeWidth="2" fill="none"/>
-            <polygon points="16,8 23,12 23,20 16,24 9,20 9,12" fill="currentColor" opacity="0.3"/>
           </svg>
           <span>POStore POS</span>
         </div>
         <div className="pos-header-right">
           <button
-            className={`sky-toggle ${theme === "light" ? "sky-toggle--light" : "sky-toggle--dark"} ${animating ? "sky-toggle--animating" : ""}`}
-            onClick={toggleTheme}
-            title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
-            style={{ marginRight: "16px" }}
-          >
-            <span className="sky-toggle__arc">
-              <span className="sky-toggle__celestial">
-                {theme === "light" ? <SunIcon /> : <MoonIcon />}
-              </span>
-            </span>
-            <span className="sky-toggle__label">
-              {theme === "light" ? "Light" : "Dark"}
-            </span>
+
+className={`sky-toggle ${theme === "light" ? "sky-toggle--light" : "sky-toggle--dark"} ${animating ? "sky-toggle--animating" : ""}`}
+
+onClick={toggleTheme}
+
+title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+
+style={{ marginRight: "16px" }}
+
+>
+
+<span className="sky-toggle__arc">
+
+<span className="sky-toggle__celestial">
+
+{theme === "light" ? <SunIcon /> : <MoonIcon />}
+
+</span>
+
+</span>
+
+<span className="sky-toggle__label">
+
+{theme === "light" ? "Light" : "Dark"}
+
+</span>
+
           </button>
-          <span className="pos-staff">
-            <span className="pos-avatar">{user.name[0]}</span>
-            {user.name}
-          </span>
+          <span className="pos-staff"><span className="pos-avatar">{user.name[0]}</span>{user.name}</span>
           <button className="pos-logout" onClick={() => setShowLogoutConfirm(true)}>Sign out</button>
         </div>
       </header>
 
       <div className="pos-body">
-        {/* Products Panel */}
         <div className="products-panel">
           <div className="products-toolbar">
-            <input
-              type="text"
-              className="pos-search"
-              placeholder="Search products..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <input type="text" className="pos-search" placeholder="Search products..." value={search} onChange={(e) => setSearch(e.target.value)} />
             <div className="category-tabs">
-              <button
-                className={`cat-tab ${category === "all" ? "cat-active" : ""}`}
-                onClick={() => setCategory("all")}
-              >
-                All
-              </button>
-              {categories.map((c) => (
-                <button
-                  key={c}
-                  className={`cat-tab ${category === c ? "cat-active" : ""}`}
-                  onClick={() => setCategory(c)}
-                >
-                  {c}
-                </button>
+              <button className={`cat-tab ${category === "all" ? "cat-active" : ""}`} onClick={() => setCategory("all")}>All</button>
+              {categories.map(c => (
+                <button key={c} className={`cat-tab ${category === c ? "cat-active" : ""}`} onClick={() => setCategory(c)}>{c}</button>
               ))}
             </div>
           </div>
 
-          {loading ? (
-            <div className="pos-loading">Loading products...</div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="pos-empty">No products found</div>
-          ) : (
-            <div className="products-grid">
-              {filteredProducts.map((product) => (
-                <button
-                  key={product.id}
-                  className="product-card"
-                  onClick={() => addToCart(product)}
-                  disabled={product.stock <= 0}
-                >
-                  <div className="product-name">{product.name}</div>
-                  <div className="product-price">Ksh {Number(product.price).toLocaleString()}</div>
-                  <div className={`product-stock ${product.stock <= 5 ? "low-stock" : ""}`}>
-                    {product.stock <= 0 ? "Out of stock" : `${product.stock} left`}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="products-grid">
+            {filteredProducts.map(product => (
+              <button key={product.id} className="product-card" onClick={() => addToCart(product)} disabled={product.stock <= 0}>
+                <div className="product-name">{product.name}</div>
+                <div className="product-price">Ksh {Number(product.price).toLocaleString()}</div>
+                <div className={`product-stock ${product.stock <= 5 ? "low-stock" : ""}`}>{product.stock <= 0 ? "Out of stock" : `${product.stock} left`}</div>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Cart Panel */}
         <div className="cart-panel">
           <div className="cart-header">
             <h2>Current Order</h2>
-            {cart.length > 0 && (
-              <button className="clear-cart" onClick={() => setCart([])}>Clear</button>
-            )}
+            {cart.length > 0 && <button className="clear-cart" onClick={() => setCart([])}>Clear</button>}
           </div>
 
           <div className="cart-items">
             {cart.length === 0 ? (
-              <div className="cart-empty">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.4">
-                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                  <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
-                </svg>
-                <p>Add products to begin</p>
-              </div>
+              <div className="cart-empty"><p>Add products to begin</p></div>
             ) : (
-              cart.map((item) => (
+              cart.map(item => (
                 <div key={item.id} className="cart-item">
                   <div className="cart-item-name">{item.name}</div>
                   <div className="cart-item-controls">
@@ -439,125 +347,61 @@ export default function StaffDashboard({ user, onLogout }) {
           </div>
 
           <div className="cart-summary">
-            <div className="summary-row">
-              <span>Subtotal</span>
-              <span>Ksh {subtotal.toLocaleString()}</span>
+            {/* Discount Selector */}
+            <div className="discount-selector-area" style={{marginBottom: '15px', borderBottom: '1px solid var(--border)', paddingBottom: '10px'}}>
+              <label style={{fontSize: '11px', fontWeight: '600', display: 'block', marginBottom: '5px'}}>APPLY DISCOUNT</label>
+              <select 
+                className="pos-search" 
+                value={selectedDiscount?.id || ""} 
+                onChange={(e) => setSelectedDiscount(availableDiscounts.find(d => d.id === e.target.value))}
+                style={{height: '35px', fontSize: '13px'}}
+              >
+                <option value="">No Discount</option>
+                {availableDiscounts.map(d => (
+                  <option key={d.id} value={d.id}>{d.name} ({d.discount_type === 'percentage' ? d.discount_value+'%' : 'Fixed'})</option>
+                ))}
+              </select>
+              <div style={{display: 'flex', gap: '15px', marginTop: '8px', fontSize: '12px'}}>
+                <label style={{cursor: 'pointer'}}><input type="radio" checked={applyBeforeVAT} onChange={() => setApplyBeforeVAT(true)} /> Before VAT</label>
+                <label style={{cursor: 'pointer'}}><input type="radio" checked={!applyBeforeVAT} onChange={() => setApplyBeforeVAT(false)} /> After VAT</label>
+              </div>
             </div>
-            <div className="summary-row">
-              {/* Shows the actual tax name and rate set by admin e.g. "VAT (16%)" */}
-              <span>{taxLabel}</span>
-              <span>Ksh {tax.toFixed(2)}</span>
-            </div>
-            <div className="summary-row summary-total">
-              <span>Total</span>
-              <span>Ksh {total.toFixed(2)}</span>
-            </div>
+
+            <div className="summary-row"><span>Subtotal</span><span>Ksh {rawCartTotal.toLocaleString()}</span></div>
+            {discountVal > 0 && (
+              <div className="summary-row" style={{color: '#10b981'}}>
+                <span>Discount Applied</span><span>- Ksh {discountVal.toLocaleString()}</span>
+              </div>
+            )}
+            <div className="summary-row"><span>{taxSettings.taxName} ({taxSettings.taxRate}%)</span><span>Ksh {finalTax.toFixed(2)}</span></div>
+            <div className="summary-row summary-total"><span>Total</span><span>Ksh {finalTotal.toFixed(2)}</span></div>
 
             <div className="payment-methods">
-              {["cash", "card", "mpesa"].map((method) => (
-                <button
-                  key={method}
-                  className={`payment-btn ${paymentMethod === method ? "payment-active" : ""}`}
-                  onClick={() => setPaymentMethod(method)}
-                >
-                  {method.toUpperCase()}
-                </button>
+              {["cash", "card", "mpesa"].map(m => (
+                <button key={m} className={`payment-btn ${paymentMethod === m ? "payment-active" : ""}`} onClick={() => setPaymentMethod(m)}>{m.toUpperCase()}</button>
               ))}
             </div>
-
-            <button
-              className="checkout-btn"
-              onClick={handleCheckout}
-              disabled={cart.length === 0}
-            >
-              Charge Ksh {total.toFixed(2)}
-            </button>
+            <button className="checkout-btn" onClick={handleCheckout} disabled={cart.length === 0}>Charge Ksh {finalTotal.toFixed(2)}</button>
           </div>
 
-          {/* Order success overlay */}
           {orderComplete && lastOrder && (
             <div className="order-success">
-              <div className="success-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              </div>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>Order Complete!</div>
-              <div style={{ fontSize: 13, color: "var(--text-2)" }}>{lastOrder.orderNumber}</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--accent)" }}>
-                Ksh {lastOrder.total.toFixed(2)}
-              </div>
-              <button
-                onClick={() => printReceipt(lastOrder, user, taxSettings)}
-                style={{
-                  marginTop: 8,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  background: "var(--accent)",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "10px 20px",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 6 2 18 2 18 9"/>
-                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-                  <rect x="6" y="14" width="12" height="8"/>
-                </svg>
-                Print Receipt
-              </button>
-              <button
-                onClick={() => setOrderComplete(false)}
-                style={{
-                  marginTop: 4,
-                  background: "none",
-                  border: "none",
-                  color: "var(--text-3)",
-                  fontSize: 11,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  textDecoration: "underline",
-                }}
-              >
-                Skip
-              </button>
+              <div style={{fontWeight: 700}}>Order Complete!</div>
+              <div style={{fontSize: 16, color: "var(--accent)"}}>Ksh {lastOrder.total.toFixed(2)}</div>
+              <button className="btn-primary" style={{marginTop: 10}} onClick={() => printReceipt(lastOrder, user, taxSettings)}>Print Receipt</button>
+              <button className="btn-secondary" style={{marginTop: 5, fontSize: '11px'}} onClick={() => setOrderComplete(false)}>Close</button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
         <div className="modal-overlay">
           <div className="modal">
             <h2 className="modal-title">Sign Out</h2>
-            <p style={{ textAlign: "center", marginBottom: "20px", color: "#666" }}>
-              Are you sure you want to sign out?
-            </p>
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button
-                className="btn-secondary"
-                onClick={() => setShowLogoutConfirm(false)}
-                style={{ flex: 1 }}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn-primary"
-                onClick={() => {
-                  setShowLogoutConfirm(false);
-                  onLogout();
-                }}
-                style={{ flex: 1, background: "#ef4444" }}
-              >
-                Sign Out
-              </button>
+            <div style={{display: "flex", gap: "10px", marginTop: '20px'}}>
+              <button className="btn-secondary" onClick={() => setShowLogoutConfirm(false)} style={{flex: 1}}>Cancel</button>
+              <button className="btn-primary" onClick={onLogout} style={{flex: 1, background: "#ef4444"}}>Sign Out</button>
             </div>
           </div>
         </div>

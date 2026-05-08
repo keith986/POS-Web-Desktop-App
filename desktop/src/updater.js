@@ -159,6 +159,7 @@ function registerUpdaterHandlers(mainWindow) {
   });
 
   // Renderer → get current app version
+  ipcMain.removeHandler("get-app-version");
   ipcMain.handle("get-app-version", () => {
     return CURRENT_VERSION;
   });

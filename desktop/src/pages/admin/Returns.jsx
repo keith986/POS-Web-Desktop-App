@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "./admin.css";
 
-const CONDITION_OPTIONS = ["unopened", "opened", "damaged", "defective"];
 const STATUS_OPTIONS = ["pending", "approved", "rejected", "refunded", "exchanged"];
 
 export default function Returns() {
@@ -10,10 +9,29 @@ export default function Returns() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadReturns();
+  const loadReturns = useCallback(() => {
+    try {
+      setLoading(true);
+      const stored = localStorage.getItem("postore-returns") || "[]";
+      let allReturns = JSON.parse(stored);
+      
+      if (filterStatus !== "all") {
+        allReturns = allReturns.filter((r) => r.status === filterStatus);
+      }
+      
+      setReturns(allReturns);
+    } catch (error) {
+      console.error("Error loading returns:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [filterStatus]);
 
+  useEffect(() => {
+    loadReturns();
+  }, [loadReturns]);
+
+  /*
   const loadReturns = () => {
     try {
       setLoading(true);
@@ -31,6 +49,7 @@ export default function Returns() {
       setLoading(false);
     }
   };
+  */
 
   const handleUpdateStatus = (returnId, newStatus, approvedBy = "Local Admin") => {
     const updated = returns.map((r) =>

@@ -46,16 +46,16 @@ function createWindow() {
 
   log.info("Loading URL:", startURL);
   mainWindow.loadURL(startURL);
+ 
+  registerUpdaterHandlers(mainWindow);
 
   mainWindow.webContents.on("did-finish-load", () => {
-    // Register all updater IPC handlers
-    registerUpdaterHandlers(mainWindow);
- 
     // Auto-check for updates on startup (silent = true means no "you're up to date" toast)
     setTimeout(() => {
       checkForUpdate(mainWindow, true);
     }, 3000); // wait 3s after load so UI is ready
   });
+
 
   if (isDev) {
     mainWindow.webContents.openDevTools({ mode: "detach" });
@@ -156,7 +156,7 @@ function setupIPC() {
   });
 
   // ── App info ──────────────────────────────────────────────────
-  ipcMain.handle("get-app-version", () => app.getVersion());
+  //ipcMain.handle("get-app-version", () => app.getVersion());
 }
 
 app.on("ready", () => {

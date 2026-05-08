@@ -82,10 +82,7 @@ const BASE_STORE: NavItem[] = [
 ];
 
 const POS_FEATURES: NavItem[] = [
-  { href: "/admin/barcodes",   icon: "zap",   label: "Barcode Scanning" },
-  { href: "/admin/discounts",  icon: "tag",   label: "Discounts"        },
-  { href: "/admin/returns",    icon: "switch", label: "Returns/Refunds"  },
-  { href: "/admin/receipts",   icon: "clipboard", label: "Receipts"      },
+  { href: "/admin/discounts",  icon: "tag",   label: "Discounts"        }
 ];
 
 const NAV_CONFIG: Record<PosType, NavSection[]> = {
