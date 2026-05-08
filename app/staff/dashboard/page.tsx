@@ -31,23 +31,25 @@ interface CartItem extends Product {
   qty: number;
 }
 
-interface Sale {
-  id:             string;
-  order_number:   string;
-  items:          SaleItem[] | string;
-  subtotal:       number;
-  tax:            number;
-  total:          number;
-  payment_method: string;
-  status:         string;
-  staff_name:     string | null;
-  created_at:     string;
-}
-
 interface SaleItem {
   name:     string;
   quantity: number;
   price:    number;
+}
+
+interface Sale {
+  id:              string;
+  order_number:    string;
+  items:           SaleItem[] | string;
+  subtotal:        number;
+  discount_amount: number;
+  discount_code?:  string | null;
+  tax:             number;
+  total:           number;
+  payment_method:  string;
+  status:          string;
+  staff_name:      string | null;
+  created_at:      string;
 }
 
 interface StoreSettings {
@@ -74,27 +76,21 @@ interface Discount {
   created_at:     string;
 }
 
-interface Sale {
-  id:               string;
-  order_number:     string;
-  items:            SaleItem[] | string;
-  subtotal:         number;
-  discount_amount:  number;
-  tax:              number;
-  total:            number;
-  payment_method:   string;
-  status:           string;
-  staff_name:       string | null;
-  discount_code?:   string | null;
-  created_at:       string;
-}
-
 function formatCurrency(n: number, currency = "KES"): string {
   return `${currency} ${Number(n).toLocaleString("en-KE", { minimumFractionDigits: 2 })}`;
 }
 
 function formatTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+/* ─── Safe items parser ── */
+function parseItems(raw: SaleItem[] | string): SaleItem[] {
+  try {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === "string") return JSON.parse(raw);
+    return [];
+  } catch { return []; }
 }
 
 /* ─── Category SVG icons ── */
@@ -112,70 +108,52 @@ function IcoCatFood()       { return <svg width="18" height="18" viewBox="0 0 24
 function IcoCatSports()     { return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg>; }
 
 const CATEGORY_ICON_MAP: Record<string, () => React.ReactElement> = {
-  footwear:    IcoCatFootwear,   shoes:       IcoCatFootwear,
-  accessories: IcoCatBags,       bags:        IcoCatBags,
-  skincare:    IcoCatSkincare,   beauty:      IcoCatSkincare,
-  kitchen:     IcoCatKitchen,    food:        IcoCatFood,
-  beverage:    IcoCatKitchen,
-  apparel:     IcoCatApparel,    clothing:    IcoCatApparel,
-  caps:        IcoCatApparel,
-  stationery:  IcoCatStationery, books:       IcoCatStationery,
-  home:        IcoCatHome,
+  footwear: IcoCatFootwear, shoes: IcoCatFootwear,
+  accessories: IcoCatBags, bags: IcoCatBags,
+  skincare: IcoCatSkincare, beauty: IcoCatSkincare,
+  kitchen: IcoCatKitchen, food: IcoCatFood, beverage: IcoCatKitchen,
+  apparel: IcoCatApparel, clothing: IcoCatApparel, caps: IcoCatApparel,
+  stationery: IcoCatStationery, books: IcoCatStationery,
+  home: IcoCatHome,
   electronics: IcoCatElectronics,
-  health:      IcoCatHealth,     pharmacy:    IcoCatHealth,
-  sports:      IcoCatSports,     toys:        IcoCatSports,
+  health: IcoCatHealth, pharmacy: IcoCatHealth,
+  sports: IcoCatSports, toys: IcoCatSports,
 };
 
 const CATEGORY_COLOR_MAP: Record<string, { bg: string; color: string }> = {
-  footwear:    { bg: "#eff6ff", color: "#2563eb" },
-  shoes:       { bg: "#eff6ff", color: "#2563eb" },
-  accessories: { bg: "#fdf4ff", color: "#9333ea" },
-  bags:        { bg: "#fdf4ff", color: "#9333ea" },
-  skincare:    { bg: "#f0fdf4", color: "#16a34a" },
-  beauty:      { bg: "#f0fdf4", color: "#16a34a" },
-  kitchen:     { bg: "#fffbeb", color: "#d97706" },
-  food:        { bg: "#f0fdf4", color: "#16a34a" },
+  footwear:    { bg: "#eff6ff", color: "#2563eb" }, shoes:       { bg: "#eff6ff", color: "#2563eb" },
+  accessories: { bg: "#fdf4ff", color: "#9333ea" }, bags:        { bg: "#fdf4ff", color: "#9333ea" },
+  skincare:    { bg: "#f0fdf4", color: "#16a34a" }, beauty:      { bg: "#f0fdf4", color: "#16a34a" },
+  kitchen:     { bg: "#fffbeb", color: "#d97706" }, food:        { bg: "#f0fdf4", color: "#16a34a" },
   beverage:    { bg: "#fffbeb", color: "#d97706" },
-  apparel:     { bg: "#fff7ed", color: "#ea580c" },
-  clothing:    { bg: "#fff7ed", color: "#ea580c" },
+  apparel:     { bg: "#fff7ed", color: "#ea580c" }, clothing:    { bg: "#fff7ed", color: "#ea580c" },
   caps:        { bg: "#fff7ed", color: "#ea580c" },
-  stationery:  { bg: "#f0f9ff", color: "#0284c7" },
-  books:       { bg: "#f0f9ff", color: "#0284c7" },
+  stationery:  { bg: "#f0f9ff", color: "#0284c7" }, books:       { bg: "#f0f9ff", color: "#0284c7" },
   home:        { bg: "#fdf2f8", color: "#c026d3" },
   electronics: { bg: "#eff6ff", color: "#2563eb" },
-  health:      { bg: "#fef2f2", color: "#dc2626" },
-  pharmacy:    { bg: "#fef2f2", color: "#dc2626" },
-  sports:      { bg: "#f0fdf4", color: "#16a34a" },
-  toys:        { bg: "#fffbeb", color: "#d97706" },
+  health:      { bg: "#fef2f2", color: "#dc2626" }, pharmacy:    { bg: "#fef2f2", color: "#dc2626" },
+  sports:      { bg: "#f0fdf4", color: "#16a34a" }, toys:        { bg: "#fffbeb", color: "#d97706" },
 };
 
 function getCategoryIcon(category: string): () => React.ReactElement {
   const key = category.toLowerCase().replace(/[^a-z]/g, "");
   return CATEGORY_ICON_MAP[key] ?? IcoCatDefault;
 }
-
 function getCategoryColor(category: string): { bg: string; color: string } {
   const key = category.toLowerCase().replace(/[^a-z]/g, "");
   return CATEGORY_COLOR_MAP[key] ?? { bg: "#f5f4f0", color: "#4a4a40" };
 }
-
 function CategoryIcon({ category, size = 18 }: { category: string; size?: number }) {
   const iconFn = getCategoryIcon(category);
   const color  = getCategoryColor(category);
-  /* Call the icon function directly — avoids "component created during render" error */
   return (
-    <div style={{
-      width: size + 12, height: size + 12, borderRadius: 8,
-      background: color.bg, color: color.color,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      flexShrink: 0,
-    }}>
+    <div style={{ width: size + 12, height: size + 12, borderRadius: 8, background: color.bg, color: color.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
       {iconFn()}
     </div>
   );
 }
 
-const TABS         = ["Dashboard", "Record Sale", "Products", "Sales History", "Settings"];
+const TABS = ["Dashboard", "Record Sale", "Products", "Sales History", "Settings"];
 const HEADER_TITLES: Record<string, string> = {
   "Dashboard":     "Staff Dashboard",
   "Record Sale":   "Record a Sale",
@@ -184,213 +162,247 @@ const HEADER_TITLES: Record<string, string> = {
   "Settings":      "My Settings",
 };
 
-/* ─── Icons ─────────────────────────────────────────────────── */
 const SearchIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-    stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
   </svg>
 );
 
-/* ── Print Receipt Function ── */
-const printReceipt = (order: { orderNumber: string; items: CartItem[]; subtotal: number; discount_amount: number; discount_code?: string | null; tax: number; total: number }) => {
+/* ── Print receipt after checkout ── */
+const printReceipt = (order: {
+  orderNumber: string;
+  items: CartItem[];
+  subtotal: number;
+  discount_amount: number;
+  discount_code?: string | null;
+  tax: number;
+  total: number;
+  paymentMethod?: string;
+  staffName?: string;
+}) => {
   const win = window.open("", "_blank", "width=320,height=600");
   if (!win) return;
 
-  const itemLines = order.items.map(
-    (item) =>
-      `<tr>
-        <td style="padding:2px 0;font-size:12px;">${item.name}</td>
-        <td style="text-align:center;padding:2px 4px;font-size:12px;">${item.qty}</td>
-        <td style="text-align:right;padding:2px 0;font-size:12px;">KES ${(item.price * item.qty).toLocaleString()}</td>
-      </tr>`
+  const itemLines = order.items.map(item =>
+    `<tr>
+      <td style="padding:2px 0;font-size:12px;">${item.name}</td>
+      <td style="text-align:center;padding:2px 4px;font-size:12px;">${item.qty}</td>
+      <td style="text-align:right;padding:2px 0;font-size:12px;">KES ${(item.price * item.qty).toLocaleString()}</td>
+    </tr>`
   ).join("");
 
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'DM Mono', monospace; font-size: 12px; width: 280px; margin: 0 auto; padding: 16px 8px; }
-    .center { text-align: center; }
-    .divider { border-top: 1px dashed #aaa; margin: 8px 0; }
-    .brand { font-size: 20px; font-weight: 700; }
-    table { width: 100%; }
-    .total-row td { font-size: 13px; font-weight: 700; padding-top: 6px; }
-    .footer { font-size: 10px; color: #888; margin-top: 12px; }
-    .discount-row { color: #d946ef; }
-  </style>
-</head>
-<body>
-  <div class="center">
-    <div class="brand">POStore</div>
-    <div class="sub">${new Date().toLocaleString()}</div>
-    <div class="sub">${order.orderNumber}</div>
-  </div>
-  <div class="divider"></div>
-  <table>
-    <thead><tr><th align="left">Item</th><th align="center">Qty</th><th align="right">Total</th></tr></thead>
-    <tbody>${itemLines}</tbody>
-  </table>
-  <div class="divider"></div>
-  <table>
-    <tr><td>Subtotal</td><td align="right">KES ${order.subtotal.toLocaleString()}</td></tr>
-    ${order.discount_amount > 0 ? `<tr class="discount-row"><td>Discount ${order.discount_code ? `(${order.discount_code})` : ''}</td><td align="right">-KES ${order.discount_amount.toLocaleString()}</td></tr>` : ''}
-    <tr><td>VAT (16%)</td><td align="right">KES ${order.tax.toFixed(2)}</td></tr>
-    <tr class="total-row"><td>TOTAL</td><td align="right">KES ${order.total.toFixed(2)}</td></tr>
-  </table>
-  <div class="center" style="margin-top:15px;">
-    <div class="footer">Thank you for shopping with us!</div>
-  </div>
-  <script>window.onload = () => { window.print(); window.onafterprint = () => window.close(); }<\/script>
-</body>
-</html>`;
+  const html = buildReceiptHtml({
+    orderNumber: order.orderNumber,
+    dateStr: new Date().toLocaleString(),
+    itemLines,
+    subtotal: order.subtotal,
+    discountAmount: order.discount_amount,
+    discountCode: order.discount_code,
+    tax: order.tax,
+    total: order.total,
+    paymentMethod: order.paymentMethod,
+    staffName: order.staffName,
+  });
+
   win.document.write(html);
   win.document.close();
 };
 
+/* ── Print receipt from sales history ── */
 const printSaleReceipt = (sale: Sale, staffName: string) => {
   const win = window.open("", "_blank", "width=320,height=600");
   if (!win) return;
 
-  const items = Array.isArray(sale.items) ? sale.items : [];
-  const itemLines = items.map(
-    (item: SaleItem) =>
-      `<tr>
-        <td style="padding:2px 0;font-size:12px;">${item.name}</td>
-        <td style="text-align:center;padding:2px 4px;font-size:12px;">${item.quantity}</td>
-        <td style="text-align:right;padding:2px 0;font-size:12px;">KES ${(item.price * item.quantity).toLocaleString()}</td>
-      </tr>`
+  // Safe parse — handles pre-parsed arrays, JSON strings, and empty/null
+  const items: SaleItem[] = parseItems(sale.items);
+
+  if (items.length === 0) {
+    win.document.write(`<html><body style="font-family:monospace;padding:20px;text-align:center;">
+      <h3>POStore Receipt</h3>
+      <p>${sale.order_number}</p>
+      <p>Total: KES ${Number(sale.total).toFixed(2)}</p>
+      <p style="color:#888;font-size:11px;">Item details unavailable</p>
+      <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script>
+    </body></html>`);
+    win.document.close();
+    return;
+  }
+
+  const itemLines = items.map(item =>
+    `<tr>
+      <td style="padding:2px 0;font-size:12px;">${item.name}</td>
+      <td style="text-align:center;padding:2px 4px;font-size:12px;">${item.quantity}</td>
+      <td style="text-align:right;padding:2px 0;font-size:12px;">KES ${(item.price * item.quantity).toLocaleString()}</td>
+    </tr>`
   ).join("");
 
-  const html = `<!DOCTYPE html>
+  const html = buildReceiptHtml({
+    orderNumber: sale.order_number,
+    dateStr: new Date(sale.created_at).toLocaleString(),
+    itemLines,
+    subtotal: sale.subtotal,
+    discountAmount: sale.discount_amount,
+    discountCode: sale.discount_code,
+    tax: sale.tax,
+    total: sale.total,
+    paymentMethod: sale.payment_method,
+    staffName,
+  });
+
+  win.document.write(html);
+  win.document.close();
+};
+
+/* ── Shared receipt HTML builder ── */
+function buildReceiptHtml(opts: {
+  orderNumber: string;
+  dateStr: string;
+  itemLines: string;
+  subtotal: number;
+  discountAmount?: number;
+  discountCode?: string | null;
+  tax: number;
+  total: number;
+  paymentMethod?: string;
+  staffName?: string;
+}): string {
+  const { orderNumber, dateStr, itemLines, subtotal, discountAmount = 0, discountCode, tax, total, paymentMethod, staffName } = opts;
+  return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8"/>
+  <title>Receipt - ${orderNumber}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'DM Mono', monospace; font-size: 12px; width: 280px; margin: 0 auto; padding: 16px 8px; }
+    body { font-family: 'DM Mono', 'Courier New', monospace; font-size: 12px; color: #111; background: #fff; width: 280px; margin: 0 auto; padding: 16px 8px; }
     .center { text-align: center; }
-    .divider { border-top: 1px dashed #aaa; margin: 8px 0; }
-    .brand { font-size: 20px; font-weight: 700; }
-    table { width: 100%; }
+    .divider { border: none; border-top: 1px dashed #aaa; margin: 8px 0; }
+    .brand { font-size: 20px; font-weight: 700; letter-spacing: 2px; margin-bottom: 2px; }
+    .sub { font-size: 10px; color: #555; margin-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { font-size: 10px; color: #888; text-transform: uppercase; padding: 4px 0; border-bottom: 1px dashed #ccc; }
     .total-row td { font-size: 13px; font-weight: 700; padding-top: 6px; }
+    .tax-row td { font-size: 11px; color: #555; }
+    .discount-row td { font-size: 11px; color: #d946ef; }
     .footer { font-size: 10px; color: #888; margin-top: 12px; }
-    .discount-row { color: #d946ef; }
+    .payment-badge { display: inline-block; background: #111; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 3px; letter-spacing: 1px; margin-top: 4px; }
+    @media print { body { width: 280px; } button { display: none; } }
   </style>
 </head>
 <body>
   <div class="center">
     <div class="brand">POStore</div>
-    <div class="sub">${new Date(sale.created_at).toLocaleString()}</div>
-    <div class="sub">${sale.order_number}</div>
+    <div class="sub">Point of Sale Receipt</div>
+    <div class="sub">${dateStr}</div>
+    <div class="sub">${orderNumber}</div>
   </div>
-  <div class="divider"></div>
+  <hr class="divider"/>
   <table>
-    <thead><tr><th align="left">Item</th><th align="center">Qty</th><th align="right">Total</th></tr></thead>
+    <thead>
+      <tr>
+        <th style="text-align:left;">Item</th>
+        <th style="text-align:center;">Qty</th>
+        <th style="text-align:right;">Total</th>
+      </tr>
+    </thead>
     <tbody>${itemLines}</tbody>
   </table>
-  <div class="divider"></div>
+  <hr class="divider"/>
   <table>
-    <tr><td>Subtotal</td><td align="right">KES ${sale.subtotal.toLocaleString()}</td></tr>
-    ${sale.discount_amount > 0 ? `<tr class="discount-row"><td>Discount</td><td align="right">-KES ${sale.discount_amount.toLocaleString()}</td></tr>` : ''}
-    <tr><td>VAT (16%)</td><td align="right">KES ${sale.tax.toFixed(2)}</td></tr>
-    <tr class="total-row"><td>TOTAL</td><td align="right">KES ${sale.total.toFixed(2)}</td></tr>
+    <tr class="tax-row">
+      <td>Subtotal</td>
+      <td style="text-align:right;">KES ${Number(subtotal).toLocaleString()}</td>
+    </tr>
+    ${discountAmount > 0 ? `
+    <tr class="discount-row">
+      <td>Discount${discountCode ? ` (${discountCode})` : ""}</td>
+      <td style="text-align:right;">-KES ${Number(discountAmount).toLocaleString()}</td>
+    </tr>` : ""}
+    <tr class="tax-row">
+      <td>VAT</td>
+      <td style="text-align:right;">KES ${Number(tax).toFixed(2)}</td>
+    </tr>
+    <tr class="total-row">
+      <td>TOTAL</td>
+      <td style="text-align:right;">KES ${Number(total).toFixed(2)}</td>
+    </tr>
   </table>
-  <div class="center" style="margin-top:15px;">
-    <div>Served by: ${staffName}</div>
-    <div class="footer">Thank you for shopping with us!</div>
+  <hr class="divider"/>
+  <div class="center">
+    ${staffName ? `<div class="sub">Served by: <strong>${staffName}</strong></div>` : ""}
+    ${paymentMethod ? `<div><span class="payment-badge">${paymentMethod.toUpperCase()}</span></div>` : ""}
+    <div class="footer" style="margin-top:10px;">Thank you for shopping with us!</div>
+    <div class="footer">POStore &bull; pos.upendoapps.com</div>
   </div>
   <script>window.onload = () => { window.print(); window.onafterprint = () => window.close(); }<\/script>
 </body>
 </html>`;
-  win.document.write(html);
-  win.document.close();
-};
+}
 
 /* ─────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────── */
 export default function StaffDashboard() {
-  const [staff,  setStaff]  = useState<StoredStaff | null>(null); 
+  const [staff,  setStaff]  = useState<StoredStaff | null>(null);
   const [ready,  setReady]  = useState(false);
 
-  const [activeTab,   setActiveTab]   = useState("Dashboard");
-  const [products,    setProducts]    = useState<Product[]>([]);
-  const [sales,       setSales]       = useState<Sale[]>([]);
-  const [discounts,   setDiscounts]   = useState<Discount[]>([]);
+  const [activeTab,        setActiveTab]        = useState("Dashboard");
+  const [products,         setProducts]         = useState<Product[]>([]);
+  const [sales,            setSales]            = useState<Sale[]>([]);
+  const [discounts,        setDiscounts]        = useState<Discount[]>([]);
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
-  const [settings,    setSettings]    = useState<StoreSettings>({ tax_enabled: true, tax_rate: 16, tax_name: "VAT", tax_inclusive: false, currency: "KES" });
-  const [cart,        setCart]        = useState<CartItem[]>([]);
-  const [payMethod,   setPayMethod]   = useState("Card");
-  const [search,      setSearch]      = useState("");
-  const [catFilter,   setCatFilter]   = useState("All");
-  const [fetching,    setFetching]    = useState(true);
-  const [saving,      setSaving]      = useState(false);
-  const [toast,       setToast]       = useState<{ msg: string; type: "ok" | "err" } | null>(null);
+  const [settings,         setSettings]         = useState<StoreSettings>({ tax_enabled: true, tax_rate: 16, tax_name: "VAT", tax_inclusive: false, currency: "KES" });
+  const [cart,             setCart]             = useState<CartItem[]>([]);
+  const [payMethod,        setPayMethod]        = useState("Card");
+  const [search,           setSearch]           = useState("");
+  const [catFilter,        setCatFilter]        = useState("All");
+  const [fetching,         setFetching]         = useState(true);
+  const [saving,           setSaving]           = useState(false);
+  const [toast,            setToast]            = useState<{ msg: string; type: "ok" | "err" } | null>(null);
 
-  /* ── Guard ── */
-  /* ── Read session from URL if coming from cross-domain redirect ── */
+  /* ── Auth guard ── */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionParam = params.get("session");
 
-useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  const sessionParam = params.get("session");
+    if (sessionParam) {
+      try {
+        const user = JSON.parse(decodeURIComponent(sessionParam));
+        localStorage.setItem("user", JSON.stringify(user));
+        window.history.replaceState({}, "", window.location.pathname);
+      } catch {
+        window.location.href = "https://pos.upendoapps.com";
+        return;
+      }
+    }
 
-  if (sessionParam) {
+    const stored = localStorage.getItem("user");
+    if (!stored) { window.location.href = "https://pos.upendoapps.com"; return; }
+
     try {
-      const user = JSON.parse(decodeURIComponent(sessionParam));
-      localStorage.setItem("user", JSON.stringify(user));
-      window.history.replaceState({}, "", window.location.pathname);
+      const user = JSON.parse(stored);
+      if (!user || user.role !== "staff") { window.location.href = "https://pos.upendoapps.com"; return; }
+
+      fetch(`/api/subscription/status?user_id=${user.admin_id}`)
+        .then(r => r.json())
+        .then(d => {
+          if (!d.active) { window.location.href = "/suspended"; return; }
+          setStaff(user);
+          setReady(true);
+        })
+        .catch(() => { setStaff(user); setReady(true); });
     } catch {
       window.location.href = "https://pos.upendoapps.com";
-      return;
     }
-  }
-
-  const stored = localStorage.getItem("user");
-  if (!stored) {
-    window.location.href = "https://pos.upendoapps.com";
-    return;
-  }
-
-  try {
-    const user = JSON.parse(stored);
-    if (!user || user.role !== "staff") {
-      window.location.href = "https://pos.upendoapps.com";
-      return;
-    }
-
-    // ── Check admin's subscription ──
-    fetch(`/api/subscription/status?user_id=${user.admin_id}`)
-      .then(r => r.json())
-      .then(d => {
-        if (!d.active) {
-          // Redirect to suspended page on their subdomain
-          window.location.href = "/suspended";
-          return;
-        }
-        setStaff(user);
-        setReady(true);
-      })
-      .catch(() => {
-        // Silent fail — allow access on network error
-        setStaff(user);
-        setReady(true);
-      });
-
-  } catch {
-    window.location.href = "https://pos.upendoapps.com";
-  }
-}, []);
+  }, []);
 
   const showToast = (msg: string, type: "ok" | "err" = "ok") => {
-    setToast({ msg, type }); setTimeout(() => setToast(null), 3500);
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
   };
 
-  /* ── Fetch products + settings + today's sales ── */
+  /* ── Fetch all data ── */
   const fetchAll = useCallback(async () => {
     if (!staff?.admin_id) return;
     setFetching(true);
@@ -402,10 +414,9 @@ useEffect(() => {
         fetch(`/api/discounts?admin_id=${staff.admin_id}`),
       ]);
 
-      const prodData  = await prodRes.json();
-      const settData  = await settRes.json();
-      const salesData = await salesRes.json();
-      const discData  = await discRes.json();
+      const [prodData, settData, salesData, discData] = await Promise.all([
+        prodRes.json(), settRes.json(), salesRes.json(), discRes.json(),
+      ]);
 
       if (Array.isArray(prodData))
         setProducts(prodData.filter((p: Product) => p.status === "active"));
@@ -423,11 +434,11 @@ useEffect(() => {
         setDiscounts(discData.filter((d: Discount) => d.is_active));
 
       if (Array.isArray(salesData)) {
-        const parsed = salesData.map((s: Sale) => ({
+        setSales(salesData.map((s: Sale) => ({
           ...s,
-          items: typeof s.items === "string" ? JSON.parse(s.items) : s.items ?? [],
-        }));
-        setSales(parsed);
+          items:           parseItems(s.items),
+          discount_amount: Number(s.discount_amount) || 0,
+        })));
       }
     } catch { showToast("Failed to load data", "err"); }
     finally  { setFetching(false); }
@@ -466,22 +477,18 @@ useEffect(() => {
   const removeItem = (id: string) => setCart(c => c.filter(i => i.id !== id));
 
   /* ── Totals ── */
-  const subtotal  = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
   let discountAmount = 0;
   if (selectedDiscount) {
-    if (selectedDiscount.discount_type === "percentage") {
-      discountAmount = subtotal * (selectedDiscount.discount_value / 100);
-    } else {
-      discountAmount = selectedDiscount.discount_value;
-    }
-    if (selectedDiscount.max_discount && discountAmount > selectedDiscount.max_discount) {
+    discountAmount = selectedDiscount.discount_type === "percentage"
+      ? subtotal * (selectedDiscount.discount_value / 100)
+      : selectedDiscount.discount_value;
+    if (selectedDiscount.max_discount && discountAmount > selectedDiscount.max_discount)
       discountAmount = selectedDiscount.max_discount;
-    }
   }
   const discountedSubtotal = Math.max(0, subtotal - discountAmount);
   const taxAmount = settings.tax_enabled && !settings.tax_inclusive
-    ? discountedSubtotal * (settings.tax_rate / 100)
-    : 0;
+    ? discountedSubtotal * (settings.tax_rate / 100) : 0;
   const total     = discountedSubtotal + taxAmount;
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
@@ -499,35 +506,37 @@ useEffect(() => {
           subtotal,
           discount_amount: discountAmount,
           discount_code:   selectedDiscount?.code || null,
-          tax:            taxAmount,
+          tax:             taxAmount,
           total,
-          payment_method: payMethod.toLowerCase(),
-          payment_status: "paid",
-          status:         "completed",
-          customer_name:  "Walk-in Customer",
-          customer_email: "",
-          staff_name:     staff.full_name,
-          admin_id:       staff.admin_id,
+          payment_method:  payMethod.toLowerCase(),
+          payment_status:  "paid",
+          status:          "completed",
+          customer_name:   "Walk-in Customer",
+          customer_email:  "",
+          staff_name:      staff.full_name,
+          admin_id:        staff.admin_id,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+
       showToast(`Sale ${data.order_number} completed — ${formatCurrency(total, settings.currency)}`);
-      
-      // Print receipt automatically
+
       printReceipt({
-        orderNumber: data.order_number,
-        items: cart,
+        orderNumber:     data.order_number,
+        items:           cart,
         subtotal,
         discount_amount: discountAmount,
-        discount_code: selectedDiscount?.code || null,
-        tax: taxAmount,
+        discount_code:   selectedDiscount?.code || null,
+        tax:             taxAmount,
         total,
+        paymentMethod:   payMethod,
+        staffName:       staff.full_name,
       });
 
       setCart([]);
       setSelectedDiscount(null);
-      fetchAll(); // refresh sales list
+      fetchAll();
     } catch (err) {
       showToast((err as Error).message || "Failed to complete sale", "err");
     } finally {
@@ -539,9 +548,8 @@ useEffect(() => {
   const stockClass = (s: number) => s === 0 ? "badge bad" : s <= 8 ? "badge warn" : "badge ok";
   const stockLabel = (s: number) => s === 0 ? "Out of stock" : s <= 8 ? `Low — ${s} left` : `${s} in stock`;
 
-  /* ── Shift stats ── */
-  const shiftTotal  = sales.reduce((s, r) => s + r.total, 0);
-  const lowStockCt  = products.filter(p => p.stock > 0 && p.stock <= 8).length;
+  const shiftTotal = sales.reduce((s, r) => s + r.total, 0);
+  const lowStockCt = products.filter(p => p.stock > 0 && p.stock <= 8).length;
 
   if (!ready || !staff) return null;
 
@@ -578,9 +586,7 @@ useEffect(() => {
             {staff.full_name} · On Shift
           </div>
           <div className="hdr-time">{dater}</div>
-          <button className="hdr-btn" onClick={() => setActiveTab("Record Sale")}>
-            + New Sale
-          </button>
+          <button className="hdr-btn" onClick={() => setActiveTab("Record Sale")}>+ New Sale</button>
         </header>
 
         {/* ── MAIN ── */}
@@ -589,13 +595,9 @@ useEffect(() => {
           {/* Tab bar */}
           <div className="staff-tabs">
             {TABS.map(t => (
-              <button key={t}
-                className={`staff-tab-btn ${activeTab === t ? "active" : ""}`}
-                onClick={() => setActiveTab(t)}>
+              <button key={t} className={`staff-tab-btn ${activeTab === t ? "active" : ""}`} onClick={() => setActiveTab(t)}>
                 {t}
-                {t === "Record Sale" && cartCount > 0 && (
-                  <span className="staff-tab-count">{cartCount}</span>
-                )}
+                {t === "Record Sale" && cartCount > 0 && <span className="staff-tab-count">{cartCount}</span>}
               </button>
             ))}
           </div>
@@ -619,7 +621,6 @@ useEffect(() => {
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                {/* Recent sales */}
                 <div className="card">
                   <div className="card-header">
                     <span className="card-title">Recent Sales</span>
@@ -634,9 +635,10 @@ useEffect(() => {
                       <thead><tr><th>Order</th><th>Items</th><th>Total</th><th>Method</th></tr></thead>
                       <tbody>
                         {sales.slice(0, 4).map(s => {
-                          const itemStr = Array.isArray(s.items)
-                            ? s.items.map((i: SaleItem) => `${i.name}${i.quantity > 1 ? ` ×${i.quantity}` : ""}`).join(", ")
-                            : String(s.items);
+                          const items = parseItems(s.items);
+                          const itemStr = items.length > 0
+                            ? items.map(i => `${i.name}${i.quantity > 1 ? ` ×${i.quantity}` : ""}`).join(", ")
+                            : "—";
                           return (
                             <tr key={s.id}>
                               <td style={{ fontWeight: 500, color: "var(--ink)" }}>{s.order_number}</td>
@@ -651,7 +653,6 @@ useEffect(() => {
                   )}
                 </div>
 
-                {/* Stock alerts */}
                 <div className="card">
                   <div className="card-header">
                     <span className="card-title">Stock Alerts</span>
@@ -661,9 +662,9 @@ useEffect(() => {
                     <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Loading…</div>
                   ) : products.filter(p => p.stock <= 8).length === 0 ? (
                     <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    All products well stocked
-                  </div>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      All products well stocked
+                    </div>
                   ) : (
                     <div style={{ paddingBottom: "0.5rem" }}>
                       {products.filter(p => p.stock <= 8).map(p => (
@@ -687,8 +688,6 @@ useEffect(() => {
           {activeTab === "Record Sale" && (
             <div className="sale-layout">
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-
-                {/* Product picker */}
                 <div className="card">
                   <div className="card-header">
                     <span className="card-title">Add Products to Sale</span>
@@ -701,14 +700,10 @@ useEffect(() => {
                     </div>
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                       {categories.map(c => (
-                        <button key={c}
-                          className={`filter-btn ${catFilter === c ? "active" : ""}`}
-                          onClick={() => setCatFilter(c)}>{c}
-                        </button>
+                        <button key={c} className={`filter-btn ${catFilter === c ? "active" : ""}`} onClick={() => setCatFilter(c)}>{c}</button>
                       ))}
                     </div>
                   </div>
-
                   {fetching ? (
                     <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Loading products…</div>
                   ) : (
@@ -727,15 +722,12 @@ useEffect(() => {
                         </button>
                       ))}
                       {filtered.filter(p => p.stock > 0).length === 0 && (
-                        <div style={{ gridColumn: "1/-1", padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
-                          No products found.
-                        </div>
+                        <div style={{ gridColumn: "1/-1", padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No products found.</div>
                       )}
                     </div>
                   )}
                 </div>
 
-                {/* Cart */}
                 <div className="card">
                   <div className="card-header">
                     <span className="card-title">Current Sale</span>
@@ -784,9 +776,7 @@ useEffect(() => {
                   </div>
 
                   <div>
-                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 500 }}>
-                      Apply Discount
-                    </div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 500 }}>Apply Discount</div>
                     <select className="payment-select" value={selectedDiscount?.id || ""} onChange={e => {
                       const disc = discounts.find(d => d.id === e.target.value);
                       setSelectedDiscount(disc || null);
@@ -802,7 +792,7 @@ useEffect(() => {
 
                   {discountAmount > 0 && (
                     <div className="summary-row" style={{ color: "#d946ef" }}>
-                      <span className="label">Discount</span>
+                      <span className="label">Discount {selectedDiscount?.code ? `(${selectedDiscount.code})` : ""}</span>
                       <span>-{formatCurrency(discountAmount, settings.currency)}</span>
                     </div>
                   )}
@@ -819,19 +809,16 @@ useEffect(() => {
                       <span style={{ color: "var(--muted)", fontSize: 11 }}>included</span>
                     </div>
                   )}
+
                   <div className="summary-row total">
                     <span>Total</span>
                     <span>{formatCurrency(total, settings.currency)}</span>
                   </div>
 
                   <div>
-                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 500 }}>
-                      Payment Method
-                    </div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 500 }}>Payment Method</div>
                     <select className="payment-select" value={payMethod} onChange={e => setPayMethod(e.target.value)}>
-                      <option>Card</option>
-                      <option>Cash</option>
-                      <option>Mobile</option>
+                      <option>Card</option><option>Cash</option><option>Mobile</option>
                     </select>
                   </div>
 
@@ -840,8 +827,7 @@ useEffect(() => {
                     Time: <strong style={{ color: "var(--ink)" }}>{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong>
                   </div>
 
-                  <button className="complete-btn" onClick={completeSale}
-                    disabled={cart.length === 0 || saving}>
+                  <button className="complete-btn" onClick={completeSale} disabled={cart.length === 0 || saving}>
                     {saving ? "Processing…" : cart.length === 0 ? "Add items to complete" : `Complete Sale — ${formatCurrency(total, settings.currency)}`}
                   </button>
 
@@ -869,10 +855,7 @@ useEffect(() => {
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {categories.map(c => (
-                    <button key={c}
-                      className={`filter-btn ${catFilter === c ? "active" : ""}`}
-                      onClick={() => setCatFilter(c)}>{c}
-                    </button>
+                    <button key={c} className={`filter-btn ${catFilter === c ? "active" : ""}`} onClick={() => setCatFilter(c)}>{c}</button>
                   ))}
                 </div>
               </div>
@@ -900,9 +883,7 @@ useEffect(() => {
                     </div>
                   ))}
                   {filtered.length === 0 && (
-                    <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "2rem", color: "var(--muted)", fontSize: 13 }}>
-                      No products match your search.
-                    </div>
+                    <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "2rem", color: "var(--muted)", fontSize: 13 }}>No products match your search.</div>
                   )}
                 </div>
               )}
@@ -914,9 +895,7 @@ useEffect(() => {
             <div className="card">
               <div className="card-header">
                 <span className="card-title">Sales History — Today</span>
-                <span className="card-meta">
-                  {sales.length} transactions · {formatCurrency(shiftTotal, settings.currency)}
-                </span>
+                <span className="card-meta">{sales.length} transactions · {formatCurrency(shiftTotal, settings.currency)}</span>
               </div>
               {fetching ? (
                 <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Loading…</div>
@@ -929,9 +908,10 @@ useEffect(() => {
                   </thead>
                   <tbody>
                     {sales.map(s => {
-                      const itemStr = Array.isArray(s.items)
-                        ? s.items.map((i: SaleItem) => `${i.name}${i.quantity > 1 ? ` ×${i.quantity}` : ""}`).join(", ")
-                        : String(s.items);
+                      const items = parseItems(s.items);
+                      const itemStr = items.length > 0
+                        ? items.map(i => `${i.name}${i.quantity > 1 ? ` ×${i.quantity}` : ""}`).join(", ")
+                        : "—";
                       return (
                         <tr key={s.id}>
                           <td style={{ fontWeight: 500, color: "var(--ink)" }}>{s.order_number}</td>
@@ -946,16 +926,10 @@ useEffect(() => {
                             </span>
                           </td>
                           <td>
-                            <button onClick={() => printSaleReceipt(s, staff?.full_name || "Staff")} style={{ 
-                              fontSize: 11, 
-                              padding: "4px 8px", 
-                              background: "var(--accent)", 
-                              color: "#fff", 
-                              border: "none", 
-                              borderRadius: 4, 
-                              cursor: "pointer", 
-                              fontFamily: "inherit" 
-                            }}>
+                            <button
+                              onClick={() => printSaleReceipt(s, staff?.full_name || "Staff")}
+                              style={{ fontSize: 11, padding: "4px 10px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}
+                            >
                               Print
                             </button>
                           </td>
@@ -968,14 +942,9 @@ useEffect(() => {
             </div>
           )}
 
-
           {/* ══ SETTINGS ══ */}
           {activeTab === "Settings" && (
-            <StaffSettingsTab
-              staff={staff}
-              settings={settings}
-              formatCurrency={formatCurrency}
-            />
+            <StaffSettingsTab staff={staff} settings={settings} formatCurrency={formatCurrency} />
           )}
 
         </main>
