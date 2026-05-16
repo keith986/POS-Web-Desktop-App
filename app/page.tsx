@@ -149,7 +149,7 @@ export default function LoginPage() {
   }, []);
 
   /* ── Redirect helper ── */
-  const doRedirect = (user: Record<string, string>) => {
+const doRedirect = (user: Record<string, string>) => {
   setRedirecting(true);
 
   // Super admin goes to super admin dashboard
@@ -340,4 +340,4 @@ export default function LoginPage() {
       </div>
     </>
   );
-}
+} 

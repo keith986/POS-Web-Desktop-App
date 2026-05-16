@@ -90,7 +90,6 @@ export default function DownloadPage() {
             <ul style={{ color: "#4a4a40", fontSize: "14px", lineHeight: 1.8, marginLeft: "1rem" }}>
               <li>Windows 10 or later</li>
               <li>At least 4GB RAM</li>
-              <li>50MB free disk space</li>
               <li>Internet connection for initial setup</li>
             </ul>
           </div>
