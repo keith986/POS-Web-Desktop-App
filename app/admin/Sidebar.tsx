@@ -33,6 +33,7 @@ const iconPaths: Record<string, string> = {
   chevron:   "M6 9l6 6 6-6",
   lock:      "M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2zM7 11V7a5 5 0 0110 0v4",
   zap:       "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
+  creditcard: "M1 4h22v16H1zM1 10h22",
 };
 
 // ─────────────────────────────────────────
@@ -78,11 +79,12 @@ const BASE_MAIN: NavItem[] = [
 const BASE_STORE: NavItem[] = [
   { href: "/admin/products", icon: "tag",   label: "Products" },
   { href: "/admin/staff",    icon: "staff", label: "Staff"    },
+  { href: "/admin/subscription",  icon: "creditcard", label: "Subscription" },
   { href: "/admin/settings", icon: "cog",   label: "Settings" },
 ];
 
 const POS_FEATURES: NavItem[] = [
-  { href: "/admin/discounts",  icon: "tag",   label: "Discounts"        }
+  { href: "/admin/discounts",  icon: "tag",   label: "Discounts" }
 ];
 
 const NAV_CONFIG: Record<PosType, NavSection[]> = {
@@ -640,6 +642,34 @@ export default function Sidebar() {
 
         {/* ── Footer / user info ── */}
         <div className="sidebar-footer">
+
+        {/* ── Subscription status ── */}
+        <Link href="/admin/subscription" style={{
+  display: "flex", alignItems: "center", gap: 8,
+  padding: "0.5rem 0.85rem", marginBottom: "0.5rem",
+  background: "rgba(234,88,12,0.08)",
+  border: "1px solid rgba(234,88,12,0.2)",
+  borderRadius: 8, textDecoration: "none",
+  cursor: "pointer", transition: "all 0.15s",
+}}>
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+    stroke="#f97316" strokeWidth="2" strokeLinecap="round">
+    <path d="M1 4h22v16H1zM1 10h22" />
+  </svg>
+  <div style={{ flex: 1 }}>
+    <div style={{ fontSize: 11, fontWeight: 600, color: "#f97316" }}>
+      Subscription
+    </div>
+    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginTop: 1 }}>
+      Manage & view payments
+    </div>
+  </div>
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+    stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round">
+    <path d="M9 18l6-6-6-6" />
+  </svg>
+        </Link>
+
           <div className="sidebar-user">
             <div className="sidebar-avatar">{getInitials(user.full_name)}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
