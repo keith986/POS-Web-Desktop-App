@@ -283,7 +283,7 @@ export default function SubscriptionPage() {
                   fontFamily: "inherit", transition: "all 0.15s",
                   boxShadow: tab === t ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
                 }}>
-                  {t === "overview" ? "📋  Overview" : `🧾  Payment History${sub?.payments?.length ? ` (${sub.payments.length})` : ""}`}
+                  {t === "overview" ? "Overview" : `Payment History${sub?.payments?.length ? ` (${sub.payments.length})` : ""}`}
                 </button>
               ))}
             </div>
@@ -335,7 +335,11 @@ export default function SubscriptionPage() {
                 {(sub?.status === "expired" || sub?.status === "due" || sub?.status === "none") && (
                   <div style={{ padding: "14px 18px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 18 }}>⚠️</span>
+                      <span style={{ fontSize: 18 }}>
+                         <svg className="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                          <path fill-rule="evenodd" d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z" clip-rule="evenodd"/>
+                         </svg>
+                      </span>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 500, color: "#92400e" }}>
                           {sub?.status === "none" ? "No active subscription" : "Your subscription has expired"}
