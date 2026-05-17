@@ -10,6 +10,7 @@ import Discounts from "./admin/Discounts";
 import Returns from "./admin/Returns";
 import { SettingsIcon } from "../components/Icons";
 import UpdateBanner from "../components/UpdateBanner";
+import Subscription from "./admin/Subscription";
 
 const SunIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -28,6 +29,16 @@ const SunIcon = () => (
 const MoonIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+);
+
+// ── Subscription icon as a component (matches svgIcon pattern) ──
+const SubscriptionIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.8"
+    strokeLinecap="round" strokeLinejoin="round">
+    <rect x="1" y="4" width="22" height="16" rx="2"/>
+    <path d="M1 10h22"/>
   </svg>
 );
 
@@ -99,15 +110,12 @@ function AdCarousel() {
         position: "relative",
         opacity: fading ? 0 : 1, transition: "opacity 0.35s ease",
       }}>
-        {/* Close */}
         <button onClick={() => setVisible(false)} style={{
           position: "absolute", top: 10, right: 14, background: "none",
           border: "none", color: "#555", fontSize: 18, cursor: "pointer", zIndex: 10,
         }}>✕</button>
 
         <div style={{ display: "flex", minHeight: 260 }}>
-
-          {/* LEFT panel */}
           <div style={{
             width: 200, flexShrink: 0, background: "#1a1a1a",
             borderRight: "1px solid #2a2a2a",
@@ -126,7 +134,6 @@ function AdCarousel() {
             </p>
           </div>
 
-          {/* RIGHT panel */}
           <div style={{ flex: 1, padding: "1.75rem", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
             <div>
               <p style={{ fontSize: 20, fontWeight: 700, color: "#fff", margin: "0 0 8px" }}>{ad.title}</p>
@@ -141,7 +148,6 @@ function AdCarousel() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "1.5rem" }}>
-              {/* Dots */}
               <div style={{ display: "flex", gap: 6 }}>
                 {ADS.map((_, i) => (
                   <div key={i} onClick={() => goTo(i)} style={{
@@ -151,7 +157,6 @@ function AdCarousel() {
                   }} />
                 ))}
               </div>
-              {/* CTA */}
               <button style={{
                 background: "#0f9d7e", color: "#fff", border: "none",
                 borderRadius: 8, padding: "10px 20px", fontSize: 13,
@@ -208,15 +213,17 @@ export default function AdminDashboard({ user, onLogout }) {
     handleSync();
   }, []);
 
+  // ── Nav items — Subscription added before Settings ──
   const navItems = [
-    { to: "/admin/overview", label: "Overview", icon: "◈" },
-    { to: "/admin/orders", label: "Orders", icon: "◫" },
-    { to: "/admin/products", label: "Products", icon: "◧" },
-    { to: "/admin/staff", label: "Staff", icon: "◉" },
-    { to: "/admin/reports", label: "Reports", icon: "◎" },
-    { to: "/admin/discounts", label: "Discounts", icon: "◉" },
-    { to: "/admin/returns", label: "Returns", icon: "◎" },
-    { to: "/admin/settings", label: "Settings", icon: null, svgIcon: SettingsIcon },
+    { to: "/admin/overview",      label: "Overview",      icon: "◈"  },
+    { to: "/admin/orders",        label: "Orders",        icon: "◫"  },
+    { to: "/admin/products",      label: "Products",      icon: "◧"  },
+    { to: "/admin/staff",         label: "Staff",         icon: "◉"  },
+    { to: "/admin/reports",       label: "Reports",       icon: "◎"  },
+    { to: "/admin/discounts",     label: "Discounts",     icon: "◉"  },
+    { to: "/admin/returns",       label: "Returns",       icon: "◎"  },
+    { to: "/admin/subscription",  label: "Subscription",  icon: null, svgIcon: SubscriptionIcon },
+    { to: "/admin/settings",      label: "Settings",      icon: null, svgIcon: SettingsIcon     },
   ];
 
   return (
@@ -269,7 +276,6 @@ export default function AdminDashboard({ user, onLogout }) {
             </div>
           </div>
 
-          {/* Sky arc toggle */}
           <button
             className={`sky-toggle ${theme === "light" ? "sky-toggle--light" : "sky-toggle--dark"} ${animating ? "sky-toggle--animating" : ""}`}
             onClick={toggleTheme}
@@ -289,21 +295,21 @@ export default function AdminDashboard({ user, onLogout }) {
       </aside>
 
       <main className="main-content">
-      <AdCarousel /> 
+        <AdCarousel />
         <Routes>
-          <Route path="overview" element={<Overview />} />
-          <Route path="orders" element={<Orders />} />
-          <Route path="products" element={<Products />} />
-          <Route path="staff" element={<Staff />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="discounts" element={<Discounts />} />
-          <Route path="returns" element={<Returns />} />
-          <Route path="settings" element={<Settings user={user} onLogout={onLogout} />} />
-          <Route path="*" element={<Navigate to="overview" replace />} />
+          <Route path="overview"      element={<Overview />} />
+          <Route path="orders"        element={<Orders />} />
+          <Route path="products"      element={<Products />} />
+          <Route path="staff"         element={<Staff />} />
+          <Route path="reports"       element={<Reports />} />
+          <Route path="subscription"  element={<Subscription />} />
+          <Route path="discounts"     element={<Discounts />} />
+          <Route path="returns"       element={<Returns />} />
+          <Route path="settings"      element={<Settings user={user} onLogout={onLogout} />} />
+          <Route path="*"             element={<Navigate to="overview" replace />} />
         </Routes>
       </main>
 
-      {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
         <div className="modal-overlay">
           <div className="modal">

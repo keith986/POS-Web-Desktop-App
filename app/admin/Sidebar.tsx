@@ -8,6 +8,16 @@ import { usePlan } from "@/app/_lib/usePlan";
 import type { PlanId, PosType } from "@/app/_lib/pricing";
 
 // ─────────────────────────────────────────
+// ROUTES ACCESSIBLE WHEN SUBSCRIPTION EXPIRED
+// ─────────────────────────────────────────
+const ALWAYS_ACCESSIBLE = new Set(["/admin/dashboard", "/admin/subscription"]);
+
+function isExpiredLocked(href: string): boolean {
+  // Lock everything except the two whitelisted routes
+  return !ALWAYS_ACCESSIBLE.has(href);
+}
+
+// ─────────────────────────────────────────
 // ICON PATHS
 // ─────────────────────────────────────────
 const iconPaths: Record<string, string> = {
@@ -33,6 +43,7 @@ const iconPaths: Record<string, string> = {
   chevron:   "M6 9l6 6 6-6",
   lock:      "M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2zM7 11V7a5 5 0 0110 0v4",
   creditcard:"M1 4h22v16H1zM1 10h22",
+  warning:   "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01",
 };
 
 const POS_LIMIT: Record<PlanId, number> = {
@@ -43,14 +54,15 @@ type NavItem    = { href: string; icon: string; label: string };
 type NavSection = { title: string; items: NavItem[] };
 
 interface User {
-  id:         string;
-  full_name:  string;
-  email:      string;
-  role:       string;
-  store_name: string | null;
-  pos_type?:  PosType;
-  domain?:    string;
-  plan?:      PlanId;
+  id:                string;
+  full_name:         string;
+  email:             string;
+  role:              string;
+  store_name:        string | null;
+  pos_type?:         PosType;
+  domain?:           string;
+  plan?:             PlanId;
+  subscription_end?: string | null; // ISO date string, e.g. "2025-06-01"
 }
 
 // ─────────────────────────────────────────
@@ -130,6 +142,23 @@ const POS_TYPES_META: { id: PosType; label: string; svgIcon: string; accent: str
 ];
 
 // ─────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────
+
+/**
+ * Returns true when the user's subscription has expired.
+ *
+ * The sidebar reads `subscription_end` from the user object in localStorage.
+ * If your API returns a different field name, adjust accordingly — or replace
+ * this function with an async hook that hits your subscriptions endpoint.
+ */
+function checkSubscriptionExpired(user: User | null): boolean {
+  if (!user) return false;
+  if (!user.subscription_end) return false; // no end date → treat as active
+  return new Date(user.subscription_end) < new Date();
+}
+
+// ─────────────────────────────────────────
 // ICON COMPONENTS
 // ─────────────────────────────────────────
 function Icon({ type }: { type: string }) {
@@ -153,6 +182,7 @@ function ChevronIcon({ open }: { open: boolean }) {
   );
 }
 
+/** Standard plan-tier lock badge */
 function LockBadge({ plan }: { plan: string }) {
   return (
     <span style={{
@@ -168,6 +198,26 @@ function LockBadge({ plan }: { plan: string }) {
         <path d="M7 11V7a5 5 0 0110 0v4"/>
       </svg>
       {plan}
+    </span>
+  );
+}
+
+/** Red "Expired" badge shown on items locked due to expired subscription */
+function ExpiredBadge() {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 3,
+      background: "rgba(220,38,38,0.12)", border: "1px solid rgba(220,38,38,0.25)",
+      borderRadius: 100, padding: "2px 7px",
+      fontSize: 9, fontWeight: 600, color: "rgba(239,68,68,0.75)",
+      textTransform: "uppercase", letterSpacing: "0.3px",
+      flexShrink: 0, marginLeft: "auto",
+    }}>
+      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2"/>
+        <path d="M7 11V7a5 5 0 0110 0v4"/>
+      </svg>
+      Expired
     </span>
   );
 }
@@ -198,6 +248,31 @@ function PlanBadge({ plan }: { plan: PlanId }) {
   );
 }
 
+/** Replaces PlanBadge when subscription has expired */
+function ExpiredSubscriptionBanner() {
+  return (
+    <div style={{ padding: "0 0.75rem", marginBottom: "0.5rem" }}>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 6,
+        background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.3)",
+        borderRadius: 8, padding: "6px 10px",
+      }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <path d={iconPaths.warning} />
+        </svg>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+            Subscription Expired
+          </div>
+          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>
+            Renew to restore full access
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function getInitials(name: string) {
   return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 }
@@ -206,17 +281,16 @@ function getInitials(name: string) {
 // COLLAPSIBLE NAV SECTION
 // ─────────────────────────────────────────
 function NavSection({
-  section, userPlan, isActive, pendingOrders, router, initialOpen,
+  section, userPlan, isActive, pendingOrders, router, initialOpen, subscriptionExpired,
 }: {
-  section:       NavSection;
-  userPlan:      PlanId;
-  isActive:      (href: string) => boolean;
-  pendingOrders: number;
-  router:        ReturnType<typeof useRouter>;
-  initialOpen:   boolean;
+  section:             NavSection;
+  userPlan:            PlanId;
+  isActive:            (href: string) => boolean;
+  pendingOrders:       number;
+  router:              ReturnType<typeof useRouter>;
+  initialOpen:         boolean;
+  subscriptionExpired: boolean;
 }) {
-  // ✅ FIX: initialise open state directly — no useEffect, no cascading renders.
-  // Check if any child is active at mount time and OR it with the defaultOpen prop.
   const [open, setOpen] = useState(
     () => initialOpen || section.items.some(i => isActive(i.href))
   );
@@ -249,6 +323,32 @@ function NavSection({
         marginBottom: open ? "0.25rem" : 0,
       }}>
         {section.items.map(({ href, icon, label }) => {
+
+          // ── 1. Subscription-expired lock (highest priority) ───────────
+          if (subscriptionExpired && isExpiredLocked(href)) {
+            return (
+              <div
+                key={href}
+                onClick={() => router.push("/admin/subscription")}
+                title="Subscription expired — click to renew"
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "0.55rem 0.85rem", borderRadius: 8,
+                  margin: "1px 0.75rem", fontSize: 13, fontWeight: 500,
+                  color: "rgba(255,255,255,0.22)", cursor: "pointer",
+                  transition: "background 0.15s", userSelect: "none",
+                }}
+                onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = "rgba(220,38,38,0.06)"}
+                onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = "transparent"}
+              >
+                <span style={{ opacity: 0.3 }}><Icon type={icon} /></span>
+                <span style={{ flex: 1 }}>{label}</span>
+                <ExpiredBadge />
+              </div>
+            );
+          }
+
+          // ── 2. Plan-tier lock ─────────────────────────────────────────
           const locked  = isRouteLocked(href, userPlan);
           const reqPlan = requiredPlan(href);
 
@@ -269,6 +369,7 @@ function NavSection({
             );
           }
 
+          // ── 3. Accessible link ────────────────────────────────────────
           return (
             <Link key={href} href={href} className={`nav-item ${isActive(href) ? "active" : ""}`}>
               <Icon type={icon} />
@@ -420,6 +521,9 @@ export default function Sidebar() {
 
   const userPlan = usePlan(user?.id);
 
+  // ── Derived from user object — swap for an API hook if needed ──────────────
+  const subscriptionExpired = checkSubscriptionExpired(user);
+
   const fetchPendingCount = useCallback(async (id: string) => {
     try {
       const res  = await fetch(`/api/orders/pending-count?admin_id=${id}`);
@@ -453,8 +557,6 @@ export default function Sidebar() {
     finally { setSwitching(false); }
   };
 
-  // ✅ Stable reference — wrapped in useCallback so NavSection's useState initialiser
-  //    sees the correct value on first render without needing a useEffect.
   const isActive = useCallback((href: string) =>
     href === "/admin/dashboard"
       ? pathname === href || pathname === "/admin"
@@ -530,7 +632,8 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <PlanBadge plan={userPlan} />
+        {/* Plan badge OR expired warning banner */}
+        {subscriptionExpired ? <ExpiredSubscriptionBanner /> : <PlanBadge plan={userPlan} />}
 
         {/* Collapsible nav sections */}
         {sections.map((section, idx) => (
@@ -541,15 +644,38 @@ export default function Sidebar() {
             isActive={isActive}
             pendingOrders={pendingOrders}
             router={router}
-            initialOpen={idx === 0}   
+            initialOpen={idx === 0}
+            subscriptionExpired={subscriptionExpired}
           />
         ))}
 
-        {/* Switch POS Type */}
+        {/* Switch POS Type — disabled when subscription expired */}
         <div style={{ padding: "0 0.75rem", marginTop: "0.5rem" }}>
-          <button onClick={() => setSwitcherOpen(true)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "0.6rem 0.85rem", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: 500, transition: "all 0.15s" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.85)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.5)"; }}>
+          <button
+            onClick={() => !subscriptionExpired && setSwitcherOpen(true)}
+            disabled={subscriptionExpired}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", gap: 9,
+              padding: "0.6rem 0.85rem",
+              background: subscriptionExpired ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.05)",
+              border: `1px solid ${subscriptionExpired ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.08)"}`,
+              borderRadius: 8,
+              cursor: subscriptionExpired ? "not-allowed" : "pointer",
+              fontFamily: "inherit",
+              color: subscriptionExpired ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.5)",
+              fontSize: 12, fontWeight: 500, transition: "all 0.15s",
+              opacity: subscriptionExpired ? 0.45 : 1,
+            }}
+            onMouseEnter={e => {
+              if (subscriptionExpired) return;
+              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)";
+              (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.85)";
+            }}
+            onMouseLeave={e => {
+              if (subscriptionExpired) return;
+              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)";
+              (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.5)";
+            }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={iconPaths.switch} /></svg>
             {switching ? "Switching…" : "Switch POS Type"}
             <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", opacity: 0.6 }}><Icon type={posMeta?.svgIcon ?? "cog"} /></span>
@@ -558,16 +684,26 @@ export default function Sidebar() {
 
         {/* Footer */}
         <div className="sidebar-footer">
+          {/* Subscription link — highlighted red when expired */}
           <Link href="/admin/subscription" style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "0.5rem 0.85rem", marginBottom: "0.5rem",
-            background: "rgba(234,88,12,0.08)", border: "1px solid rgba(234,88,12,0.2)",
+            background: subscriptionExpired ? "rgba(220,38,38,0.1)" : "rgba(234,88,12,0.08)",
+            border: `1px solid ${subscriptionExpired ? "rgba(220,38,38,0.35)" : "rgba(234,88,12,0.2)"}`,
             borderRadius: 8, textDecoration: "none", cursor: "pointer", transition: "all 0.15s",
           }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round"><path d="M1 4h22v16H1zM1 10h22" /></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke={subscriptionExpired ? "#ef4444" : "#f97316"}
+              strokeWidth="2" strokeLinecap="round">
+              <path d="M1 4h22v16H1zM1 10h22" />
+            </svg>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#f97316" }}>Subscription</div>
-              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginTop: 1 }}>Manage &amp; view payments</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: subscriptionExpired ? "#ef4444" : "#f97316" }}>
+                {subscriptionExpired ? "Renew Subscription" : "Subscription"}
+              </div>
+              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginTop: 1 }}>
+                {subscriptionExpired ? "Tap to restore full access" : "Manage & view payments"}
+              </div>
             </div>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
           </Link>

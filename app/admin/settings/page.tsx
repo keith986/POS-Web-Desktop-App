@@ -894,7 +894,7 @@ export default function AdminSettingsPage() {
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 3 }}>Sign out of this session</div>
                         <div style={{ fontSize: 12, color: "#9a9a8e" }}>
-                          Clears your localStorage session and redirects to login.
+                          Clear your session.
                         </div>
                       </div>
                       <button
