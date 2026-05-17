@@ -32,25 +32,13 @@ const iconPaths: Record<string, string> = {
   switch:    "M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4",
   chevron:   "M6 9l6 6 6-6",
   lock:      "M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2zM7 11V7a5 5 0 0110 0v4",
-  zap:       "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
-  creditcard: "M1 4h22v16H1zM1 10h22",
+  creditcard:"M1 4h22v16H1zM1 10h22",
 };
 
-// ─────────────────────────────────────────
-// POS TYPE LIMITS PER PLAN
-// starter    → 1 POS type  (whichever they chose at onboarding)
-// pro        → 2 POS types (current + 1 more)
-// enterprise → all 5
-// ─────────────────────────────────────────
 const POS_LIMIT: Record<PlanId, number> = {
-  starter:    1,
-  pro:        2,
-  enterprise: 5,
+  starter: 1, pro: 2, enterprise: 5,
 };
 
-// ─────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────
 type NavItem    = { href: string; icon: string; label: string };
 type NavSection = { title: string; items: NavItem[] };
 
@@ -75,33 +63,24 @@ const BASE_MAIN: NavItem[] = [
   { href: "/admin/customers", icon: "users", label: "Customers" },
   { href: "/admin/analytics", icon: "chart", label: "Analytics" },
 ];
-
 const BASE_STORE: NavItem[] = [
-  { href: "/admin/products", icon: "tag",   label: "Products" },
-  { href: "/admin/staff",    icon: "staff", label: "Staff"    },
-  { href: "/admin/subscription",  icon: "creditcard", label: "Subscription" },
-  { href: "/admin/settings", icon: "cog",   label: "Settings" },
+  { href: "/admin/products",     icon: "tag",        label: "Products"     },
+  { href: "/admin/staff",        icon: "staff",      label: "Staff"        },
+  { href: "/admin/subscription", icon: "creditcard", label: "Subscription" },
+  { href: "/admin/settings",     icon: "cog",        label: "Settings"     },
 ];
-
 const POS_FEATURES: NavItem[] = [
-  { href: "/admin/discounts",  icon: "tag",   label: "Discounts" }
+  { href: "/admin/discounts", icon: "tag", label: "Discounts" },
 ];
-
 const NAV_CONFIG: Record<PosType, NavSection[]> = {
   retail: [
-    { title: "Main",  items: BASE_MAIN },
-    { title: "Store", items: BASE_STORE },
+    { title: "Main",         items: BASE_MAIN  },
+    { title: "Store",        items: BASE_STORE },
     { title: "POS Features", items: POS_FEATURES },
   ],
   restaurant: [
-    { title: "Main", items: [
-      ...BASE_MAIN,
-      { href: "/admin/tables", icon: "utensils", label: "Tables" },
-    ]},
-    { title: "Kitchen", items: [
-      { href: "/admin/menu", icon: "clipboard", label: "Menu" },
-      ...BASE_STORE,
-    ]},
+    { title: "Main",    items: [...BASE_MAIN, { href: "/admin/tables", icon: "utensils", label: "Tables" }] },
+    { title: "Kitchen", items: [{ href: "/admin/menu", icon: "clipboard", label: "Menu" }, ...BASE_STORE]  },
     { title: "POS Features", items: POS_FEATURES },
   ],
   salon: [
@@ -112,16 +91,13 @@ const NAV_CONFIG: Record<PosType, NavSection[]> = {
       { href: "/admin/customers",    icon: "users",    label: "Clients"      },
       BASE_MAIN[4],
     ]},
-    { title: "Business", items: [
-      { href: "/admin/services", icon: "scissors", label: "Services" },
-      ...BASE_STORE,
-    ]},
+    { title: "Business", items: [{ href: "/admin/services", icon: "scissors", label: "Services" }, ...BASE_STORE] },
     { title: "POS Features", items: POS_FEATURES },
   ],
   wholesale: [
     { title: "Main",      items: BASE_MAIN },
     { title: "Wholesale", items: [
-      ...BASE_STORE.slice(0, 1),
+      BASE_STORE[0],
       { href: "/admin/suppliers",   icon: "truck",  label: "Suppliers"   },
       { href: "/admin/price-tiers", icon: "layers", label: "Price Tiers" },
       ...BASE_STORE.slice(1),
@@ -145,9 +121,7 @@ const NAV_CONFIG: Record<PosType, NavSection[]> = {
   ],
 };
 
-const POS_TYPES_META: {
-  id: PosType; label: string; svgIcon: string; accent: string; desc: string;
-}[] = [
+const POS_TYPES_META: { id: PosType; label: string; svgIcon: string; accent: string; desc: string }[] = [
   { id: "retail",     label: "Retail Store",     svgIcon: "tag",      accent: "#2563eb", desc: "Products & inventory"    },
   { id: "restaurant", label: "Restaurant",       svgIcon: "utensils", accent: "#d97706", desc: "Tables, menu & kitchen"  },
   { id: "salon",      label: "Salon & Services", svgIcon: "scissors", accent: "#7c3aed", desc: "Appointments & services" },
@@ -156,15 +130,25 @@ const POS_TYPES_META: {
 ];
 
 // ─────────────────────────────────────────
-// SMALL COMPONENTS
+// ICON COMPONENTS
 // ─────────────────────────────────────────
 function Icon({ type }: { type: string }) {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
       stroke="currentColor" strokeWidth="1.8"
-      strokeLinecap="round" strokeLinejoin="round"
-    >
+      strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
       <path d={iconPaths[type] ?? iconPaths.cog} />
+    </svg>
+  );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2.5"
+      strokeLinecap="round" strokeLinejoin="round"
+      style={{ transition: "transform 0.2s ease", transform: open ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}>
+      <path d="M6 9l6 6 6-6" />
     </svg>
   );
 }
@@ -175,13 +159,11 @@ function LockBadge({ plan }: { plan: string }) {
       display: "inline-flex", alignItems: "center", gap: 3,
       background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
       borderRadius: 100, padding: "2px 7px",
-      fontSize: 9, fontWeight: 600,
-      color: "rgba(255,255,255,0.35)",
+      fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.35)",
       textTransform: "uppercase", letterSpacing: "0.3px",
       flexShrink: 0, marginLeft: "auto",
     }}>
-      <svg width="8" height="8" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="11" width="18" height="11" rx="2"/>
         <path d="M7 11V7a5 5 0 0110 0v4"/>
       </svg>
@@ -206,8 +188,7 @@ function PlanBadge({ plan }: { plan: PlanId }) {
         fontSize: 10, fontWeight: 600, color: c.text,
         textTransform: "uppercase", letterSpacing: "0.5px",
       }}>
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="11" width="18" height="11" rx="2"/>
           <path d="M7 11V7a5 5 0 0110 0v4"/>
         </svg>
@@ -222,202 +203,189 @@ function getInitials(name: string) {
 }
 
 // ─────────────────────────────────────────
-// POS SWITCHER MODAL  (plan-aware)
+// COLLAPSIBLE NAV SECTION
 // ─────────────────────────────────────────
-function SwitcherModal({
-  current, plan, onClose, onSwitch,
+function NavSection({
+  section, userPlan, isActive, pendingOrders, router, initialOpen,
 }: {
-  current:  PosType;
-  plan:     PlanId;
-  onClose:  () => void;
-  onSwitch: (t: PosType) => void;
+  section:       NavSection;
+  userPlan:      PlanId;
+  isActive:      (href: string) => boolean;
+  pendingOrders: number;
+  router:        ReturnType<typeof useRouter>;
+  initialOpen:   boolean;
+}) {
+  // ✅ FIX: initialise open state directly — no useEffect, no cascading renders.
+  // Check if any child is active at mount time and OR it with the defaultOpen prop.
+  const [open, setOpen] = useState(
+    () => initialOpen || section.items.some(i => isActive(i.href))
+  );
+
+  return (
+    <div>
+      {/* Section header — clickable toggle */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          width: "100%", padding: "0.3rem 0.85rem",
+          background: "none", border: "none", cursor: "pointer",
+          fontFamily: "inherit", marginBottom: open ? 2 : 0,
+        }}
+      >
+        <span className="sidebar-section" style={{ margin: 0, padding: 0 }}>
+          {section.title}
+        </span>
+        <span style={{ color: "rgba(255,255,255,0.25)" }}>
+          <ChevronIcon open={open} />
+        </span>
+      </button>
+
+      {/* Items — animated collapse */}
+      <div style={{
+        overflow: "hidden",
+        maxHeight: open ? `${section.items.length * 44}px` : "0px",
+        transition: "max-height 0.25s ease",
+        marginBottom: open ? "0.25rem" : 0,
+      }}>
+        {section.items.map(({ href, icon, label }) => {
+          const locked  = isRouteLocked(href, userPlan);
+          const reqPlan = requiredPlan(href);
+
+          if (locked) {
+            return (
+              <div
+                key={href}
+                onClick={() => router.push("/admin/dashboard?upgrade=true")}
+                title={`Requires ${reqPlan ? planLabel(reqPlan) : "higher"} plan`}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.55rem 0.85rem", borderRadius: 8, margin: "1px 0.75rem", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.28)", cursor: "pointer", transition: "background 0.15s", userSelect: "none" }}
+                onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)"}
+                onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = "transparent"}
+              >
+                <span style={{ opacity: 0.4 }}><Icon type={icon} /></span>
+                <span style={{ flex: 1 }}>{label}</span>
+                <LockBadge plan={reqPlan ? planLabel(reqPlan) : "Pro"} />
+              </div>
+            );
+          }
+
+          return (
+            <Link key={href} href={href} className={`nav-item ${isActive(href) ? "active" : ""}`}>
+              <Icon type={icon} />
+              {label}
+              {href === "/admin/orders" && pendingOrders > 0 && (
+                <span className="nav-badge">{pendingOrders > 99 ? "99+" : pendingOrders}</span>
+              )}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────
+// POS SWITCHER MODAL
+// ─────────────────────────────────────────
+function SwitcherModal({ current, plan, onClose, onSwitch }: {
+  current: PosType; plan: PlanId; onClose: () => void; onSwitch: (t: PosType) => void;
 }) {
   const limit      = POS_LIMIT[plan];
   const posOrder   = POS_TYPES_META.map(p => p.id);
   const currentIdx = posOrder.indexOf(current);
 
-  /* Which POS types are unlocked for this plan?
-     Starter  → only the one they already have (index = currentIdx)
-     Pro      → current + the next one in the list (wraps around)
-     Enterprise → all                                               */
   function isPosLocked(posId: PosType): boolean {
     if (plan === "enterprise") return false;
-    if (posId === current)    return false; // current is always accessible
-
-    if (plan === "starter") return true;    // starter can only use 1
-
-    // Pro — allow current + 1 adjacent (next in list, wrapping)
-    const targetIdx  = posOrder.indexOf(posId);
-    const nextIdx    = (currentIdx + 1) % posOrder.length;
+    if (posId === current) return false;
+    if (plan === "starter") return true;
+    const targetIdx = posOrder.indexOf(posId);
+    const nextIdx   = (currentIdx + 1) % posOrder.length;
     return targetIdx !== nextIdx;
   }
 
   const upgradeNeeded = (posId: PosType): PlanId | null => {
     if (!isPosLocked(posId)) return null;
-    if (plan === "starter") return "pro";
-    return "enterprise";
+    return plan === "starter" ? "pro" : "enterprise";
   };
 
   return (
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 2000 }} />
       <div style={{
-        position: "fixed", top: "50%", left: "50%",
-        transform: "translate(-50%, -50%)",
+        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
         background: "#1a1a14", border: "1px solid rgba(255,255,255,0.1)",
-        borderRadius: 16, padding: "1.5rem",
-        width: "100%", maxWidth: 400, zIndex: 2001,
-        boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
-        animation: "switcherIn 0.2s ease",
+        borderRadius: 16, padding: "1.5rem", width: "100%", maxWidth: 400, zIndex: 2001,
+        boxShadow: "0 24px 60px rgba(0,0,0,0.5)", animation: "switcherIn 0.2s ease",
         fontFamily: "'DM Sans', sans-serif",
       }}>
         <style>{`@keyframes switcherIn{from{opacity:0;transform:translate(-50%,-46%)}to{opacity:1;transform:translate(-50%,-50%)}}`}</style>
-
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1rem" }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>Switch POS Type</div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
-              {plan === "starter"
-                ? "Starter includes 1 POS type. Upgrade for more."
-                : plan === "pro"
-                ? "Pro includes 2 POS types. Upgrade for all 5."
-                : "Enterprise — all POS types unlocked."}
+              {plan === "starter" ? "Starter includes 1 POS type." : plan === "pro" ? "Pro includes 2 POS types." : "Enterprise — all unlocked."}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 8, width: 28, height: 28, cursor: "pointer", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
-            ×
-          </button>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 8, width: 28, height: 28, cursor: "pointer", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>×</button>
         </div>
-
-        {/* Limit indicator */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "1rem", padding: "7px 10px", background: "rgba(255,255,255,0.04)", borderRadius: 8 }}>
           <div style={{ display: "flex", gap: 4 }}>
-            {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} style={{
-                width: 20, height: 4, borderRadius: 2,
-                background: i <= limit ? "#60a5fa" : "rgba(255,255,255,0.1)",
-              }} />
+            {[1,2,3,4,5].map(i => (
+              <div key={i} style={{ width: 20, height: 4, borderRadius: 2, background: i <= limit ? "#60a5fa" : "rgba(255,255,255,0.1)" }} />
             ))}
           </div>
           <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginLeft: 4 }}>
             {limit} of 5 POS type{limit !== 1 ? "s" : ""} on {planLabel(plan)}
           </span>
         </div>
-
-        {/* POS type list */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {POS_TYPES_META.map(type => {
             const isCurrent = type.id === current;
             const locked    = isPosLocked(type.id);
             const needsPlan = upgradeNeeded(type.id);
-
             return (
-              <button
-                key={type.id}
+              <button key={type.id}
                 onClick={() => {
-                  if (locked) {
-                    /* Redirect to upgrade instead of switching */
-                    window.location.href = "https://pos.upendoapps.com/payment";
-                    return;
-                  }
+                  if (locked) { window.location.href = "https://pos.upendoapps.com/payment"; return; }
                   if (!isCurrent) onSwitch(type.id);
                 }}
                 style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  padding: "0.7rem 1rem",
-                  background: isCurrent
-                    ? `${type.accent}22`
-                    : locked
-                    ? "rgba(255,255,255,0.02)"
-                    : "rgba(255,255,255,0.04)",
-                  border: `1px solid ${
-                    isCurrent ? type.accent + "55"
-                    : locked   ? "rgba(255,255,255,0.06)"
-                    :            "rgba(255,255,255,0.08)"
-                  }`,
-                  borderRadius: 10,
-                  cursor: locked ? "pointer" : isCurrent ? "default" : "pointer",
-                  fontFamily: "inherit", transition: "all 0.15s",
-                  width: "100%", textAlign: "left",
-                  opacity: locked ? 0.55 : 1,
-                }}
-                onMouseEnter={e => {
-                  if (!isCurrent && !locked)
-                    (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.09)";
-                  if (locked)
-                    (e.currentTarget as HTMLButtonElement).style.opacity = "0.75";
-                }}
-                onMouseLeave={e => {
-                  if (!isCurrent && !locked)
-                    (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
-                  if (locked)
-                    (e.currentTarget as HTMLButtonElement).style.opacity = "0.55";
-                }}
-              >
-                {/* Icon */}
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8,
-                  background: locked ? "rgba(255,255,255,0.05)" : `${type.accent}22`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0,
-                  color: locked ? "rgba(255,255,255,0.3)" : type.accent,
+                  display: "flex", alignItems: "center", gap: 12, padding: "0.7rem 1rem",
+                  background: isCurrent ? `${type.accent}22` : locked ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${isCurrent ? type.accent + "55" : locked ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: 10, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+                  width: "100%", textAlign: "left", opacity: locked ? 0.55 : 1,
                 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: locked ? "rgba(255,255,255,0.05)" : `${type.accent}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: locked ? "rgba(255,255,255,0.3)" : type.accent }}>
                   <Icon type={locked ? "lock" : type.svgIcon} />
                 </div>
-
-                {/* Label + desc */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: isCurrent ? "#fff" : locked ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.75)" }}>
-                    {type.label}
-                  </div>
-                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 1 }}>
-                    {type.desc}
-                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: isCurrent ? "#fff" : locked ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.75)" }}>{type.label}</div>
+                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 1 }}>{type.desc}</div>
                 </div>
-
-                {/* Right badge */}
                 {isCurrent ? (
-                  <span style={{ fontSize: 10, fontWeight: 600, color: type.accent, background: `${type.accent}22`, padding: "2px 8px", borderRadius: 100, flexShrink: 0 }}>
-                    Active
-                  </span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: type.accent, background: `${type.accent}22`, padding: "2px 8px", borderRadius: 100, flexShrink: 0 }}>Active</span>
                 ) : locked ? (
-                  <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", padding: "2px 7px", borderRadius: 100, flexShrink: 0, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                  <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", padding: "2px 7px", borderRadius: 100, flexShrink: 0, textTransform: "uppercase" }}>
                     {needsPlan ? planLabel(needsPlan) : "Upgrade"}
                   </span>
                 ) : (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
-                    <path d="M9 18l6-6-6-6" />
-                  </svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6" /></svg>
                 )}
               </button>
             );
           })}
         </div>
-
-        {/* Upgrade CTA — only shown if on starter or pro */}
         {plan !== "enterprise" && (
           <div style={{ marginTop: "1rem", padding: "10px 12px", background: "rgba(37,99,235,0.1)", border: "1px solid rgba(37,99,235,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#60a5fa" }}>
-                {plan === "starter" ? "Upgrade to Pro" : "Upgrade to Enterprise"}
-              </div>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>
-                {plan === "starter" ? "Unlock 2 POS types" : "Unlock all 5 POS types"}
-              </div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#60a5fa" }}>{plan === "starter" ? "Upgrade to Pro" : "Upgrade to Enterprise"}</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{plan === "starter" ? "Unlock 2 POS types" : "Unlock all 5 POS types"}</div>
             </div>
-            <a
-              href="https://pos.upendoapps.com/payment"
-              style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#2563eb", padding: "5px 12px", borderRadius: 7, textDecoration: "none", flexShrink: 0 }}
-            >
-              Upgrade →
-            </a>
+            <a href="https://pos.upendoapps.com/payment" style={{ fontSize: 11, fontWeight: 600, color: "#fff", background: "#2563eb", padding: "5px 12px", borderRadius: 7, textDecoration: "none", flexShrink: 0 }}>Upgrade →</a>
           </div>
         )}
-
-        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: "0.75rem", textAlign: "center" }}>
-          Your data is preserved when switching types
-        </p>
+        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: "0.75rem", textAlign: "center" }}>Your data is preserved when switching types</p>
       </div>
     </>
   );
@@ -436,7 +404,6 @@ export default function Sidebar() {
   const [switching,     setSwitching]     = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
 
-  // ── Load user from localStorage ──
   useEffect(() => {
     const stored = localStorage.getItem("user");
     if (!stored) { window.location.href = "https://pos.upendoapps.com"; return; }
@@ -451,10 +418,8 @@ export default function Sidebar() {
     }
   }, [router]);
 
-  // ── Fetch live plan from DB ──
   const userPlan = usePlan(user?.id);
 
-  // ── Pending orders badge ──
   const fetchPendingCount = useCallback(async (id: string) => {
     try {
       const res  = await fetch(`/api/orders/pending-count?admin_id=${id}`);
@@ -470,15 +435,13 @@ export default function Sidebar() {
     return () => clearInterval(t);
   }, [user?.id, fetchPendingCount]);
 
-  // ── Switch POS type ──
   const handleSwitch = async (newType: PosType) => {
     if (!user) return;
     setSwitching(true);
     try {
       const res = await fetch("/api/onboarding", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ admin_id: user.id, pos_type: newType }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ admin_id: user.id, pos_type: newType }),
       });
       if (!res.ok) throw new Error("Failed");
       const updated = { ...user, pos_type: newType };
@@ -490,10 +453,13 @@ export default function Sidebar() {
     finally { setSwitching(false); }
   };
 
-  const isActive = (href: string) =>
+  // ✅ Stable reference — wrapped in useCallback so NavSection's useState initialiser
+  //    sees the correct value on first render without needing a useEffect.
+  const isActive = useCallback((href: string) =>
     href === "/admin/dashboard"
       ? pathname === href || pathname === "/admin"
-      : pathname.startsWith(href);
+      : pathname.startsWith(href),
+  [pathname]);
 
   const doLogout = () => {
     localStorage.removeItem("user");
@@ -509,50 +475,33 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* ── POS Switcher Modal ── */}
       {switcherOpen && (
-        <SwitcherModal
-          current={posType}
-          plan={userPlan}
-          onClose={() => setSwitcherOpen(false)}
-          onSwitch={handleSwitch}
-        />
+        <SwitcherModal current={posType} plan={userPlan} onClose={() => setSwitcherOpen(false)} onSwitch={handleSwitch} />
       )}
 
-      {/* ── Logout Confirm Modal ── */}
       {logoutConfirm && (
         <>
           <div onClick={() => setLogoutConfirm(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 2000 }} />
           <div style={{
-            position: "fixed", top: "50%", left: "50%",
-            transform: "translate(-50%,-50%)",
+            position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
             background: "#1a1a14", border: "1px solid rgba(255,255,255,0.12)",
-            borderRadius: 16, padding: "1.75rem",
-            width: "100%", maxWidth: 340, zIndex: 2001,
-            boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
-            animation: "switcherIn 0.2s ease",
+            borderRadius: 16, padding: "1.75rem", width: "100%", maxWidth: 340, zIndex: 2001,
+            boxShadow: "0 24px 60px rgba(0,0,0,0.5)", animation: "switcherIn 0.2s ease",
             fontFamily: "'DM Sans', sans-serif",
           }}>
+            <style>{`@keyframes switcherIn{from{opacity:0;transform:translate(-50%,-46%)}to{opacity:1;transform:translate(-50%,-50%)}}`}</style>
             <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(220,38,38,0.15)", border: "1px solid rgba(220,38,38,0.3)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.1rem", color: "#ef4444" }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d={iconPaths.logout} />
-              </svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={iconPaths.logout} /></svg>
             </div>
             <div style={{ fontSize: 15, fontWeight: 600, color: "#fff", marginBottom: 6 }}>Sign out?</div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6, marginBottom: "1.5rem" }}>
-              You will be returned to the login screen. Any unsaved changes will be lost.
-            </div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6, marginBottom: "1.5rem" }}>You will be returned to the login screen. Any unsaved changes will be lost.</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={() => setLogoutConfirm(false)} style={{ flex: 1, padding: "9px 0", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 9, fontSize: 13, color: "rgba(255,255,255,0.7)", cursor: "pointer", fontFamily: "inherit", fontWeight: 500 }}
                 onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.12)"}
-                onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)"}>
-                Cancel
-              </button>
+                onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)"}>Cancel</button>
               <button onClick={doLogout} style={{ flex: 1, padding: "9px 0", background: "#dc2626", border: "none", borderRadius: 9, fontSize: 13, color: "#fff", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}
                 onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = "#b91c1c"}
-                onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = "#dc2626"}>
-                Sign out
-              </button>
+                onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = "#dc2626"}>Sign out</button>
             </div>
           </div>
         </>
@@ -560,15 +509,14 @@ export default function Sidebar() {
 
       <aside className="sidebar">
 
-        {/* ── Store logo — click to open POS switcher ── */}
+        {/* Store logo */}
         <div className="sidebar-logo" style={{ cursor: "pointer" }} onClick={() => setSwitcherOpen(true)}>
           <div className="sidebar-logo-mark">
             {user.store_name?.charAt(0).toUpperCase() ?? "P"}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <span className="sidebar-logo-name">
-              {(user.store_name?.charAt(0).toUpperCase() ?? "") +
-               (user.store_name?.slice(1).toLowerCase() ?? "")}
+              {(user.store_name?.charAt(0).toUpperCase() ?? "") + (user.store_name?.slice(1).toLowerCase() ?? "")}
             </span>
             {posMeta && (
               <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 1, display: "flex", alignItems: "center", gap: 4 }}>
@@ -578,97 +526,51 @@ export default function Sidebar() {
             )}
           </div>
           <div style={{ flexShrink: 0, color: "rgba(255,255,255,0.25)" }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d={iconPaths.chevron} />
-            </svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d={iconPaths.chevron} /></svg>
           </div>
         </div>
 
-        {/* ── Plan badge ── */}
         <PlanBadge plan={userPlan} />
 
-        {/* ── Nav sections ── */}
-        {sections.map(section => (
-          <div key={section.title}>
-            <div className="sidebar-section">{section.title}</div>
-            {section.items.map(({ href, icon, label }) => {
-              const locked  = isRouteLocked(href, userPlan);
-              const reqPlan = requiredPlan(href);
-
-              if (locked) {
-                return (
-                  <div key={href}
-                    onClick={() => router.push("/admin/dashboard?upgrade=true")}
-                    title={`Requires ${reqPlan ? planLabel(reqPlan) : "higher"} plan — click to upgrade`}
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.55rem 0.85rem", borderRadius: 8, margin: "1px 0.75rem", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.28)", cursor: "pointer", transition: "background 0.15s", userSelect: "none" }}
-                    onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)"}
-                    onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = "transparent"}
-                  >
-                    <span style={{ opacity: 0.4 }}><Icon type={icon} /></span>
-                    <span style={{ flex: 1 }}>{label}</span>
-                    <LockBadge plan={reqPlan ? planLabel(reqPlan) : "Pro"} />
-                  </div>
-                );
-              }
-
-              return (
-                <Link key={href} href={href} className={`nav-item ${isActive(href) ? "active" : ""}`}>
-                  <Icon type={icon} />
-                  {label}
-                  {href === "/admin/orders" && pendingOrders > 0 && (
-                    <span className="nav-badge">{pendingOrders > 99 ? "99+" : pendingOrders}</span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
+        {/* Collapsible nav sections */}
+        {sections.map((section, idx) => (
+          <NavSection
+            key={section.title}
+            section={section}
+            userPlan={userPlan}
+            isActive={isActive}
+            pendingOrders={pendingOrders}
+            router={router}
+            initialOpen={idx === 0}   
+          />
         ))}
 
-        {/* ── Switch POS Type button ── */}
+        {/* Switch POS Type */}
         <div style={{ padding: "0 0.75rem", marginTop: "0.5rem" }}>
           <button onClick={() => setSwitcherOpen(true)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "0.6rem 0.85rem", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: 500, transition: "all 0.15s" }}
             onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.85)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.5)"; }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d={iconPaths.switch} />
-            </svg>
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.5)"; }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={iconPaths.switch} /></svg>
             {switching ? "Switching…" : "Switch POS Type"}
-            <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", opacity: 0.6 }}>
-              <Icon type={posMeta?.svgIcon ?? "cog"} />
-            </span>
+            <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", opacity: 0.6 }}><Icon type={posMeta?.svgIcon ?? "cog"} /></span>
           </button>
         </div>
 
-        {/* ── Footer / user info ── */}
+        {/* Footer */}
         <div className="sidebar-footer">
-
-        {/* ── Subscription status ── */}
-        <Link href="/admin/subscription" style={{
-  display: "flex", alignItems: "center", gap: 8,
-  padding: "0.5rem 0.85rem", marginBottom: "0.5rem",
-  background: "rgba(234,88,12,0.08)",
-  border: "1px solid rgba(234,88,12,0.2)",
-  borderRadius: 8, textDecoration: "none",
-  cursor: "pointer", transition: "all 0.15s",
-}}>
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-    stroke="#f97316" strokeWidth="2" strokeLinecap="round">
-    <path d="M1 4h22v16H1zM1 10h22" />
-  </svg>
-  <div style={{ flex: 1 }}>
-    <div style={{ fontSize: 11, fontWeight: 600, color: "#f97316" }}>
-      Subscription
-    </div>
-    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginTop: 1 }}>
-      Manage & view payments
-    </div>
-  </div>
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-    stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round">
-    <path d="M9 18l6-6-6-6" />
-  </svg> 
-        </Link>
+          <Link href="/admin/subscription" style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "0.5rem 0.85rem", marginBottom: "0.5rem",
+            background: "rgba(234,88,12,0.08)", border: "1px solid rgba(234,88,12,0.2)",
+            borderRadius: 8, textDecoration: "none", cursor: "pointer", transition: "all 0.15s",
+          }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round"><path d="M1 4h22v16H1zM1 10h22" /></svg>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#f97316" }}>Subscription</div>
+              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginTop: 1 }}>Manage &amp; view payments</div>
+            </div>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
+          </Link>
 
           <div className="sidebar-user">
             <div className="sidebar-avatar">{getInitials(user.full_name)}</div>
@@ -679,14 +581,13 @@ export default function Sidebar() {
             <button onClick={() => setLogoutConfirm(true)} title="Sign out"
               style={{ background: "none", border: "none", cursor: "pointer", padding: 4, borderRadius: 5, color: "rgba(255,255,255,0.4)", display: "flex", alignItems: "center", transition: "color 0.15s, background 0.15s", flexShrink: 0 }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#fff"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.4)"; (e.currentTarget as HTMLButtonElement).style.background = "none"; }}
-            >
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.4)"; (e.currentTarget as HTMLButtonElement).style.background = "none"; }}>
               <Icon type="logout" />
             </button>
           </div>
-        </div>  
+        </div>
 
       </aside>
     </>
-  ); 
+  );
 }
