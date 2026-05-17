@@ -171,15 +171,15 @@ function IconSpinner({ size = 14 }: { size?: number }) {
 // ─────────────────────────────────────────
 function StatusBadge({ status, daysLeft }: { status: SubStatus; daysLeft: number | null }) {
   const cfg = {
-    active:  { bg: "var(--color-background-success)", color: "var(--color-text-success)", dot: "var(--color-text-success)", label: daysLeft !== null ? `Active · ${daysLeft}d left` : "Active" },
-    expired: { bg: "var(--color-background-danger)",  color: "var(--color-text-danger)",  dot: "var(--color-text-danger)",  label: "Expired"        },
-    due:     { bg: "var(--color-background-warning)", color: "var(--color-text-warning)", dot: "var(--color-text-warning)", label: "Payment Due"    },
-    none:    { bg: "var(--color-background-secondary)", color: "var(--color-text-secondary)", dot: "var(--color-border-secondary)", label: "No Subscription" },
-  }[status];
+    active:  { backgroundColor: "#dcfce7", color: "#16a34a", borderColor: "#16a34a", label: daysLeft !== null ? `Active · ${daysLeft}d left` : "Active" },
+    expired: { backgroundColor: "#fee2e2", color: "#dc2626", borderColor: "#dc2626", label: "Expired"        },
+    due:     { backgroundColor: "#fef3c7", color: "#d97706", borderColor: "#d97706", label: "Payment Due"    },
+    none:    { backgroundColor: "#f3f4f6", color: "#4b5563", borderColor: "#d1d5db", label: "No Subscription" },
+}[status];
 
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, background: cfg.bg, borderRadius: 100, padding: "5px 13px", fontSize: 12, fontWeight: 500, color: cfg.color }}>
-      <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot, flexShrink: 0 }} />
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, background: cfg.backgroundColor, borderRadius: 100, padding: "5px 13px", fontSize: 12, fontWeight: 500, color: cfg.color }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.borderColor, flexShrink: 0 }} />
       {cfg.label}
     </span>
   );
@@ -187,19 +187,19 @@ function StatusBadge({ status, daysLeft }: { status: SubStatus; daysLeft: number
 
 function PaymentRow({ p }: { p: Payment }) {
   const s = {
-    success: { color: "var(--color-text-success)", bg: "var(--color-background-success)", label: "Paid"    },
-    failed:  { color: "var(--color-text-danger)",  bg: "var(--color-background-danger)",  label: "Failed"  },
-    pending: { color: "var(--color-text-warning)", bg: "var(--color-background-warning)", label: "Pending" },
+    success: { color: "#16a34a", bg: "#dcfce7", label: "Paid"    },
+    failed:  { color: "#dc2626", bg: "#fee2e2", label: "Failed"  },
+    pending: { color: "#d97706", bg: "#fef3c7", label: "Pending" },
   }[p.status];
 
   return (
-    <tr style={{ borderBottom: "0.5px solid var(--color-border-tertiary)" }}>
-      <td style={{ padding: "0.85rem 1.25rem" }}>
-        <div style={{ fontWeight: 500, color: "var(--color-text-primary)", fontSize: 13 }}>{formatDate(p.date)}</div>
-        <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 1, textTransform: "capitalize" }}>{p.period}</div>
-      </td>
-      <td style={{ padding: "0.85rem 1.25rem" }}>
-        <span style={{ fontSize: 12, color: "var(--color-text-secondary)", fontFamily: "monospace" }}>
+    <tr style={{ borderBottom: "0.5px solid #e5e7eb" }}>
+  <td style={{ padding: "0.85rem 1.25rem" }}>
+    <div style={{ fontWeight: 500, color: "#111827", fontSize: 13 }}>{formatDate(p.date)}</div>
+    <div style={{ fontSize: 11, color: "#4b5563", marginTop: 1, textTransform: "capitalize" }}>{p.period}</div>
+  </td>
+  <td style={{ padding: "0.85rem 1.25rem" }}>
+    <span style={{ fontSize: 12, color: "#4b5563", fontFamily: "monospace" }}>
           {p.mpesaReceipt ?? (p.checkoutRequestId ? `···${p.checkoutRequestId.slice(-6)}` : "—")}
         </span>
       </td>
@@ -335,13 +335,13 @@ export default function SubscriptionPage() {
 
   // ── Shared style tokens ──
   const card: React.CSSProperties = {
-    background: "var(--color-background-primary)",
-    border: "0.5px solid var(--color-border-tertiary)",
-    borderRadius: "var(--border-radius-lg)",
+    background: "#ffffff",
+    border: "0.5px solid #e5e7eb",
+    borderRadius: "8px",
     padding: "1.25rem 1.5rem",
   };
   const sectionLabel: React.CSSProperties = {
-    fontSize: 11, fontWeight: 500, color: "var(--color-text-secondary)",
+    fontSize: 11, fontWeight: 500, color: "#4b5563",
     textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 12,
   };
   const thStyle: React.CSSProperties = {
@@ -355,11 +355,12 @@ export default function SubscriptionPage() {
   return (
     <>
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        input::placeholder { color: var(--color-text-secondary); }
-        input:focus { outline: none; border-color: var(--color-border-primary) !important; }
-        * { box-sizing: border-box; }
-      `}</style>
+      @keyframes spin { to { transform: rotate(360deg); } }
+      input::placeholder { color: #9ca3af; }
+      input:focus { outline: none; border-color: #3b82f6 !important; }
+      * { box-sizing: border-box; }
+     `}</style>
+
 
       {/* ── Header ── */}
       <header className="header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -367,7 +368,7 @@ export default function SubscriptionPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div className="header-date">{dater}</div>
           {sub?.status === "active" && (
-            <span style={{ fontSize: 12, fontWeight: 500, background: "var(--color-background-success)", color: "var(--color-text-success)", border: "0.5px solid var(--color-border-success)", padding: "5px 13px", borderRadius: 100 }}>
+            <span style={{ fontSize: 12, fontWeight: 500, background: "#dcfce7", color: "#16a34a", border: "0.5px solid #bbf7d0", padding: "5px 13px", borderRadius: 100 }}>
               {activePeriod.label} Plan
             </span>
           )}
@@ -378,7 +379,7 @@ export default function SubscriptionPage() {
 
         {/* ── Loading ── */}
         {loading && (
-          <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "center", padding: "3rem", color: "var(--color-text-secondary)", fontSize: 13, gap: 10 }}>
+          <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "center", padding: "3rem", color: "#4b5563", fontSize: 13, gap: 10 }}>
             <IconSpinner size={18} />
             Loading subscription…
           </div>
@@ -388,9 +389,9 @@ export default function SubscriptionPage() {
         {!loading && fetchError && (
           <div style={{ ...card, padding: "3rem", textAlign: "center" }}>
             <IconWarning size={32} />
-            <div style={{ fontSize: 14, fontWeight: 500, color: "var(--color-text-danger)", margin: "12px 0 16px" }}>{fetchError}</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: "#dc2626", margin: "12px 0 16px" }}>{fetchError}</div>
             {adminUser?.id && (
-              <button onClick={fetchSub} style={{ padding: "8px 20px", background: "var(--color-text-primary)", border: "none", borderRadius: 8, color: "var(--color-background-primary)", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}>
+              <button onClick={fetchSub} style={{ padding: "8px 20px", background: "#3b82f6", border: "none", borderRadius: 8, color: "#ffffff", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}>
                 Retry
               </button>
             )}
@@ -407,8 +408,8 @@ export default function SubscriptionPage() {
                   <div style={sectionLabel}>Current status</div>
                   <StatusBadge status={sub?.status ?? "none"} daysLeft={sub?.daysLeft ?? null} />
                   {sub?.plan && (
-                    <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 8 }}>
-                      Plan: <strong style={{ color: "var(--color-text-primary)", fontWeight: 500 }}>{sub.plan}</strong>
+                    <div style={{ fontSize: 13, color: "#4b5563", marginTop: 8 }}>
+                      Plan: <strong style={{ color: "#1f2937", fontWeight: 500 }}>{sub.plan}</strong>
                       {sub.amount != null && <span style={{ marginLeft: 6 }}>· {fmt(Number(sub.amount))}</span>}
                     </div>
                   )}
@@ -453,16 +454,16 @@ export default function SubscriptionPage() {
             </div>
 
             {/* Tabs */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", overflow: "hidden" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", background: "#ffffff", border: "0.5px solid #e5e7eb", borderRadius: "8px", overflow: "hidden" }}>
               {(["renew", "history"] as const).map(t => (
                 <button key={t} onClick={() => setTab(t)} style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                   padding: "11px 16px",
-                  background: tab === t ? "var(--color-background-secondary)" : "transparent",
+                  background: tab === t ? "#f3f4f6" : "transparent",
                   border: "none",
-                  borderBottom: tab === t ? "2px solid var(--color-text-primary)" : "2px solid transparent",
+                  borderBottom: tab === t ? "2px solid #3b82f6" : "2px solid transparent",
                   cursor: "pointer", fontSize: 13, fontWeight: 500,
-                  color: tab === t ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                  color: tab === t ? "#1f2937" : "#4b5563",
                   fontFamily: "inherit", transition: "all 0.15s",
                 }}>
                   {t === "renew" ? <IconCreditCard size={15} /> : <IconReceipt size={15} />}
@@ -483,9 +484,9 @@ export default function SubscriptionPage() {
                       <button key={key} onClick={() => setPosType(key)} style={{
                         padding: "5px 13px", borderRadius: 100,
                         border: "0.5px solid",
-                        borderColor: posType === key ? "var(--color-border-primary)" : "var(--color-border-tertiary)",
-                        background: posType === key ? "var(--color-background-primary)" : "var(--color-background-secondary)",
-                        color: posType === key ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                        borderColor: posType === key ? "#3b82f6" : "#e5e7eb",
+                        background: posType === key ? "#ffffff" : "#f9fafb",
+                        color: posType === key ? "#111827" : "#4b5563",
                         fontWeight: posType === key ? 500 : 400,
                         fontSize: 12, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
                       }}>
@@ -496,88 +497,88 @@ export default function SubscriptionPage() {
                 </div>
 
                 {/* Plan chooser */}
-                <div style={card}>
-                  <div style={sectionLabel}>
-                    {sub?.status === "active" ? "Extend / change plan" : "Choose a plan"}
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {PERIODS.map(period => {
-                      const price    = getPeriodPrice(posType, period.id);
-                      const perMonth = Math.round(price / period.months);
-                      const isCur    = sub?.plan === period.id && sub?.status === "active";
-                      const isSel    = selectedPlan === period.id;
-                      return (
-                        <button key={period.id} onClick={() => setSelectedPlan(period.id)} style={{
-                          display: "flex", alignItems: "center",
-                          padding: "14px 16px",
-                          background: isSel ? "var(--color-background-secondary)" : "var(--color-background-primary)",
-                          border: `${isSel ? "1.5px" : "0.5px"} solid ${isSel ? "var(--color-border-primary)" : "var(--color-border-tertiary)"}`,
-                          borderRadius: "var(--border-radius-lg)", cursor: "pointer",
-                          fontFamily: "inherit", transition: "all 0.15s", textAlign: "left", gap: 14,
-                        }}>
-                          {/* Radio */}
-                          <div style={{ width: 17, height: 17, borderRadius: "50%", border: `2px solid ${isSel ? "var(--color-border-primary)" : "var(--color-border-secondary)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            {isSel && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--color-text-primary)" }} />}
-                          </div>
-                          {/* Labels */}
-                          <div style={{ flex: 1 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-                              <span style={{ fontSize: 14, fontWeight: 500, color: "var(--color-text-primary)" }}>{period.label}</span>
-                              {period.badge && (
-                                <span style={{ fontSize: 10, fontWeight: 500, color: "var(--color-text-warning)", background: "var(--color-background-warning)", border: "0.5px solid var(--color-border-warning)", padding: "2px 8px", borderRadius: 100, textTransform: "uppercase", letterSpacing: "0.3px" }}>
-                                  {period.badge}
-                                </span>
-                              )}
-                              {isCur && (
-                                <span style={{ fontSize: 10, fontWeight: 500, color: "var(--color-text-success)", background: "var(--color-background-success)", border: "0.5px solid var(--color-border-success)", padding: "2px 8px", borderRadius: 100, textTransform: "uppercase", letterSpacing: "0.3px" }}>
-                                  Current
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ display: "flex", gap: 10, marginTop: 3, flexWrap: "wrap" }}>
-                              <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{period.desc}</span>
-                              {period.saving && <span style={{ fontSize: 12, color: "var(--color-text-success)" }}>{period.saving}</span>}
-                            </div>
-                          </div>
-                          {/* Price */}
-                          <div style={{ textAlign: "right", flexShrink: 0 }}>
-                            <div style={{ fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)" }}>{fmt(price)}</div>
-                            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2 }}>≈ {fmt(perMonth)}/mo</div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+<div style={card}>
+  <div style={sectionLabel}>
+    {sub?.status === "active" ? "Extend / change plan" : "Choose a plan"}
+  </div>
+  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    {PERIODS.map(period => {
+      const price    = getPeriodPrice(posType, period.id);
+      const perMonth = Math.round(price / period.months);
+      const isCur    = sub?.plan === period.id && sub?.status === "active";
+      const isSel    = selectedPlan === period.id;
+      return (
+        <button key={period.id} onClick={() => setSelectedPlan(period.id)} style={{
+          display: "flex", alignItems: "center",
+          padding: "14px 16px",
+          background: isSel ? "#f9fafb" : "#ffffff",
+          border: `${isSel ? "1.5px" : "0.5px"} solid ${isSel ? "#3b82f6" : "#e5e7eb"}`,
+          borderRadius: "8px", cursor: "pointer",
+          fontFamily: "inherit", transition: "all 0.15s", textAlign: "left", gap: 14,
+        }}>
+          {/* Radio */}
+          <div style={{ width: 17, height: 17, borderRadius: "50%", border: `2px solid ${isSel ? "#3b82f6" : "#d1d5db"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            {isSel && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#111827" }} />}
+          </div>
+          {/* Labels */}
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 14, fontWeight: 500, color: "#111827" }}>{period.label}</span>
+              {period.badge && (
+                <span style={{ fontSize: 10, fontWeight: 500, color: "#d97706", background: "#fef3c7", border: "0.5px solid #fde68a", padding: "2px 8px", borderRadius: 100, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                  {period.badge}
+                </span>
+              )}
+              {isCur && (
+                <span style={{ fontSize: 10, fontWeight: 500, color: "#16a34a", background: "#dcfce7", border: "0.5px solid #bbf7d0", padding: "2px 8px", borderRadius: 100, textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                  Current
+                </span>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 3, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: "#4b5563" }}>{period.desc}</span>
+              {period.saving && <span style={{ fontSize: 12, color: "#16a34a" }}>{period.saving}</span>}
+            </div>
+          </div>
+          {/* Price */}
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 500, color: "#111827" }}>{fmt(price)}</div>
+            <div style={{ fontSize: 11, color: "#4b5563", marginTop: 2 }}>≈ {fmt(perMonth)}/mo</div>
+          </div>
+        </button>
+      );
+    })}
+  </div>
+</div>
 
                 {/* M-Pesa form */}
                 <div style={card}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: "var(--border-radius-md)", background: "var(--color-background-success)", border: "0.5px solid var(--color-border-success)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <IconPhone size={20} color="var(--color-text-success)" />
+                    <div style={{ width: 36, height: 36, borderRadius: "6px", background: "#dcfce7", border: "0.5px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <IconPhone size={20} color="#16a34a" />
                     </div>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>Pay via M-Pesa</div>
-                      <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>STK Push — you will get a prompt on your phone</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "#111827" }}>Pay via M-Pesa</div>
+                      <div style={{ fontSize: 12, color: "#4b5563" }}>STK Push — you will get a prompt on your phone</div>
                     </div>
                   </div>
 
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--color-text-secondary)", marginBottom: 5 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "#4b5563", marginBottom: 5 }}>
                     M-Pesa phone number
                   </label>
                   <input
                     type="tel" placeholder="e.g. 0712 345 678"
                     value={phone} onChange={e => setPhone(e.target.value)} disabled={stkSent}
-                    style={{ width: "100%", background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", borderRadius: 8, padding: "9px 12px", fontSize: 14, color: "var(--color-text-primary)", fontFamily: "inherit", marginBottom: 14, transition: "border-color 0.15s" }}
+                    style={{ width: "100%", background: "#f9fafb", border: "0.5px solid #d1d5db", borderRadius: 8, padding: "9px 12px", fontSize: 14, color: "#111827", fontFamily: "inherit", marginBottom: 14, transition: "border-color 0.15s" }}
                   />
 
                   {/* Order summary */}
-                  <div style={{ background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: 8, padding: "12px 14px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>{activePeriod.label} plan</span>
-                    <span style={{ fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)" }}>{fmt(activePrice)}</span>
+                  <div style={{ background: "#f9fafb", border: "0.5px solid #e5e7eb", borderRadius: 8, padding: "12px 14px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 13, color: "#4b5563" }}>{activePeriod.label} plan</span>
+                    <span style={{ fontSize: 15, fontWeight: 500, color: "#111827" }}>{fmt(activePrice)}</span>
                   </div>
                   {isCurrentPlan && sub?.paidUntil && (
-                    <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, color: "#4b5563", marginBottom: 14 }}>
                       Will extend your subscription beyond {formatDate(sub.paidUntil)}
                     </div>
                   )}
@@ -587,9 +588,9 @@ export default function SubscriptionPage() {
                     disabled={paying || stkSent || !phone}
                     style={{
                       width: "100%", padding: "10px",
-                      background: paying || stkSent || !phone ? "var(--color-background-secondary)" : "var(--color-text-primary)",
+                      background: paying || stkSent || !phone ? "#f9fafb" : "#111827",
                       border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500,
-                      color: paying || stkSent || !phone ? "var(--color-text-secondary)" : "var(--color-background-primary)",
+                      color: paying || stkSent || !phone ? "#4b5563" : "#ffffff",
                       cursor: paying || stkSent || !phone ? "not-allowed" : "pointer",
                       fontFamily: "inherit", transition: "all 0.15s",
                       display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
@@ -607,7 +608,7 @@ export default function SubscriptionPage() {
                   </button>
 
                   {stkSent && !polling && (
-                    <button onClick={() => { setStkSent(false); setMsg(null); }} style={{ width: "100%", marginTop: 8, padding: "9px", background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-secondary)", borderRadius: 8, fontSize: 13, color: "var(--color-text-secondary)", cursor: "pointer", fontFamily: "inherit" }}>
+                    <button onClick={() => { setStkSent(false); setMsg(null); }} style={{ width: "100%", marginTop: 8, padding: "9px", background: "#ffffff", border: "0.5px solid #d1d5db", borderRadius: 8, fontSize: 13, color: "#4b5563", cursor: "pointer", fontFamily: "inherit" }}>
                       Try again
                     </button>
                   )}
@@ -617,21 +618,22 @@ export default function SubscriptionPage() {
                 {msg && (
                   <div style={{
                     padding: "12px 16px", borderRadius: 8,
-                    background: msg.type === "success" ? "var(--color-background-success)" : "var(--color-background-danger)",
-                    border: `0.5px solid ${msg.type === "success" ? "var(--color-border-success)" : "var(--color-border-danger)"}`,
-                    fontSize: 13, color: msg.type === "success" ? "var(--color-text-success)" : "var(--color-text-danger)",
+                    background: msg.type === "success" ? "#dcfce7" : "#fee2e2",
+                    border: `0.5px solid ${msg.type === "success" ? "#bbf7d0" : "#fecaca"}`,
+                    fontSize: 13, color: msg.type === "success" ? "#16a34a" : "#dc2626",
                     display: "flex", alignItems: "flex-start", gap: 8,
                   }}>
                     {msg.type === "success" ? <IconCheck size={15} /> : <IconWarning size={15} />}
                     {msg.text}
                   </div>
                 )}
+
               </div>
             )}
 
             {/* ══ HISTORY TAB ══ */}
             {tab === "history" && (
-              <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", overflow: "hidden" }}>
+              <div style={{ background: "#ffffff", border: "0.5px solid #e5e7eb", borderRadius: "8px", overflow: "hidden" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr>
@@ -645,11 +647,11 @@ export default function SubscriptionPage() {
                       sub.payments.map(p => <PaymentRow key={p.id} p={p} />)
                     ) : (
                       <tr>
-                        <td colSpan={4} style={{ padding: "3rem", textAlign: "center", color: "var(--color-text-secondary)", fontSize: 13 }}>
+                        <td colSpan={4} style={{ padding: "3rem", textAlign: "center", color: "#4b5563", fontSize: 13 }}>
                           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
                             <IconReceipt size={32} />
                             No payments yet. Your history will appear here.
-                            <button onClick={() => setTab("renew")} style={{ padding: "7px 18px", background: "var(--color-background-secondary)", border: "0.5px solid var(--color-border-secondary)", borderRadius: 7, fontSize: 12, color: "var(--color-text-primary)", cursor: "pointer", fontFamily: "inherit" }}>
+                            <button onClick={() => setTab("renew")} style={{ padding: "7px 18px", background: "#f9fafb", border: "0.5px solid #d1d5db", borderRadius: 7, fontSize: 12, color: "#111827", cursor: "pointer", fontFamily: "inherit" }}>
                               Make your first payment
                             </button>
                           </div>
@@ -659,12 +661,13 @@ export default function SubscriptionPage() {
                   </tbody>
                 </table>
                 {!!sub?.payments?.length && (
-                  <div style={{ padding: "0.75rem 1.25rem", borderTop: "0.5px solid var(--color-border-tertiary)", fontSize: 12, color: "var(--color-text-secondary)" }}>
+                  <div style={{ padding: "0.75rem 1.25rem", borderTop: "0.5px solid #e5e7eb", fontSize: 12, color: "#4b5563" }}>
                     Showing {sub.payments.length} transaction{sub.payments.length !== 1 ? "s" : ""}
                   </div>
                 )}
               </div>
             )}
+
           </>
         )}
       </main>
