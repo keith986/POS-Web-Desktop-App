@@ -362,7 +362,7 @@ export default function SubscriptionPage() {
       `}</style>
 
       {/* ── Header ── */}
-      <header className="header">
+      <header className="header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div className="header-title">Subscription</div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div className="header-date">{dater}</div>
