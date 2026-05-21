@@ -4,15 +4,16 @@ import bcrypt from "bcryptjs";
 import { RowDataPacket } from "mysql2";
 
 interface UserRow extends RowDataPacket {
-  id:         string;
-  full_name:  string;
-  email:      string;
-  password:   string;
-  role:       "admin" | "staff" | "client";
-  store_name: string | null;
-  domain:     string | null;
-  pos_type:   string | null;
-  created_at: string;
+  id:               string;
+  full_name:        string;
+  email:            string;
+  password:         string;
+  role:             "admin" | "staff" | "client";
+  store_name:       string | null;
+  domain:           string | null;
+  pos_type:         string | null;
+  subdomain_status: string | null;
+  created_at:       string;
 }
 
 interface StaffRow extends RowDataPacket {
@@ -29,9 +30,13 @@ interface StaffRow extends RowDataPacket {
 
 interface SubRow extends RowDataPacket {
   status: string;
+  plan:   string;
 }
 
-// Add this helper function near the top of the file, before the POST handler
+interface TxRow extends RowDataPacket {
+  plan: string;
+}
+
 async function logLoginNotification(
   pool: Awaited<ReturnType<typeof getPool>>,
   adminId: string,
@@ -51,10 +56,36 @@ async function logLoginNotification(
   const message = `${loginName} (${email}) signed in from IP ${ip}`;
 
   await pool.query(
-    `INSERT INTO notifications (admin_id, type, title, message)
-     VALUES (?, 'login', ?, ?)`,
+    `INSERT INTO notifications (admin_id, type, title, message) VALUES (?, 'login', ?, ?)`,
     [adminId, title, message]
   );
+}
+
+/**
+ * Returns true when the admin has a valid, paid subscription.
+ * Checks the subscriptions table first, then falls back to a completed
+ * mpesa_transactions row — matching the same logic used in the admin login path.
+ */
+async function adminHasActivePlan(
+  pool: Awaited<ReturnType<typeof getPool>>,
+  adminId: string
+): Promise<boolean> {
+  // 1. Active subscription row
+  const [subRows] = await pool.query<SubRow[]>(
+    "SELECT status, plan FROM subscriptions WHERE user_id = ? LIMIT 1",
+    [adminId]
+  );
+  if (subRows.some(s => s.status === "active")) return true;
+
+  // 2. Completed M-Pesa transaction (fallback for admins who paid via M-Pesa
+  //    but don't yet have a subscriptions row)
+  const [txRows] = await pool.query<TxRow[]>(
+    `SELECT plan FROM mpesa_transactions
+     WHERE user_id = ? AND status = 'completed'
+     ORDER BY created_at DESC LIMIT 1`,
+    [adminId]
+  );
+  return txRows.length > 0;
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -95,66 +126,64 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       if (!match)
         return NextResponse.json({ error: "Invalid password" }, { status: 401 });
 
-      // ── Super admin bypass ──
-if (user.email === "admin@postore.app" && user.role === "admin") {
-  const { password: _, ...safeUser } = user;
-  return NextResponse.json({
-    success: true,
-    user: { ...safeUser, payment_status: "active", is_super_admin: true },
-  });
-}
+      // Super admin bypass
+      if (user.email === "admin@postore.app" && user.role === "admin") {
+        const { password: _, ...safeUser } = user;
+        return NextResponse.json({
+          success: true,
+          user: { ...safeUser, payment_status: "active", is_super_admin: true },
+        });
+      }
 
-if (user.subdomain_status === "inactive") {
-    return NextResponse.json(
-      { error: "Your account has been deactivated. Please contact support." },
-      { status: 403 }
-    );
-}
+      if (user.subdomain_status === "inactive") {
+        return NextResponse.json(
+          { error: "Your account has been deactivated. Please contact support." },
+          { status: 403 }
+        );
+      }
 
-      // ── Check subscription for admin ──
-  if (user.role === "admin") {
-        // Check active subscription first
-  const [subRows] = await pool.query<SubRow[]>(
-    "SELECT status, plan FROM subscriptions WHERE user_id = ? LIMIT 1",
-    [user.id]
-  ) as [{ status: string; plan: string }[], unknown];
+      // Check subscription for admin
+      if (user.role === "admin") {
+        const [subRows] = await pool.query<SubRow[]>(
+          "SELECT status, plan FROM subscriptions WHERE user_id = ? LIMIT 1",
+          [user.id]
+        );
+        const activeSub = subRows.find(s => s.status === "active");
 
-  const activeSub = subRows.find(s => s.status === "active");
+        if (activeSub) {
+          const { password: _, ...safeUser } = user;
+          await logLoginNotification(pool, user.id, user.full_name, "admin", user.email, request);
+          return NextResponse.json({
+            success: true,
+            user: { ...safeUser, plan: activeSub.plan, payment_status: "active" },
+          });
+        }
 
-  if (activeSub) {
-    const { password: _, ...safeUser } = user;
-    await logLoginNotification(pool, user.id, user.full_name, "admin", user.email, request);
-    return NextResponse.json({
-      success: true,
-      user: { ...safeUser, plan: activeSub.plan, payment_status: "active" },
-    });
-  }
+        // Fall back to completed M-Pesa transaction
+        const [txRows] = await pool.query<TxRow[]>(
+          `SELECT plan FROM mpesa_transactions
+           WHERE user_id = ? AND status = 'completed'
+           ORDER BY created_at DESC LIMIT 1`,
+          [user.id]
+        );
 
-   // Fall back to completed mpesa transaction
-  const [txRows] = await pool.query(
-    `SELECT plan FROM mpesa_transactions
-     WHERE user_id = ? AND status = 'completed'
-     ORDER BY created_at DESC LIMIT 1`,
-    [user.id]
-  ) as [{ plan: string }[], unknown];
+        if (txRows.length > 0) {
+          const { password: _, ...safeUser } = user;
+          await logLoginNotification(pool, user.id, user.full_name, "admin", user.email, request);
+          return NextResponse.json({
+            success: true,
+            user: { ...safeUser, plan: txRows[0].plan, payment_status: "active" },
+          });
+        }
 
-  if (txRows.length > 0) {
-    const { password: _, ...safeUser } = user;
-    await logLoginNotification(pool, user.id, user.full_name, "admin", user.email, request);
-    return NextResponse.json({
-      success: true,
-      user: { ...safeUser, plan: txRows[0].plan, payment_status: "active" },
-    });
-  }
-
-  // No valid payment — block
-  const { password: _, ...safeUser } = user;
-  await logLoginNotification(pool, user.id, user.full_name, "admin", user.email, request);
-  return NextResponse.json({
-    user: { ...safeUser, payment_status: "unpaid", plan: null },
-  }, { status: 402 });
-
-  }
+        // No valid payment — block
+        const { password: _, ...safeUser } = user;
+        await logLoginNotification(pool, user.id, user.full_name, "admin", user.email, request);
+        return NextResponse.json(
+          { user: { ...safeUser, payment_status: "unpaid", plan: null } },
+          { status: 402 }
+        );
+      }
 
       const { password: _, ...safeUser } = user;
       await logLoginNotification(pool, user.id, user.full_name, "admin", user.email, request);
@@ -163,9 +192,9 @@ if (user.subdomain_status === "inactive") {
 
     /* ── 2. Check staff table ── */
     const [staffRows] = await pool.query<StaffRow[]>(
-      `SELECT s.*, u.domain 
-       FROM staff s 
-       JOIN users u ON s.admin_id = u.id 
+      `SELECT s.*, u.domain
+       FROM staff s
+       JOIN users u ON s.admin_id = u.id
        WHERE s.email = ? LIMIT 1`,
       [email]
     );
@@ -185,15 +214,10 @@ if (user.subdomain_status === "inactive") {
           { status: 403 }
         );
 
-      // ── Check admin's subscription for staff ──
-      const [subRows] = await pool.query<SubRow[]>(
-        "SELECT status FROM subscriptions WHERE user_id = ? LIMIT 1",
-        [staff.admin_id]
-      );
-
-      const hasActiveSub = subRows.length > 0 && subRows[0].status === "active";
-
-      if (!hasActiveSub)
+      // Check admin's subscription — mirrors the admin payment logic:
+      // subscriptions table first, then mpesa_transactions fallback.
+      const adminPaid = await adminHasActivePlan(pool, staff.admin_id);
+      if (!adminPaid)
         return NextResponse.json(
           { error: "Your store subscription has expired. Contact your administrator." },
           { status: 402 }
