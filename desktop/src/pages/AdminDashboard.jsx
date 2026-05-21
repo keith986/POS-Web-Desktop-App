@@ -7,45 +7,119 @@ import Orders from "./admin/Orders";
 import Reports from "./admin/Reports";
 import Settings from "./admin/Settings";
 import Discounts from "./admin/Discounts";
-import Returns from "./admin/Returns";
 import { SettingsIcon } from "../components/Icons";
 import UpdateBanner from "../components/UpdateBanner";
 import Subscription from "./admin/Subscription";
 
+/* ───────────────── ICONS ───────────────── */
+
 const SunIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <circle cx="12" cy="12" r="5"/>
-    <line x1="12" y1="1" x2="12" y2="3"/>
-    <line x1="12" y1="21" x2="12" y2="23"/>
-    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-    <line x1="1" y1="12" x2="3" y2="12"/>
-    <line x1="21" y1="12" x2="23" y2="12"/>
-    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    <circle cx="12" cy="12" r="5" />
+    <line x1="12" y1="1" x2="12" y2="3" />
+    <line x1="12" y1="21" x2="12" y2="23" />
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+    <line x1="1" y1="12" x2="3" y2="12" />
+    <line x1="21" y1="12" x2="23" y2="12" />
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
   </svg>
 );
 
 const MoonIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
   </svg>
 );
 
-// ── Subscription icon as a component (matches svgIcon pattern) ──
 const SubscriptionIcon = ({ size = 16 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="1.8"
-    strokeLinecap="round" strokeLinejoin="round">
-    <rect x="1" y="4" width="22" height="16" rx="2"/>
-    <path d="M1 10h22"/>
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="1" y="4" width="22" height="16" rx="2" />
+    <path d="M1 10h22" />
   </svg>
 );
+
+/* ───── NEW SVG ICONS REPLACING EMOJIS ───── */
+
+const CloudIcon = ({ size = 40 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#0f9d7e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25" />
+    <path d="M8 17h12" />
+  </svg>
+);
+
+const BoltIcon = ({ size = 40 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#f5b942" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </svg>
+);
+
+const TeamIcon = ({ size = 40 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#4f8cff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
+const CheckIcon = ({ size = 15 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#0f9d7e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const CloseIcon = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const SyncIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10" />
+    <polyline points="1 20 1 14 7 14" />
+    <path d="M3.51 9a9 9 0 0114.13-3.36L23 10" />
+    <path d="M20.49 15a9 9 0 01-14.13 3.36L1 14" />
+  </svg>
+);
+
+const SuccessIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#0f9d7e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const ErrorIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#ff5c5c" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const HexagonIcon = ({ size = 22 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polygon points="7 2 17 2 22 12 17 22 7 22 2 12" />
+  </svg>
+);
+
+/* ───────────────── ADS ───────────────── */
 
 const ADS = [
   {
     badge: "POStore Web",
-    icon: "☁️",
+    icon: <CloudIcon />,
     tagline: "Your store, always online",
     title: "Sync to Cloud",
     desc: "Sign in once and all your offline data syncs online. Access your dashboard from any device, any browser.",
@@ -54,7 +128,7 @@ const ADS = [
   },
   {
     badge: "No Setup",
-    icon: "⚡",
+    icon: <BoltIcon />,
     tagline: "Zero installs, zero updates",
     title: "Works Everywhere",
     desc: "The web app runs on phones, tablets, and laptops. No downloads, no version mismatches — just open and go.",
@@ -63,7 +137,7 @@ const ADS = [
   },
   {
     badge: "Real-time",
-    icon: "👥",
+    icon: <TeamIcon />,
     tagline: "Your whole team, one view",
     title: "Collaborate Live",
     desc: "Multiple staff members can log in simultaneously. Orders, products, and reports stay in sync for everyone.",
@@ -71,6 +145,50 @@ const ADS = [
     cta: "Invite Your Team →",
   },
 ];
+
+/* ───────────────── NAV ICONS ───────────────── */
+
+const OverviewIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M3 13h8V3H3zM13 21h8v-6h-8zM13 3v8h8V3zM3 21h8v-6H3z"/>
+  </svg>
+);
+
+const OrdersIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="4" width="18" height="16" rx="2"/>
+    <line x1="3" y1="10" x2="21" y2="10"/>
+  </svg>
+);
+
+const ProductsIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+  </svg>
+);
+
+const StaffIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+  </svg>
+);
+
+const ReportsIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="18" y1="20" x2="18" y2="10"/>
+    <line x1="12" y1="20" x2="12" y2="4"/>
+    <line x1="6" y1="20" x2="6" y2="14"/>
+  </svg>
+);
+
+const DiscountsIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="7.5" cy="7.5" r="1.5"/>
+    <circle cx="16.5" cy="16.5" r="1.5"/>
+    <line x1="18" y1="6" x2="6" y2="18"/>
+  </svg>
+);
 
 function AdCarousel() {
   const [current, setCurrent] = useState(0);
@@ -113,7 +231,7 @@ function AdCarousel() {
         <button onClick={() => setVisible(false)} style={{
           position: "absolute", top: 10, right: 14, background: "none",
           border: "none", color: "#555", fontSize: 18, cursor: "pointer", zIndex: 10,
-        }}>✕</button>
+        }}> <CloseIcon /></button>
 
         <div style={{ display: "flex", minHeight: 260 }}>
           <div style={{
@@ -141,7 +259,7 @@ function AdCarousel() {
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {ad.checks.map((c) => (
                   <div key={c} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#ccc" }}>
-                    <span style={{ color: "#0f9d7e", fontWeight: 700, fontSize: 15 }}>✓</span> {c}
+                    <span style={{ color: "#0f9d7e", fontWeight: 700, fontSize: 15 }}><CheckIcon /></span> {c}
                   </div>
                 ))}
               </div>
@@ -215,23 +333,22 @@ export default function AdminDashboard({ user, onLogout }) {
 
   // ── Nav items — Subscription added before Settings ──
   const navItems = [
-    { to: "/admin/overview",      label: "Overview",      icon: "◈"  },
-    { to: "/admin/orders",        label: "Orders",        icon: "◫"  },
-    { to: "/admin/products",      label: "Products",      icon: "◧"  },
-    { to: "/admin/staff",         label: "Staff",         icon: "◉"  },
-    { to: "/admin/reports",       label: "Reports",       icon: "◎"  },
-    { to: "/admin/discounts",     label: "Discounts",     icon: "◉"  },
-    { to: "/admin/returns",       label: "Returns",       icon: "◎"  },
-    { to: "/admin/subscription",  label: "Subscription",  icon: null, svgIcon: SubscriptionIcon },
-    { to: "/admin/settings",      label: "Settings",      icon: null, svgIcon: SettingsIcon     },
-  ];
+  { to: "/admin/overview", label: "Overview", svgIcon: OverviewIcon },
+  { to: "/admin/orders", label: "Orders", svgIcon: OrdersIcon },
+  { to: "/admin/products", label: "Products", svgIcon: ProductsIcon },
+  { to: "/admin/staff", label: "Staff", svgIcon: StaffIcon },
+  { to: "/admin/reports", label: "Reports", svgIcon: ReportsIcon },
+  { to: "/admin/discounts", label: "Discounts", svgIcon: DiscountsIcon },
+  { to: "/admin/subscription", label: "Subscription", svgIcon: SubscriptionIcon },
+  { to: "/admin/settings", label: "Settings", svgIcon: SettingsIcon },
+];
 
   return (
     <div className="app-layout">
       <UpdateBanner />
       <aside className="sidebar">
         <div className="sidebar-header">
-          <span className="sidebar-logo">⬡</span>
+          <span className="sidebar-logo"><HexagonIcon /></span>
           <div>
             <div className="sidebar-brand">POStore</div>
             <div className="sidebar-role">Admin</div>
@@ -262,9 +379,10 @@ export default function AdminDashboard({ user, onLogout }) {
               onClick={handleSync}
               disabled={syncStatus === "syncing"}
             >
-              {syncStatus === "syncing" ? "⟳ Syncing..." :
-               syncStatus === "success" ? "✓ Synced" :
-               syncStatus === "error" ? "✗ Failed" : "⟳ Sync"}
+              {syncStatus === "syncing" && <><SyncIcon /> Syncing...</>}
+              {syncStatus === "success" && <><SuccessIcon /> Synced</>}
+              {syncStatus === "error" && <><ErrorIcon /> Failed</>}
+              {syncStatus === "idle" && <><SyncIcon /> Sync</>}
             </button>
             {lastSync && <span className="sync-time">{lastSync}</span>}
           </div>
@@ -304,7 +422,6 @@ export default function AdminDashboard({ user, onLogout }) {
           <Route path="reports"       element={<Reports />} />
           <Route path="subscription"  element={<Subscription />} />
           <Route path="discounts"     element={<Discounts />} />
-          <Route path="returns"       element={<Returns />} />
           <Route path="settings"      element={<Settings user={user} onLogout={onLogout} />} />
           <Route path="*"             element={<Navigate to="overview" replace />} />
         </Routes>

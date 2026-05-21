@@ -119,7 +119,12 @@ export default function Subscription() {
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(null);
   const [tab,          setTab]          = useState("overview"); // "overview" | "history"
-  const [isOnline,     setIsOnline]     = useState(navigator.onLine);
+  //const [isOnline,     setIsOnline]     = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(() => {
+  return typeof navigator !== "undefined"
+    ? navigator.onLine
+    : true;
+  });
   const [lastSync,     setLastSync]     = useState(() => localStorage.getItem("sub_last_sync") ?? null);
 
   // Track online status
@@ -136,7 +141,7 @@ export default function Subscription() {
     try {
       const cached = localStorage.getItem("sub_data");
       if (cached) {
-        setSub(JSON.parse(cached));
+        setSub(JSON.parse(cached)); 
         setLoading(false);
         return true;
       }
@@ -144,6 +149,7 @@ export default function Subscription() {
     return false;
   }, []);
 
+  /*
   const fetchFromServer = useCallback(async () => {
     if (!user?.id) return;
     try {
@@ -166,7 +172,47 @@ export default function Subscription() {
       setLoading(false);
     }
   }, [user?.id, sub]);
+ */
 
+  const fetchFromServer = useCallback(async () => {
+  // IMPORTANT FIX
+  if (!user?.id) {
+    setLoading(false);
+    setError("User not found. Please log in again.");
+    return;
+  }
+
+  try {
+    const API_BASE =
+      import.meta.env?.VITE_API_URL ??
+      "https://detox.upendoapps.com";
+
+    const res = await fetch(
+      `${API_BASE}/api/subscription/status?admin_id=${user.id}`
+    );
+
+    if (!res.ok) {
+      throw new Error(`Server error ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    localStorage.setItem("sub_data", JSON.stringify(data));
+
+    const now = new Date().toISOString();
+
+    localStorage.setItem("sub_last_sync", now);
+
+    setLastSync(now);
+    setSub(data);
+  } catch (e) {
+    setError(e.message || "Failed to load subscription");
+  } finally {
+    setLoading(false);
+  }
+  }, [user?.id]);
+  
+  /*
   useEffect(() => {
     const hasCached = loadCached();
     if (!hasCached) setLoading(true);
@@ -177,6 +223,31 @@ export default function Subscription() {
       setError("You are offline. Connect to the internet to load your subscription.");
     }
   }, [loadCached, fetchFromServer]);
+  */
+
+  useEffect(() => {
+  // Missing user
+  if (!user?.id) {
+    setLoading(false);
+    setError("No logged in user found.");
+    return;
+  }
+
+  const hasCached = loadCached();
+
+  if (!hasCached) {
+    setLoading(true);
+  }
+
+  if (navigator.onLine) {
+    fetchFromServer();
+  } else if (!hasCached) {
+    setLoading(false);
+    setError(
+      "You are offline. Connect to the internet to load your subscription."
+    );
+  }
+  }, [user?.id, loadCached, fetchFromServer]);
 
   // Manual sync
   const handleSync = () => {
@@ -294,7 +365,16 @@ export default function Subscription() {
       {!loading && error && (
         <div style={{ ...card, textAlign: "center", padding: "3rem" }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>
-            {isOnline ? "⚠️" : "📡"}
+            {isOnline ? 
+            <svg className="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+            <path fillRule="evenodd" d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z" clipRule="evenodd"/>
+            </svg>
+            : 
+            <svg className="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M13.383 4.076a6.5 6.5 0 0 0-6.887 3.95A5 5 0 0 0 7 18h3v-4a2 2 0 0 1-1.414-3.414l2-2a2 2 0 0 1 2.828 0l2 2A2 2 0 0 1 14 14v4h4a4 4 0 0 0 .988-7.876 6.5 6.5 0 0 0-5.605-6.048Z"/>
+            <path d="M12.707 9.293a1 1 0 0 0-1.414 0l-2 2a1 1 0 1 0 1.414 1.414l.293-.293V19a1 1 0 1 0 2 0v-6.586l.293.293a1 1 0 0 0 1.414-1.414l-2-2Z"/>
+            </svg>
+            }
           </div>
           <div style={{ fontSize: 14, fontWeight: 500, color: "#ef4444", marginBottom: 8 }}>{error}</div>
           {isOnline && (
@@ -395,7 +475,12 @@ export default function Subscription() {
               {/* Offline notice */}
               {!isOnline && (
                 <div style={{ padding: "12px 16px", background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: 10, display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#f97316" }}>
-                  <span>📡</span>
+                  <span>
+                    <svg className="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M13.383 4.076a6.5 6.5 0 0 0-6.887 3.95A5 5 0 0 0 7 18h3v-4a2 2 0 0 1-1.414-3.414l2-2a2 2 0 0 1 2.828 0l2 2A2 2 0 0 1 14 14v4h4a4 4 0 0 0 .988-7.876 6.5 6.5 0 0 0-5.605-6.048Z"/>
+                    <path d="M12.707 9.293a1 1 0 0 0-1.414 0l-2 2a1 1 0 1 0 1.414 1.414l.293-.293V19a1 1 0 1 0 2 0v-6.586l.293.293a1 1 0 0 0 1.414-1.414l-2-2Z"/>
+                    </svg>
+                  </span>
                   <span>You are offline. Subscription data is from your last sync. Connect to the internet to refresh.</span>
                 </div>
               )}
@@ -404,7 +489,11 @@ export default function Subscription() {
               {(sub?.status === "expired" || sub?.status === "due" || sub?.status === "none") && (
                 <div style={{ padding: "14px 18px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 18 }}>⚠️</span>
+                    <span style={{ fontSize: 18 }}>
+                      <svg className="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                      <path fillRule="evenodd" d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z" clipRule="evenodd"/>
+                      </svg>
+                    </span>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: "#ef4444" }}>
                         {sub?.status === "none" ? "No active subscription" : "Your subscription has expired"}
@@ -431,7 +520,11 @@ export default function Subscription() {
               {sub?.status === "active" && sub.daysLeft != null && sub.daysLeft <= 7 && (
                 <div style={{ padding: "14px 18px", background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.25)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 18 }}>🔔</span>
+                    <span style={{ fontSize: 18 }}>
+                    <svg className="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M17.133 12.632v-1.8a5.407 5.407 0 0 0-4.154-5.262.955.955 0 0 0 .021-.106V3.1a1 1 0 0 0-2 0v2.364a.933.933 0 0 0 .021.106 5.406 5.406 0 0 0-4.154 5.262v1.8C6.867 15.018 5 15.614 5 16.807 5 17.4 5 18 5.538 18h12.924C19 18 19 17.4 19 16.807c0-1.193-1.867-1.789-1.867-4.175Zm-13.267-.8a1 1 0 0 1-1-1 9.424 9.424 0 0 1 2.517-6.391A1.001 1.001 0 1 1 6.854 5.8a7.43 7.43 0 0 0-1.988 5.037 1 1 0 0 1-1 .995Zm16.268 0a1 1 0 0 1-1-1A7.431 7.431 0 0 0 17.146 5.8a1 1 0 0 1 1.471-1.354 9.424 9.424 0 0 1 2.517 6.391 1 1 0 0 1-1 .995ZM8.823 19a3.453 3.453 0 0 0 6.354 0H8.823Z"/>
+                    </svg>
+                    </span>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: "#f97316" }}>Expiring soon</div>
                       <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
