@@ -384,14 +384,22 @@ export default function StaffDashboard() {
       const user = JSON.parse(stored);
       if (!user || user.role !== "staff") { window.location.href = "https://pos.upendoapps.com"; return; }
 
-      fetch(`/api/subscription/status?user_id=${user.admin_id}`)
-        .then(r => r.json())
-        .then(d => {
-          if (!d.active) { window.location.href = "/suspended"; return; }
-          setStaff(user);
-          setReady(true);
-        })
-        .catch(() => { setStaff(user); setReady(true); });
+    fetch(`/api/subscription/status?admin_id=${user.admin_id}`)
+     .then(r => r.json())
+     .then(d => {
+     if (d.status !== "active") { 
+       window.location.href = "/suspended"; 
+       return; 
+    }
+      setStaff(user);
+      setReady(true);
+    })
+    .catch(() => { 
+      // Network error — allow through
+      setStaff(user); 
+      setReady(true); 
+    });
+
     } catch {
       window.location.href = "https://pos.upendoapps.com";
     }
