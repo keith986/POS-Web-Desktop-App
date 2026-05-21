@@ -29,12 +29,14 @@ interface StaffRow extends RowDataPacket {
 }
 
 interface SubRow extends RowDataPacket {
-  status: string;
-  plan:   string;
+  status:           string;
+  plan:             string;
+  next_billing_date: string;
 }
 
 interface TxRow extends RowDataPacket {
-  plan: string;
+  plan:       string;
+  created_at: string;
 }
 
 async function logLoginNotification(
@@ -62,30 +64,78 @@ async function logLoginNotification(
 }
 
 /**
- * Returns true when the admin has a valid, paid subscription.
- * Checks the subscriptions table first, then falls back to a completed
- * mpesa_transactions row — matching the same logic used in the admin login path.
+ * Returns true when the admin has a valid, paid, non-expired subscription.
+ *
+ * Priority:
+ *  1. subscriptions row with status='active' AND next_billing_date in the future
+ *  2. subscriptions row expired BUT latest completed mpesa_transactions is within 30 days
+ *     → auto-heals the subscriptions row so future checks pass without this fallback
+ *  3. No subscriptions row but completed mpesa tx within 30 days
+ *     → same auto-heal
  */
 async function adminHasActivePlan(
   pool: Awaited<ReturnType<typeof getPool>>,
   adminId: string
 ): Promise<boolean> {
-  // 1. Active subscription row
+  const now = new Date();
+
+  // 1. Check subscriptions table
   const [subRows] = await pool.query<SubRow[]>(
-    "SELECT status, plan FROM subscriptions WHERE user_id = ? LIMIT 1",
+    "SELECT status, plan, next_billing_date FROM subscriptions WHERE user_id = ? LIMIT 1",
     [adminId]
   );
-  if (subRows.some(s => s.status === "active")) return true;
+  const sub = subRows[0] ?? null;
 
-  // 2. Completed M-Pesa transaction (fallback for admins who paid via M-Pesa
-  //    but don't yet have a subscriptions row)
+  if (sub) {
+    const endDate = new Date(sub.next_billing_date);
+    if (sub.status === "active" && endDate >= now) {
+      // Genuinely active — allow through
+      return true;
+    }
+  }
+
+  // 2. Fallback: check for a completed M-Pesa transaction within the last 30 days
   const [txRows] = await pool.query<TxRow[]>(
-    `SELECT plan FROM mpesa_transactions
+    `SELECT plan, created_at FROM mpesa_transactions
      WHERE user_id = ? AND status = 'completed'
      ORDER BY created_at DESC LIMIT 1`,
     [adminId]
   );
-  return txRows.length > 0;
+
+  if (txRows.length === 0) return false;
+
+  const txDate  = new Date(txRows[0].created_at);
+  const derived = new Date(txDate);
+  derived.setDate(derived.getDate() + 30);
+
+  if (derived < now) return false; // tx exists but payment period has also expired
+
+  // Payment is valid — auto-heal the subscriptions row so future logins
+  // don't need this fallback and the subscription page shows correctly
+  const paidUntil = derived.toISOString().split("T")[0];
+  const plan      = txRows[0].plan;
+
+  if (sub) {
+    // Update existing stale row
+    await pool.query(
+      `UPDATE subscriptions
+       SET status = 'active', plan = ?, next_billing_date = ?, updated_at = NOW()
+       WHERE user_id = ?`,
+      [plan, paidUntil, adminId]
+    );
+  } else {
+    // Insert missing row
+    await pool.query(
+      `INSERT INTO subscriptions (user_id, plan, status, amount, next_billing_date, created_at, updated_at)
+       VALUES (?, ?, 'active', 0, ?, NOW(), NOW())
+       ON DUPLICATE KEY UPDATE
+         status = 'active', plan = VALUES(plan),
+         next_billing_date = VALUES(next_billing_date), updated_at = NOW()`,
+      [adminId, plan, paidUntil]
+    );
+  }
+
+  return true;
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -145,10 +195,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       // Check subscription for admin
       if (user.role === "admin") {
         const [subRows] = await pool.query<SubRow[]>(
-          "SELECT status, plan FROM subscriptions WHERE user_id = ? LIMIT 1",
+          "SELECT status, plan, next_billing_date FROM subscriptions WHERE user_id = ? LIMIT 1",
           [user.id]
         );
-        const activeSub = subRows.find(s => s.status === "active");
+        const activeSub = subRows.find(s => {
+          if (s.status !== "active") return false;
+          return new Date(s.next_billing_date) >= new Date();
+        });
 
         if (activeSub) {
           const { password: _, ...safeUser } = user;
@@ -159,21 +212,36 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           });
         }
 
-        // Fall back to completed M-Pesa transaction
+        // Fall back to completed M-Pesa transaction within 30 days
         const [txRows] = await pool.query<TxRow[]>(
-          `SELECT plan FROM mpesa_transactions
+          `SELECT plan, created_at FROM mpesa_transactions
            WHERE user_id = ? AND status = 'completed'
            ORDER BY created_at DESC LIMIT 1`,
           [user.id]
         );
 
         if (txRows.length > 0) {
-          const { password: _, ...safeUser } = user;
-          await logLoginNotification(pool, user.id, user.full_name, "admin", user.email, request);
-          return NextResponse.json({
-            success: true,
-            user: { ...safeUser, plan: txRows[0].plan, payment_status: "active" },
-          });
+          const txDate  = new Date(txRows[0].created_at);
+          const derived = new Date(txDate);
+          derived.setDate(derived.getDate() + 30);
+
+          if (derived >= new Date()) {
+            // Auto-heal subscriptions row
+            const paidUntil = derived.toISOString().split("T")[0];
+            await pool.query(
+              `UPDATE subscriptions
+               SET status = 'active', plan = ?, next_billing_date = ?, updated_at = NOW()
+               WHERE user_id = ?`,
+              [txRows[0].plan, paidUntil, user.id]
+            );
+
+            const { password: _, ...safeUser } = user;
+            await logLoginNotification(pool, user.id, user.full_name, "admin", user.email, request);
+            return NextResponse.json({
+              success: true,
+              user: { ...safeUser, plan: txRows[0].plan, payment_status: "active" },
+            });
+          }
         }
 
         // No valid payment — block
@@ -214,8 +282,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           { status: 403 }
         );
 
-      // Check admin's subscription — mirrors the admin payment logic:
-      // subscriptions table first, then mpesa_transactions fallback.
+      // Check admin's subscription — checks date validity + auto-heals DB
       const adminPaid = await adminHasActivePlan(pool, staff.admin_id);
       if (!adminPaid)
         return NextResponse.json(
@@ -234,7 +301,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({
         success: true,
         user: { ...safeStaff, role: "staff", store_name: null },
-      });
+      });  
     }
 
     return NextResponse.json(
