@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
 // ─────────────────────────────────────────
-// TYPES  (exact same StoredUser as Staff/Sidebar)
+// TYPES
 // ─────────────────────────────────────────
 interface StoredUser {
   id:         string;
@@ -35,27 +35,30 @@ interface SubscriptionData {
   amount:    number | null;
   payments:  Payment[];
   daysLeft:  number | null;
-  subStatus?: string;
 }
 
 // ─────────────────────────────────────────
-// HELPERS — same as Staff page
+// HELPERS
 // ─────────────────────────────────────────
 function getStoredUser(): StoredUser | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem("user");
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+    return raw ? (JSON.parse(raw) as StoredUser) : null;
+  } catch {
+    return null;
+  }
 }
 
-function formatDate(iso: string) {
+function formatDate(iso: string): string {
   if (!iso) return "—";
   try {
     return new Date(iso).toLocaleDateString("en-GB", {
       day: "numeric", month: "short", year: "numeric",
     });
-  } catch { return "—"; }
+  } catch {
+    return "—";
+  }
 }
 
 function daysColor(days: number | null): string {
@@ -65,15 +68,18 @@ function daysColor(days: number | null): string {
   return "#dc2626";
 }
 
-function capitalize(s: string) {
+function capitalize(s: string): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
-// ─────────────────────────────────────────
-// PLAN MONTHS (for progress bar)
-// ─────────────────────────────────────────
-const PLAN_MONTHS: Record<string, number> = {
-  monthly: 1, quarterly: 3, yearly: 12,
+// Plan → approximate days (used for progress bar)
+const PLAN_DAYS: Record<string, number> = {
+  starter:    30,
+  pro:        30,
+  enterprise: 30,
+  monthly:    30,
+  quarterly:  90,
+  yearly:     365,
 };
 
 // ─────────────────────────────────────────
@@ -98,7 +104,11 @@ function StatusBadge({ status, daysLeft }: { status: SubStatus; daysLeft: number
   }[status];
 
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: cfg.bg, borderRadius: 100, padding: "5px 13px", fontSize: 12, fontWeight: 500, color: cfg.color }}>
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 6,
+      background: cfg.bg, borderRadius: 100, padding: "5px 13px",
+      fontSize: 12, fontWeight: 500, color: cfg.color,
+    }}>
       <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot }} />
       {cfg.label}
     </span>
@@ -115,8 +125,8 @@ function PaymentRow({ p }: { p: Payment }) {
   return (
     <tr
       style={{ borderBottom: "1px solid #e2e0d8" }}
-      onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = "#fafaf8"}
-      onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = ""}
+      onMouseEnter={e => ((e.currentTarget as HTMLTableRowElement).style.background = "#fafaf8")}
+      onMouseLeave={e => ((e.currentTarget as HTMLTableRowElement).style.background = "")}
     >
       <td style={{ padding: "0.85rem 1.25rem" }}>
         <div style={{ fontWeight: 500, color: "#141410", fontSize: 13 }}>{formatDate(p.date)}</div>
@@ -128,10 +138,16 @@ function PaymentRow({ p }: { p: Payment }) {
         </span>
       </td>
       <td style={{ padding: "0.85rem 1.25rem" }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>Ksh {p.amount.toLocaleString()}</span>
+        <span style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>
+          Ksh {p.amount.toLocaleString()}
+        </span>
       </td>
       <td style={{ padding: "0.85rem 1.25rem" }}>
-        <span style={{ fontSize: 11, fontWeight: 500, color: s.color, background: s.bg, padding: "3px 10px", borderRadius: 100 }}>
+        <span style={{
+          fontSize: 11, fontWeight: 500,
+          color: s.color, background: s.bg,
+          padding: "3px 10px", borderRadius: 100,
+        }}>
           {s.label}
         </span>
       </td>
@@ -143,7 +159,8 @@ function PaymentRow({ p }: { p: Payment }) {
 // MAIN PAGE
 // ─────────────────────────────────────────
 export default function SubscriptionPage() {
-  const [adminUser] = useState<StoredUser | null>(getStoredUser);
+  // ✅ FIX: lazy initializer with explicit type — avoids SSR mismatch
+  const [adminUser] = useState<StoredUser | null>(() => getStoredUser());
 
   const [sub,        setSub]        = useState<SubscriptionData | null>(null);
   const [loading,    setLoading]    = useState(true);
@@ -158,7 +175,7 @@ export default function SubscriptionPage() {
       const res  = await fetch(`/api/subscription/status?admin_id=${adminUser.id}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? `Error ${res.status}`);
-      setSub(data);
+      setSub(data as SubscriptionData);
     } catch (e) {
       setFetchError((e as Error).message);
     } finally {
@@ -179,9 +196,10 @@ export default function SubscriptionPage() {
     month: "long", day: "numeric", year: "numeric",
   }).format(new Date());
 
-  // ── shared style tokens ──
+  // Shared style tokens
   const cardStyle: React.CSSProperties = {
-    background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden",
+    background: "#fff", border: "1px solid #e2e0d8",
+    borderRadius: 12, overflow: "hidden",
   };
   const thStyle: React.CSSProperties = {
     textAlign: "left", padding: "0.6rem 1.25rem",
@@ -190,7 +208,8 @@ export default function SubscriptionPage() {
     borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", whiteSpace: "nowrap",
   };
 
-  const planMonths = PLAN_MONTHS[sub?.plan ?? ""] ?? 1;
+  // ✅ FIX: use PLAN_DAYS keyed by plan name, not billing period string
+  const planDays = PLAN_DAYS[sub?.plan?.toLowerCase() ?? ""] ?? 30;
 
   return (
     <>
@@ -199,11 +218,10 @@ export default function SubscriptionPage() {
         * { box-sizing: border-box; }
       `}</style>
 
-      {/* ── Header — matches Staff page exactly ── */}
+      {/* Header */}
       <header className="header">
         <div className="header-title">Subscription</div>
         <div className="header-date">{dater}</div>
-        {/* Renew / Upgrade CTA in header */}
         <Link
           href="/payment"
           style={{
@@ -214,7 +232,7 @@ export default function SubscriptionPage() {
           }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/>
+            <rect x="1" y="4" width="22" height="16" rx="2" /><path d="M1 10h22" />
           </svg>
           {sub?.status === "active" ? "Renew / Upgrade" : "Subscribe Now"}
         </Link>
@@ -233,7 +251,10 @@ export default function SubscriptionPage() {
             <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
             <div style={{ fontSize: 14, fontWeight: 500, color: "#dc2626", marginBottom: 16 }}>{fetchError}</div>
             {adminUser?.id && (
-              <button onClick={fetchSub} style={{ padding: "8px 20px", background: "#141410", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}>
+              <button
+                onClick={fetchSub}
+                style={{ padding: "8px 20px", background: "#141410", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}
+              >
                 Retry
               </button>
             )}
@@ -243,14 +264,15 @@ export default function SubscriptionPage() {
         {/* Main content */}
         {!loading && !fetchError && (
           <>
-
-            {/* ── Stat strip — mirrors Staff page ── */}
+            {/* Stat strip */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
               {[
                 {
                   label: "Status",
                   value: <StatusBadge status={sub?.status ?? "none"} daysLeft={sub?.daysLeft ?? null} />,
-                  sub:   sub?.paidUntil ? (sub.status === "expired" ? `Expired ${formatDate(sub.paidUntil)}` : `Until ${formatDate(sub.paidUntil)}`) : "No active plan",
+                  sub:   sub?.paidUntil
+                    ? (sub.status === "expired" ? `Expired ${formatDate(sub.paidUntil)}` : `Until ${formatDate(sub.paidUntil)}`)
+                    : "No active plan",
                 },
                 {
                   label: "Current Plan",
@@ -271,18 +293,22 @@ export default function SubscriptionPage() {
               ))}
             </div>
 
-            {/* ── Tabs ── */}
+            {/* Tabs */}
             <div style={{ display: "flex", gap: 4, background: "#f5f4f0", border: "1px solid #e2e0d8", borderRadius: 10, padding: 4 }}>
               {(["overview", "history"] as const).map(t => (
-                <button key={t} onClick={() => setTab(t)} style={{
-                  flex: 1, padding: "8px 16px",
-                  background: tab === t ? "#fff" : "transparent",
-                  border: tab === t ? "1px solid #c8c6bc" : "1px solid transparent",
-                  borderRadius: 7, cursor: "pointer", fontSize: 13, fontWeight: 500,
-                  color: tab === t ? "#141410" : "#9a9a8e",
-                  fontFamily: "inherit", transition: "all 0.15s",
-                  boxShadow: tab === t ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
-                }}>
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  style={{
+                    flex: 1, padding: "8px 16px",
+                    background: tab === t ? "#fff" : "transparent",
+                    border: tab === t ? "1px solid #c8c6bc" : "1px solid transparent",
+                    borderRadius: 7, cursor: "pointer", fontSize: 13, fontWeight: 500,
+                    color: tab === t ? "#141410" : "#9a9a8e",
+                    fontFamily: "inherit", transition: "all 0.15s",
+                    boxShadow: tab === t ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+                  }}
+                >
                   {t === "overview" ? "Overview" : `Payment History${sub?.payments?.length ? ` (${sub.payments.length})` : ""}`}
                 </button>
               ))}
@@ -297,13 +323,12 @@ export default function SubscriptionPage() {
                   <div style={{ fontSize: 11, fontWeight: 500, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 14 }}>
                     Subscription Details
                   </div>
-
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem 2rem" }}>
                     {[
-                      { label: "Plan",        value: sub?.plan ? capitalize(sub.plan) : "—"                 },
-                      { label: "Status",      value: sub?.status ? capitalize(sub.status) : "—"             },
-                      { label: "Valid Until",  value: sub?.paidUntil ? formatDate(sub.paidUntil) : "—"       },
-                      { label: "Last Amount", value: sub?.amount != null ? `Ksh ${Number(sub.amount).toLocaleString()}` : "—" },
+                      { label: "Plan",         value: sub?.plan   ? capitalize(sub.plan)   : "—" },
+                      { label: "Status",       value: sub?.status ? capitalize(sub.status) : "—" },
+                      { label: "Valid Until",  value: sub?.paidUntil ? formatDate(sub.paidUntil) : "—" },
+                      { label: "Last Amount",  value: sub?.amount != null ? `Ksh ${Number(sub.amount).toLocaleString()}` : "—" },
                     ].map(row => (
                       <div key={row.label}>
                         <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{row.label}</div>
@@ -317,13 +342,16 @@ export default function SubscriptionPage() {
                     <div style={{ marginTop: 20 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                         <span style={{ fontSize: 12, color: "#9a9a8e" }}>Subscription period</span>
-                        <span style={{ fontSize: 12, fontWeight: 500, color: daysColor(sub.daysLeft) }}>{sub.daysLeft} days remaining</span>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: daysColor(sub.daysLeft) }}>
+                          {sub.daysLeft} days remaining
+                        </span>
                       </div>
                       <div style={{ height: 5, background: "#f5f4f0", borderRadius: 3, overflow: "hidden" }}>
                         <div style={{
                           height: "100%", borderRadius: 3,
                           background: daysColor(sub.daysLeft),
-                          width: `${Math.min(100, Math.max(2, (sub.daysLeft / (planMonths * 30)) * 100))}%`,
+                          // ✅ FIX: use planDays (keyed by plan name) not planMonths * 30
+                          width: `${Math.min(100, Math.max(2, (sub.daysLeft / planDays) * 100))}%`,
                           transition: "width 0.6s ease",
                         }} />
                       </div>
@@ -335,11 +363,10 @@ export default function SubscriptionPage() {
                 {(sub?.status === "expired" || sub?.status === "due" || sub?.status === "none") && (
                   <div style={{ padding: "14px 18px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 18 }}>
-                         <svg className="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-                          <path fill-rule="evenodd" d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z" clip-rule="evenodd"/>
-                         </svg>
-                      </span>
+                      {/* ✅ FIX: fillRule and clipRule (camelCase) instead of fill-rule / clip-rule */}
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ color: "#d97706", flexShrink: 0 }}>
+                        <path fillRule="evenodd" clipRule="evenodd" d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm11-4a1 1 0 1 0-2 0v5a1 1 0 1 0 2 0V8Zm-1 7a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2H12Z" />
+                      </svg>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 500, color: "#92400e" }}>
                           {sub?.status === "none" ? "No active subscription" : "Your subscription has expired"}
@@ -355,14 +382,16 @@ export default function SubscriptionPage() {
                   </div>
                 )}
 
-                {/* Active — renew early prompt */}
+                {/* Expiring soon banner — active, ≤ 7 days */}
                 {sub?.status === "active" && sub.daysLeft !== null && sub.daysLeft <= 7 && (
                   <div style={{ padding: "14px 18px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ fontSize: 18 }}>🔔</span>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 500, color: "#991b1b" }}>Expiring soon</div>
-                        <div style={{ fontSize: 12, color: "#b91c1c", marginTop: 2 }}>Your subscription expires in {sub.daysLeft} day{sub.daysLeft !== 1 ? "s" : ""}. Renew now to avoid interruption.</div>
+                        <div style={{ fontSize: 12, color: "#b91c1c", marginTop: 2 }}>
+                          Your subscription expires in {sub.daysLeft} day{sub.daysLeft !== 1 ? "s" : ""}. Renew now to avoid interruption.
+                        </div>
                       </div>
                     </div>
                     <Link href="/payment" style={{ flexShrink: 0, padding: "7px 16px", background: "#dc2626", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
@@ -371,7 +400,7 @@ export default function SubscriptionPage() {
                   </div>
                 )}
 
-                {/* Renew CTA card — always visible */}
+                {/* Always-visible renew CTA */}
                 <div style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, padding: "1.25rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 500, color: "#141410", marginBottom: 4 }}>
@@ -390,11 +419,10 @@ export default function SubscriptionPage() {
                       flexShrink: 0, padding: "9px 20px",
                       background: "#141410", color: "#fff",
                       borderRadius: 8, fontSize: 13, fontWeight: 500, textDecoration: "none",
-                      transition: "background 0.15s",
                     }}
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/>
+                      <rect x="1" y="4" width="22" height="16" rx="2" /><path d="M1 10h22" />
                     </svg>
                     {sub?.status === "active" ? "Renew / Upgrade" : "Subscribe Now"}
                   </Link>

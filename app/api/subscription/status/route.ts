@@ -30,7 +30,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       [admin_id]
     );
 
-    const payments = (txRows as Record<string, unknown>[]).map(tx => ({
+    const txList = txRows as Record<string, unknown>[];
+
+    const payments = txList.map(tx => ({
       id:                String(tx.id),
       date:              tx.created_at,
       amount:            Number(tx.amount),
@@ -42,30 +44,107 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       mpesaReceipt:      tx.mpesa_receipt ?? null,
     }));
 
-    /* ── 3. No subscription yet ── */
+    /* ── 3. No subscription row yet ─────────────────────────────────────────
+       Still check mpesa_transactions — admin may have paid via M-Pesa but the
+       subscriptions row was never created / updated.                          */
     if (!sub) {
+      const latestCompletedTx = txList.find(t => t.status === "completed");
+
+      if (!latestCompletedTx) {
+        return NextResponse.json({
+          status: "none", paidUntil: null, plan: null,
+          amount: null, payments, daysLeft: null,
+        });
+      }
+
+      // Derive 30-day window from the payment date
+      const txDate  = new Date(latestCompletedTx.created_at as string);
+      const derived = new Date(txDate);
+      derived.setDate(derived.getDate() + 30);
+
+      const now      = new Date();
+      const daysLeft = Math.ceil((derived.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const paidUntil = derived.toISOString().split("T")[0];
+      const plan      = String(latestCompletedTx.plan ?? "starter");
+      const amount    = Number(latestCompletedTx.amount);
+
+      if (daysLeft > 0) {
+        // Auto-heal: insert a subscriptions row so this resolves itself going forward
+        await pool.query(
+          `INSERT INTO subscriptions (user_id, plan, status, amount, next_billing_date, created_at, updated_at)
+           VALUES (?, ?, 'active', ?, ?, NOW(), NOW())
+           ON DUPLICATE KEY UPDATE
+             status = 'active', plan = VALUES(plan), amount = VALUES(amount),
+             next_billing_date = VALUES(next_billing_date), updated_at = NOW()`,
+          [admin_id, plan, amount, paidUntil]
+        );
+
+        return NextResponse.json({
+          status: "active", paidUntil, plan, amount,
+          payments, daysLeft: Math.max(0, daysLeft), subStatus: "active",
+        });
+      }
+
       return NextResponse.json({
-        status:    "none",
-        paidUntil: null,
-        plan:      null,
-        amount:    null,
-        payments,
-        daysLeft:  null,
+        status: "expired", paidUntil, plan, amount,
+        payments, daysLeft: 0, subStatus: "expired",
       });
     }
 
-    /* ── 4. Compute days left & derive UI status ── */
+    /* ── 4. Subscription row exists — compute days left ── */
     const now             = new Date();
     const nextBillingDate = new Date(sub.next_billing_date as string);
-    const daysLeft        = Math.ceil(
+    const daysLeft          = Math.ceil(
       (nextBillingDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     );
 
     let status: "active" | "expired" | "due" | "none" = "none";
-    if      (sub.status === "active")                              status = daysLeft > 0 ? "active" : "expired";
+    if      (sub.status === "active")                                status = daysLeft > 0 ? "active" : "expired";
     else if (sub.status === "expired" || sub.status === "cancelled") status = "expired";
-    else if (sub.status === "pending")                             status = "due";
+    else if (sub.status === "pending")                               status = "due";
 
+    /* ── 5. Sub row says expired — check mpesa_transactions as fallback ─────
+       This handles the case where admin paid via M-Pesa but the webhook
+       never updated the subscriptions row (e.g. Keith's case).               */
+    if (status === "expired") {
+      const latestCompletedTx = txList.find(t => t.status === "completed");
+
+      if (latestCompletedTx) {
+        const txDate  = new Date(latestCompletedTx.created_at as string);
+        const derived = new Date(txDate);
+        derived.setDate(derived.getDate() + 30);
+
+        const derivedDaysLeft = Math.ceil(
+          (derived.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        if (derivedDaysLeft > 0) {
+          const paidUntil = derived.toISOString().split("T")[0];
+          const plan      = String(latestCompletedTx.plan ?? sub.plan);
+          const amount    = Number(latestCompletedTx.amount ?? sub.amount);
+
+          // Auto-heal: update the stale subscriptions row
+          await pool.query(
+            `UPDATE subscriptions
+             SET status = 'active', plan = ?, amount = ?, next_billing_date = ?, updated_at = NOW()
+             WHERE user_id = ?`,
+            [plan, amount, paidUntil, admin_id]
+          );
+
+          return NextResponse.json({
+            status:    "active",
+            paidUntil,
+            plan,
+            amount,
+            payments,
+            daysLeft:  Math.max(0, derivedDaysLeft),
+            subStatus: "active",
+          });
+        }
+      }
+    }
+
+    /* ── 6. Return normal result ── */
     return NextResponse.json({
       status,
       paidUntil: sub.next_billing_date,
@@ -75,6 +154,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       daysLeft:  Math.max(0, daysLeft),
       subStatus: sub.status,
     });
+
   } catch (error) {
     const err = error as Error;
     return NextResponse.json({ error: err.message }, { status: 500 });
