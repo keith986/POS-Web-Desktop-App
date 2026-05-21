@@ -420,7 +420,7 @@ export default function AdminDashboard({ user, onLogout }) {
           <Route path="products"      element={<Products />} />
           <Route path="staff"         element={<Staff />} />
           <Route path="reports"       element={<Reports />} />
-          <Route path="subscription"  element={<Subscription />} />
+          <Route path="subscription"  element={<Subscription user={user}/>} />
           <Route path="discounts"     element={<Discounts />} />
           <Route path="settings"      element={<Settings user={user} onLogout={onLogout} />} />
           <Route path="*"             element={<Navigate to="overview" replace />} />

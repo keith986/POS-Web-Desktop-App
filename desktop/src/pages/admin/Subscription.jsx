@@ -23,13 +23,6 @@ function capitalize(s) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : "—";
 }
 
-// Read user from localStorage — same as AdminDashboard does
-function getStoredUser() {
-  try {
-    return JSON.parse(localStorage.getItem("user") ?? "null");
-  } catch { return null; }
-}
-
 // ─────────────────────────────────────────
 // PLAN MONTHS (for progress bar)
 // ─────────────────────────────────────────
@@ -113,8 +106,7 @@ function StatCard({ label, value, sub, accent }) {
 // ─────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────
-export default function Subscription() {
-  const [user]         = useState(() => getStoredUser());
+export default function Subscription({ user }) {
   const [sub,          setSub]          = useState(null);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(null);
@@ -126,6 +118,14 @@ export default function Subscription() {
     : true;
   });
   const [lastSync,     setLastSync]     = useState(() => localStorage.getItem("sub_last_sync") ?? null);
+
+useEffect(() => {
+  if (!user?.id) {
+    setLoading(false);
+    setError("No logged in user found.");
+  }
+}, [user]);
+
 
   // Track online status
   useEffect(() => {
@@ -210,7 +210,7 @@ export default function Subscription() {
   } finally {
     setLoading(false);
   }
-  }, [user?.id]);
+  }, [user]);
   
   /*
   useEffect(() => {
@@ -225,13 +225,9 @@ export default function Subscription() {
   }, [loadCached, fetchFromServer]);
   */
 
-  useEffect(() => {
-  // Missing user
-  if (!user?.id) {
-    setLoading(false);
-    setError("No logged in user found.");
-    return;
-  }
+useEffect(() => {
+  // Wait until user is loaded
+  if (!user) return;
 
   const hasCached = loadCached();
 
@@ -247,7 +243,7 @@ export default function Subscription() {
       "You are offline. Connect to the internet to load your subscription."
     );
   }
-  }, [user?.id, loadCached, fetchFromServer]);
+}, [user, loadCached, fetchFromServer]);
 
   // Manual sync
   const handleSync = () => {
