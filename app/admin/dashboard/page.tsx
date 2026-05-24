@@ -587,7 +587,6 @@ if (!checked) return (
             ))}
           </div>
 
-
           {/* ── Weekly chart + Payment methods ── */}
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
             <div style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden" }}>

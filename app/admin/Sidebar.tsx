@@ -7,19 +7,11 @@ import { isRouteLocked, requiredPlan, planLabel } from "@/app/_lib/pricing";
 import { usePlan } from "@/app/_lib/usePlan";
 import type { PlanId, PosType } from "@/app/_lib/pricing";
 
-// ─────────────────────────────────────────
-// ROUTES ACCESSIBLE WHEN SUBSCRIPTION EXPIRED
-// ─────────────────────────────────────────
 const ALWAYS_ACCESSIBLE = new Set(["/admin/dashboard", "/admin/subscription"]);
-
 function isExpiredLocked(href: string): boolean {
-  // Lock everything except the two whitelisted routes
   return !ALWAYS_ACCESSIBLE.has(href);
 }
 
-// ─────────────────────────────────────────
-// ICON PATHS
-// ─────────────────────────────────────────
 const iconPaths: Record<string, string> = {
   grid:      "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
   cart:      "M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0",
@@ -62,12 +54,11 @@ interface User {
   pos_type?:         PosType;
   domain?:           string;
   plan?:             PlanId;
-  subscription_end?: string | null; // ISO date string, e.g. "2025-06-01"
+  subscription_end?: string | null;
+  // ── Tracks which POS types this user has unlocked ──
+  pos_slots?:        PosType[];
 }
 
-// ─────────────────────────────────────────
-// NAV CONFIG
-// ─────────────────────────────────────────
 const BASE_MAIN: NavItem[] = [
   { href: "/admin/dashboard", icon: "grid",  label: "Overview"  },
   { href: "/admin/orders",    icon: "cart",  label: "Orders"    },
@@ -141,26 +132,12 @@ const POS_TYPES_META: { id: PosType; label: string; svgIcon: string; accent: str
   { id: "pharmacy",   label: "Pharmacy",         svgIcon: "pill",     accent: "#0891b2", desc: "Prescriptions & drugs"   },
 ];
 
-// ─────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────
-
-/**
- * Returns true when the user's subscription has expired.
- *
- * The sidebar reads `subscription_end` from the user object in localStorage.
- * If your API returns a different field name, adjust accordingly — or replace
- * this function with an async hook that hits your subscriptions endpoint.
- */
 function checkSubscriptionExpired(user: User | null): boolean {
   if (!user) return false;
-  if (!user.subscription_end) return false; // no end date → treat as active
+  if (!user.subscription_end) return false;
   return new Date(user.subscription_end) < new Date();
 }
 
-// ─────────────────────────────────────────
-// ICON COMPONENTS
-// ─────────────────────────────────────────
 function Icon({ type }: { type: string }) {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
@@ -174,48 +151,41 @@ function Icon({ type }: { type: string }) {
 function ChevronIcon({ open }: { open: boolean }) {
   return (
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2.5"
-      strokeLinecap="round" strokeLinejoin="round"
+      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
       style={{ transition: "transform 0.2s ease", transform: open ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}>
       <path d="M6 9l6 6 6-6" />
     </svg>
   );
 }
 
-/** Standard plan-tier lock badge */
 function LockBadge({ plan }: { plan: string }) {
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 3,
       background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
-      borderRadius: 100, padding: "2px 7px",
-      fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.35)",
-      textTransform: "uppercase", letterSpacing: "0.3px",
+      borderRadius: 100, padding: "2px 7px", fontSize: 9, fontWeight: 600,
+      color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.3px",
       flexShrink: 0, marginLeft: "auto",
     }}>
       <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="11" width="18" height="11" rx="2"/>
-        <path d="M7 11V7a5 5 0 0110 0v4"/>
+        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
       </svg>
       {plan}
     </span>
   );
 }
 
-/** Red "Expired" badge shown on items locked due to expired subscription */
 function ExpiredBadge() {
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 3,
       background: "rgba(220,38,38,0.12)", border: "1px solid rgba(220,38,38,0.25)",
-      borderRadius: 100, padding: "2px 7px",
-      fontSize: 9, fontWeight: 600, color: "rgba(239,68,68,0.75)",
-      textTransform: "uppercase", letterSpacing: "0.3px",
+      borderRadius: 100, padding: "2px 7px", fontSize: 9, fontWeight: 600,
+      color: "rgba(239,68,68,0.75)", textTransform: "uppercase", letterSpacing: "0.3px",
       flexShrink: 0, marginLeft: "auto",
     }}>
       <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="11" width="18" height="11" rx="2"/>
-        <path d="M7 11V7a5 5 0 0110 0v4"/>
+        <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
       </svg>
       Expired
     </span>
@@ -234,13 +204,11 @@ function PlanBadge({ plan }: { plan: PlanId }) {
       <div style={{
         display: "inline-flex", alignItems: "center", gap: 5,
         background: c.bg, border: `1px solid ${c.border}`,
-        borderRadius: 100, padding: "3px 10px",
-        fontSize: 10, fontWeight: 600, color: c.text,
-        textTransform: "uppercase", letterSpacing: "0.5px",
+        borderRadius: 100, padding: "3px 10px", fontSize: 10, fontWeight: 600,
+        color: c.text, textTransform: "uppercase", letterSpacing: "0.5px",
       }}>
         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2"/>
-          <path d="M7 11V7a5 5 0 0110 0v4"/>
+          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
         </svg>
         {planLabel(plan)} Plan
       </div>
@@ -248,7 +216,6 @@ function PlanBadge({ plan }: { plan: PlanId }) {
   );
 }
 
-/** Replaces PlanBadge when subscription has expired */
 function ExpiredSubscriptionBanner() {
   return (
     <div style={{ padding: "0 0.75rem", marginBottom: "0.5rem" }}>
@@ -261,12 +228,8 @@ function ExpiredSubscriptionBanner() {
           <path d={iconPaths.warning} />
         </svg>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-            Subscription Expired
-          </div>
-          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>
-            Renew to restore full access
-          </div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.4px" }}>Subscription Expired</div>
+          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", marginTop: 1 }}>Renew to restore full access</div>
         </div>
       </div>
     </div>
@@ -277,19 +240,12 @@ function getInitials(name: string) {
   return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
-// ─────────────────────────────────────────
-// COLLAPSIBLE NAV SECTION
-// ─────────────────────────────────────────
 function NavSection({
   section, userPlan, isActive, pendingOrders, router, initialOpen, subscriptionExpired,
 }: {
-  section:             NavSection;
-  userPlan:            PlanId;
-  isActive:            (href: string) => boolean;
-  pendingOrders:       number;
-  router:              ReturnType<typeof useRouter>;
-  initialOpen:         boolean;
-  subscriptionExpired: boolean;
+  section: NavSection; userPlan: PlanId; isActive: (href: string) => boolean;
+  pendingOrders: number; router: ReturnType<typeof useRouter>;
+  initialOpen: boolean; subscriptionExpired: boolean;
 }) {
   const [open, setOpen] = useState(
     () => initialOpen || section.items.some(i => isActive(i.href))
@@ -297,25 +253,16 @@ function NavSection({
 
   return (
     <div>
-      {/* Section header — clickable toggle */}
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          width: "100%", padding: "0.3rem 0.85rem",
-          background: "none", border: "none", cursor: "pointer",
-          fontFamily: "inherit", marginBottom: open ? 2 : 0,
-        }}
-      >
-        <span className="sidebar-section" style={{ margin: 0, padding: 0 }}>
-          {section.title}
-        </span>
-        <span style={{ color: "rgba(255,255,255,0.25)" }}>
-          <ChevronIcon open={open} />
-        </span>
+      <button onClick={() => setOpen(o => !o)} style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        width: "100%", padding: "0.3rem 0.85rem",
+        background: "none", border: "none", cursor: "pointer",
+        fontFamily: "inherit", marginBottom: open ? 2 : 0,
+      }}>
+        <span className="sidebar-section" style={{ margin: 0, padding: 0 }}>{section.title}</span>
+        <span style={{ color: "rgba(255,255,255,0.25)" }}><ChevronIcon open={open} /></span>
       </button>
 
-      {/* Items — animated collapse */}
       <div style={{
         overflow: "hidden",
         maxHeight: open ? `${section.items.length * 44}px` : "0px",
@@ -323,24 +270,13 @@ function NavSection({
         marginBottom: open ? "0.25rem" : 0,
       }}>
         {section.items.map(({ href, icon, label }) => {
-
-          // ── 1. Subscription-expired lock (highest priority) ───────────
           if (subscriptionExpired && isExpiredLocked(href)) {
             return (
-              <div
-                key={href}
-                onClick={() => router.push("/admin/subscription")}
+              <div key={href} onClick={() => router.push("/admin/subscription")}
                 title="Subscription expired — click to renew"
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "0.55rem 0.85rem", borderRadius: 8,
-                  margin: "1px 0.75rem", fontSize: 13, fontWeight: 500,
-                  color: "rgba(255,255,255,0.22)", cursor: "pointer",
-                  transition: "background 0.15s", userSelect: "none",
-                }}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.55rem 0.85rem", borderRadius: 8, margin: "1px 0.75rem", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.22)", cursor: "pointer", transition: "background 0.15s", userSelect: "none" }}
                 onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = "rgba(220,38,38,0.06)"}
-                onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = "transparent"}
-              >
+                onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = "transparent"}>
                 <span style={{ opacity: 0.3 }}><Icon type={icon} /></span>
                 <span style={{ flex: 1 }}>{label}</span>
                 <ExpiredBadge />
@@ -348,20 +284,16 @@ function NavSection({
             );
           }
 
-          // ── 2. Plan-tier lock ─────────────────────────────────────────
           const locked  = isRouteLocked(href, userPlan);
           const reqPlan = requiredPlan(href);
 
           if (locked) {
             return (
-              <div
-                key={href}
-                onClick={() => router.push("/admin/dashboard?upgrade=true")}
+              <div key={href} onClick={() => router.push("/admin/dashboard?upgrade=true")}
                 title={`Requires ${reqPlan ? planLabel(reqPlan) : "higher"} plan`}
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "0.55rem 0.85rem", borderRadius: 8, margin: "1px 0.75rem", fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.28)", cursor: "pointer", transition: "background 0.15s", userSelect: "none" }}
                 onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.05)"}
-                onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = "transparent"}
-              >
+                onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = "transparent"}>
                 <span style={{ opacity: 0.4 }}><Icon type={icon} /></span>
                 <span style={{ flex: 1 }}>{label}</span>
                 <LockBadge plan={reqPlan ? planLabel(reqPlan) : "Pro"} />
@@ -369,7 +301,6 @@ function NavSection({
             );
           }
 
-          // ── 3. Accessible link ────────────────────────────────────────
           return (
             <Link key={href} href={href} className={`nav-item ${isActive(href) ? "active" : ""}`}>
               <Icon type={icon} />
@@ -388,20 +319,35 @@ function NavSection({
 // ─────────────────────────────────────────
 // POS SWITCHER MODAL
 // ─────────────────────────────────────────
-function SwitcherModal({ current, plan, onClose, onSwitch }: {
-  current: PosType; plan: PlanId; onClose: () => void; onSwitch: (t: PosType) => void;
+function SwitcherModal({ current, plan, posSlots, onClose, onSwitch }: {
+  current:  PosType;
+  plan:     PlanId;
+  posSlots: PosType[];   // ← which slots the user has already used
+  onClose:  () => void;
+  onSwitch: (t: PosType) => void;
 }) {
-  const limit      = POS_LIMIT[plan];
-  const posOrder   = POS_TYPES_META.map(p => p.id);
-  const currentIdx = posOrder.indexOf(current);
+  const limit = POS_LIMIT[plan];
 
+  // ── FIXED isPosLocked ──────────────────────────────────────────────────────
+  // Old logic: only unlocked the "next index" in the array — wrong.
+  // New logic:
+  //   enterprise → nothing locked
+  //   starter    → everything except current locked
+  //   pro        → a POS type is free if it's already in posSlots,
+  //                or if there's still a free slot available
   function isPosLocked(posId: PosType): boolean {
     if (plan === "enterprise") return false;
-    if (posId === current) return false;
-    if (plan === "starter") return true;
-    const targetIdx = posOrder.indexOf(posId);
-    const nextIdx   = (currentIdx + 1) % posOrder.length;
-    return targetIdx !== nextIdx;
+    if (posId === current)     return false;   // current is always "active", not locked
+    if (plan === "starter")    return true;    // starter: only 1 type, no switching
+
+    // Pro: already used this type before → free to switch back
+    if (posSlots.includes(posId)) return false;
+
+    // Pro: still have a free slot → allow picking any new type
+    if (posSlots.length < limit) return false;
+
+    // Pro: slots full AND this type was never used → locked
+    return true;
   }
 
   const upgradeNeeded = (posId: PosType): PlanId | null => {
@@ -429,6 +375,8 @@ function SwitcherModal({ current, plan, onClose, onSwitch }: {
           </div>
           <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 8, width: 28, height: 28, cursor: "pointer", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>×</button>
         </div>
+
+        {/* Slot indicator */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "1rem", padding: "7px 10px", background: "rgba(255,255,255,0.04)", borderRadius: 8 }}>
           <div style={{ display: "flex", gap: 4 }}>
             {[1,2,3,4,5].map(i => (
@@ -436,14 +384,18 @@ function SwitcherModal({ current, plan, onClose, onSwitch }: {
             ))}
           </div>
           <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginLeft: 4 }}>
-            {limit} of 5 POS type{limit !== 1 ? "s" : ""} on {planLabel(plan)}
+            {posSlots.length} of {limit} slot{limit !== 1 ? "s" : ""} used · {planLabel(plan)} plan
           </span>
         </div>
+
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {POS_TYPES_META.map(type => {
-            const isCurrent = type.id === current;
-            const locked    = isPosLocked(type.id);
-            const needsPlan = upgradeNeeded(type.id);
+            const isCurrent  = type.id === current;
+            const locked     = isPosLocked(type.id);
+            const needsPlan  = upgradeNeeded(type.id);
+            // Show "used" indicator for previously visited slots that aren't current
+            const isUsedSlot = !isCurrent && posSlots.includes(type.id);
+
             return (
               <button key={type.id}
                 onClick={() => {
@@ -454,7 +406,8 @@ function SwitcherModal({ current, plan, onClose, onSwitch }: {
                   display: "flex", alignItems: "center", gap: 12, padding: "0.7rem 1rem",
                   background: isCurrent ? `${type.accent}22` : locked ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.04)",
                   border: `1px solid ${isCurrent ? type.accent + "55" : locked ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.08)"}`,
-                  borderRadius: 10, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+                  borderRadius: 10, cursor: locked ? "default" : "pointer",
+                  fontFamily: "inherit", transition: "all 0.15s",
                   width: "100%", textAlign: "left", opacity: locked ? 0.55 : 1,
                 }}>
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: locked ? "rgba(255,255,255,0.05)" : `${type.accent}22`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: locked ? "rgba(255,255,255,0.3)" : type.accent }}>
@@ -466,6 +419,9 @@ function SwitcherModal({ current, plan, onClose, onSwitch }: {
                 </div>
                 {isCurrent ? (
                   <span style={{ fontSize: 10, fontWeight: 600, color: type.accent, background: `${type.accent}22`, padding: "2px 8px", borderRadius: 100, flexShrink: 0 }}>Active</span>
+                ) : isUsedSlot ? (
+                  // Previously used — free to switch back, show subtle indicator
+                  <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", padding: "2px 7px", borderRadius: 100, flexShrink: 0 }}>Saved</span>
                 ) : locked ? (
                   <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", padding: "2px 7px", borderRadius: 100, flexShrink: 0, textTransform: "uppercase" }}>
                     {needsPlan ? planLabel(needsPlan) : "Upgrade"}
@@ -477,6 +433,7 @@ function SwitcherModal({ current, plan, onClose, onSwitch }: {
             );
           })}
         </div>
+
         {plan !== "enterprise" && (
           <div style={{ marginTop: "1rem", padding: "10px 12px", background: "rgba(37,99,235,0.1)", border: "1px solid rgba(37,99,235,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
             <div>
@@ -512,6 +469,11 @@ export default function Sidebar() {
       const parsed = JSON.parse(stored) as User;
       if (!parsed.id || !parsed.full_name) throw new Error("Invalid user");
       if (!parsed.pos_type) { window.location.href = "/onboarding"; return; }
+      // ── Seed pos_slots from pos_type if not already set ──
+      if (!parsed.pos_slots || parsed.pos_slots.length === 0) {
+        parsed.pos_slots = [parsed.pos_type];
+        localStorage.setItem("user", JSON.stringify(parsed));
+      }
       setUser(parsed);
     } catch {
       localStorage.removeItem("user");
@@ -520,9 +482,12 @@ export default function Sidebar() {
   }, [router]);
 
   const userPlan = usePlan(user?.id);
-
-  // ── Derived from user object — swap for an API hook if needed ──────────────
   const subscriptionExpired = checkSubscriptionExpired(user);
+
+  // Derive posSlots — always includes current pos_type
+  const posSlots: PosType[] = user?.pos_slots
+    ? Array.from(new Set([...(user.pos_slots), user.pos_type as PosType].filter(Boolean)))
+    : [user?.pos_type as PosType].filter(Boolean);
 
   const fetchPendingCount = useCallback(async (id: string) => {
     try {
@@ -548,7 +513,14 @@ export default function Sidebar() {
         body: JSON.stringify({ admin_id: user.id, pos_type: newType }),
       });
       if (!res.ok) throw new Error("Failed");
-      const updated = { ...user, pos_type: newType };
+
+      // ── Update pos_slots — add newType without exceeding plan limit ──
+      const currentSlots: PosType[] = user.pos_slots ?? [user.pos_type as PosType];
+      const updatedSlots: PosType[] = currentSlots.includes(newType)
+        ? currentSlots                                            // already a known slot
+        : [...currentSlots, newType].slice(0, POS_LIMIT[userPlan]); // add new, cap at limit
+
+      const updated: User = { ...user, pos_type: newType, pos_slots: updatedSlots };
       localStorage.setItem("user", JSON.stringify(updated));
       setUser(updated);
       setSwitcherOpen(false);
@@ -578,7 +550,13 @@ export default function Sidebar() {
   return (
     <>
       {switcherOpen && (
-        <SwitcherModal current={posType} plan={userPlan} onClose={() => setSwitcherOpen(false)} onSwitch={handleSwitch} />
+        <SwitcherModal
+          current={posType}
+          plan={userPlan}
+          posSlots={posSlots}
+          onClose={() => setSwitcherOpen(false)}
+          onSwitch={handleSwitch}
+        />
       )}
 
       {logoutConfirm && (
@@ -610,12 +588,8 @@ export default function Sidebar() {
       )}
 
       <aside className="sidebar">
-
-        {/* Store logo */}
         <div className="sidebar-logo" style={{ cursor: "pointer" }} onClick={() => setSwitcherOpen(true)}>
-          <div className="sidebar-logo-mark">
-            {user.store_name?.charAt(0).toUpperCase() ?? "P"}
-          </div>
+          <div className="sidebar-logo-mark">{user.store_name?.charAt(0).toUpperCase() ?? "P"}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <span className="sidebar-logo-name">
               {(user.store_name?.charAt(0).toUpperCase() ?? "") + (user.store_name?.slice(1).toLowerCase() ?? "")}
@@ -632,10 +606,8 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Plan badge OR expired warning banner */}
         {subscriptionExpired ? <ExpiredSubscriptionBanner /> : <PlanBadge plan={userPlan} />}
 
-        {/* Collapsible nav sections */}
         {sections.map((section, idx) => (
           <NavSection
             key={section.title}
@@ -649,7 +621,6 @@ export default function Sidebar() {
           />
         ))}
 
-        {/* Switch POS Type — disabled when subscription expired */}
         <div style={{ padding: "0 0.75rem", marginTop: "0.5rem" }}>
           <button
             onClick={() => !subscriptionExpired && setSwitcherOpen(true)}
@@ -659,42 +630,28 @@ export default function Sidebar() {
               padding: "0.6rem 0.85rem",
               background: subscriptionExpired ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.05)",
               border: `1px solid ${subscriptionExpired ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.08)"}`,
-              borderRadius: 8,
-              cursor: subscriptionExpired ? "not-allowed" : "pointer",
+              borderRadius: 8, cursor: subscriptionExpired ? "not-allowed" : "pointer",
               fontFamily: "inherit",
               color: subscriptionExpired ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.5)",
               fontSize: 12, fontWeight: 500, transition: "all 0.15s",
               opacity: subscriptionExpired ? 0.45 : 1,
             }}
-            onMouseEnter={e => {
-              if (subscriptionExpired) return;
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)";
-              (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.85)";
-            }}
-            onMouseLeave={e => {
-              if (subscriptionExpired) return;
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)";
-              (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.5)";
-            }}>
+            onMouseEnter={e => { if (subscriptionExpired) return; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.85)"; }}
+            onMouseLeave={e => { if (subscriptionExpired) return; (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.5)"; }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={iconPaths.switch} /></svg>
             {switching ? "Switching…" : "Switch POS Type"}
             <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", opacity: 0.6 }}><Icon type={posMeta?.svgIcon ?? "cog"} /></span>
           </button>
         </div>
 
-        {/* Footer */}
         <div className="sidebar-footer">
-          {/* Subscription link — highlighted red when expired */}
           <Link href="/admin/subscription" style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "0.5rem 0.85rem", marginBottom: "0.5rem",
+            display: "flex", alignItems: "center", gap: 8, padding: "0.5rem 0.85rem", marginBottom: "0.5rem",
             background: subscriptionExpired ? "rgba(220,38,38,0.1)" : "rgba(234,88,12,0.08)",
             border: `1px solid ${subscriptionExpired ? "rgba(220,38,38,0.35)" : "rgba(234,88,12,0.2)"}`,
             borderRadius: 8, textDecoration: "none", cursor: "pointer", transition: "all 0.15s",
           }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-              stroke={subscriptionExpired ? "#ef4444" : "#f97316"}
-              strokeWidth="2" strokeLinecap="round">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={subscriptionExpired ? "#ef4444" : "#f97316"} strokeWidth="2" strokeLinecap="round">
               <path d="M1 4h22v16H1zM1 10h22" />
             </svg>
             <div style={{ flex: 1 }}>
@@ -722,7 +679,6 @@ export default function Sidebar() {
             </button>
           </div>
         </div>
-
       </aside>
     </>
   );
