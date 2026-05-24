@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { STAFF_LIMITS } from "@/app/_lib/pricing";
+import type { PlanId } from "@/app/_lib/pricing";
 
 /* ── Types ── */
 interface StaffMember {
@@ -36,6 +39,7 @@ interface StoredUser {
   email:      string;
   role:       string;
   store_name: string | null;
+  plan?:      PlanId;
 }
 
 /* ── Get signed-in admin from localStorage ── */
@@ -78,6 +82,13 @@ function IconUserPlus() {
     </svg>
   );
 }
+function IconLock() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+    </svg>
+  );
+}
 
 /* ── Shared styles ── */
 const fieldStyle: React.CSSProperties = {
@@ -104,8 +115,14 @@ function getInitials(name: string): string {
 function formatDate(dateStr: string): string {
   if (!dateStr) return "—";
   try {
-    return new Date(dateStr).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    return new Date(dateStr).toLocaleDateString("en-GB", {
+      day: "numeric", month: "short", year: "numeric",
+    });
   } catch { return "—"; }
+}
+
+function capitalize(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
 /* ── Sub-components ── */
@@ -176,6 +193,125 @@ function StatusDot({ active }: { active: boolean }) {
       <span style={{ width: 6, height: 6, borderRadius: "50%", background: active ? "#16a34a" : "#c8c6bc" }} />
       {active ? "Active" : "Inactive"}
     </span>
+  );
+}
+
+/* ── Plan limit progress bar ── */
+function StaffLimitBar({
+  used,
+  limit,
+  plan,
+}: {
+  used:  number;
+  limit: number;
+  plan:  PlanId;
+}) {
+  if (limit === Infinity) return null; // Enterprise — no bar needed
+
+  const pct     = Math.min(100, Math.round((used / limit) * 100));
+  const isAtMax = used >= limit;
+  const isNear  = used >= limit - 1 && !isAtMax;
+
+  const barColor = isAtMax ? "#dc2626" : isNear ? "#d97706" : "#16a34a";
+
+  return (
+    <div style={{
+      background: "#fff",
+      border: `1px solid ${isAtMax ? "#fecaca" : isNear ? "#fde68a" : "#e2e0d8"}`,
+      borderRadius: 12,
+      padding: "1rem 1.25rem",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>
+          Staff usage
+          <span style={{
+            marginLeft: 8,
+            fontSize: 11,
+            fontWeight: 500,
+            padding: "2px 8px",
+            borderRadius: 100,
+            background: isAtMax ? "#fef2f2" : "#f5f4f0",
+            color: isAtMax ? "#dc2626" : "#4a4a40",
+          }}>
+            {capitalize(plan)} plan
+          </span>
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 500, color: barColor }}>
+          {used} / {limit} cashier{limit !== 1 ? "s" : ""}
+        </div>
+      </div>
+
+      <div style={{ height: 6, background: "#f5f4f0", borderRadius: 3, overflow: "hidden" }}>
+        <div style={{
+          height: "100%",
+          width: `${pct}%`,
+          background: barColor,
+          borderRadius: 3,
+          transition: "width 0.5s ease",
+        }} />
+      </div>
+
+      {isAtMax && (
+        <div style={{ marginTop: 10, fontSize: 12, color: "#dc2626", display: "flex", alignItems: "center", gap: 6 }}>
+          <IconLock />
+          Limit reached. Upgrade your plan to add more cashiers.
+        </div>
+      )}
+      {isNear && (
+        <div style={{ marginTop: 10, fontSize: 12, color: "#d97706" }}>
+          Almost at your limit — {limit - used} slot{limit - used !== 1 ? "s" : ""} remaining.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Upgrade banner (shown when at limit) ── */
+function UpgradeBanner({ plan, limit }: { plan: PlanId; limit: number }) {
+  const nextPlan = plan === "starter" ? "Pro (up to 10 staff)" : "Enterprise (unlimited staff)";
+  return (
+    <div style={{
+      padding: "14px 18px",
+      background: "#eff6ff",
+      border: "1px solid #bfdbfe",
+      borderRadius: 10,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 16,
+      flexWrap: "wrap",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#dbeafe", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <IconLock />
+        </div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: "#1e40af" }}>
+            Staff limit reached — {limit} of {limit} used
+          </div>
+          <div style={{ fontSize: 12, color: "#3b82f6", marginTop: 2 }}>
+            Your {capitalize(plan)} plan allows up to {limit} cashier{limit !== 1 ? "s" : ""}.
+            Upgrade to {nextPlan}.
+          </div>
+        </div>
+      </div>
+      <Link
+        href="/payment"
+        style={{
+          flexShrink: 0,
+          padding: "8px 18px",
+          background: "#2563eb",
+          color: "#fff",
+          borderRadius: 8,
+          fontSize: 13,
+          fontWeight: 500,
+          textDecoration: "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Upgrade plan →
+      </Link>
+    </div>
   );
 }
 
@@ -278,7 +414,6 @@ function StaffPanel({
    MAIN PAGE
 ───────────────────────────────────────── */
 export default function AdminStaffPage() {
-  // Read the signed-in admin from localStorage — used as owner key for all API calls
   const [adminUser] = useState<StoredUser | null>(getStoredUser);
 
   const [staff,      setStaff]      = useState<StaffMember[]>([]);
@@ -293,16 +428,21 @@ export default function AdminStaffPage() {
     open: false, title: "", message: "", danger: false, onConfirm: () => {},
   });
 
+  /* ── Derive plan limits ── */
+  const currentPlan: PlanId = adminUser?.plan ?? "starter";
+  const staffLimit           = STAFF_LIMITS[currentPlan];           // Infinity for enterprise
+  const atLimit              = staffLimit !== Infinity && staff.length >= staffLimit;
+
   const showToast = (msg: string, type: "success" | "error" = "success") => {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3500);
   };
 
   const openConfirm = (title: string, message: string, danger: boolean, onConfirm: () => void) =>
     setConfirm({ open: true, title, message, danger, onConfirm });
   const closeConfirm = () => setConfirm(c => ({ ...c, open: false }));
 
-  /* ── Fetch only this admin's staff ── */
+  /* ── Fetch staff ── */
   const fetchStaff = useCallback(async () => {
     if (!adminUser?.id) return;
     setFetching(true);
@@ -319,11 +459,30 @@ export default function AdminStaffPage() {
 
   useEffect(() => { fetchStaff(); }, [fetchStaff]);
 
+  /* ── Open add panel — guard limit ── */
+  const handleOpenAdd = () => {
+    if (atLimit) {
+      showToast(
+        `Your ${capitalize(currentPlan)} plan allows up to ${staffLimit} cashier${staffLimit !== 1 ? "s" : ""}. Upgrade to add more.`,
+        "error"
+      );
+      return;
+    }
+    setPanelMode("add");
+    setEditTarget(null);
+    setPanelOpen(true);
+  };
+
   /* ── Add / Edit staff ── */
   const handleSave = (form: InviteForm) => {
     if (!adminUser?.id) return showToast("Not logged in", "error");
     if (!form.full_name || !form.email) return showToast("Name and email are required", "error");
-    if (panelMode === "add" && form.password.length < 8) return showToast("Password must be at least 8 characters", "error");
+    if (panelMode === "add" && form.password.length < 8)
+      return showToast("Password must be at least 8 characters", "error");
+
+    // Re-check limit on save (in case of race)
+    if (panelMode === "add" && atLimit)
+      return showToast("Staff limit reached. Upgrade your plan to add more.", "error");
 
     openConfirm(
       panelMode === "add" ? "Add Cashier" : "Update Cashier",
@@ -339,7 +498,6 @@ export default function AdminStaffPage() {
           const res    = await fetch(url, {
             method,
             headers: { "Content-Type": "application/json" },
-            // admin_id sent in body to link/verify ownership
             body: JSON.stringify({ ...form, role: "staff", admin_id: adminUser.id }),
           });
           const data = await res.json();
@@ -439,10 +597,27 @@ export default function AdminStaffPage() {
         <div className="header-title">Staff</div>
         <div className="header-date">{dater}</div>
         <button
-          onClick={() => { setPanelMode("add"); setEditTarget(null); setPanelOpen(true); }}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "#141410", color: "#fff", border: "none", borderRadius: 7, fontFamily: "inherit", fontSize: 13, fontWeight: 500, cursor: "pointer" }}
+          onClick={handleOpenAdd}
+          title={atLimit ? `Limit reached — upgrade your plan to add more cashiers` : "Add a new cashier"}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "7px 14px",
+            background: atLimit ? "#9a9a8e" : "#141410",
+            color: "#fff",
+            border: "none",
+            borderRadius: 7,
+            fontFamily: "inherit",
+            fontSize: 13,
+            fontWeight: 500,
+            cursor: atLimit ? "not-allowed" : "pointer",
+            opacity: atLimit ? 0.7 : 1,
+            transition: "background 0.15s, opacity 0.15s",
+          }}
         >
-          <IconUserPlus /> Add Staff
+          {atLimit ? <IconLock /> : <IconUserPlus />}
+          {atLimit ? "Limit Reached" : "Add Staff"}
         </button>
       </header>
 
@@ -458,13 +633,21 @@ export default function AdminStaffPage() {
               Managing staff for <strong style={{ color: "#141410" }}>{adminUser.store_name ?? adminUser.full_name}</strong>
               <span style={{ color: "#9a9a8e" }}> · Only your cashiers are shown</span>
             </span>
+            <span style={{ marginLeft: "auto", fontSize: 11, padding: "2px 9px", borderRadius: 100, background: "#f5f4f0", color: "#4a4a40", fontWeight: 500 }}>
+              {capitalize(currentPlan)} plan
+            </span>
           </div>
+        )}
+
+        {/* Upgrade banner — only when at limit */}
+        {!fetching && atLimit && (
+          <UpgradeBanner plan={currentPlan} limit={staffLimit as number} />
         )}
 
         {/* Stat strip */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
           {[
-            { label: "Total Cashiers", value: staff.length,   sub: "In your store"   },
+            { label: "Total Cashiers", value: staff.length,   sub: staffLimit === Infinity ? "Unlimited plan" : `${staffLimit - staff.length} slot${staffLimit - staff.length !== 1 ? "s" : ""} remaining` },
             { label: "Active",         value: activeCount,    sub: "Currently on"    },
             { label: "Inactive",       value: inactiveCount,  sub: "Access revoked"  },
           ].map(s => (
@@ -475,6 +658,15 @@ export default function AdminStaffPage() {
             </div>
           ))}
         </div>
+
+        {/* Plan limit progress bar */}
+        {!fetching && (
+          <StaffLimitBar
+            used={staff.length}
+            limit={staffLimit}
+            plan={currentPlan}
+          />
+        )}
 
         {/* Staff table */}
         <div style={cardStyle}>

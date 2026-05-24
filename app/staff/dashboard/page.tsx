@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Sidebar from "@/app/staff/component/Sidebar";
 import staffCss from "@/app/staff/component/staffStyles";
 import StaffSettingsTab from "@/app/staff/component/StaffSettingsTab";
+import MpesaPaymentModal from "@/app/staff/component/MpesaPaymentModal";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface StoredStaff {
@@ -354,12 +355,16 @@ export default function StaffDashboard() {
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
   const [settings,         setSettings]         = useState<StoreSettings>({ tax_enabled: true, tax_rate: 16, tax_name: "VAT", tax_inclusive: false, currency: "KES" });
   const [cart,             setCart]             = useState<CartItem[]>([]);
-  const [payMethod,        setPayMethod]        = useState("Card");
+  //const [payMethod,        setPayMethod]        = useState("Card");
   const [search,           setSearch]           = useState("");
   const [catFilter,        setCatFilter]        = useState("All");
   const [fetching,         setFetching]         = useState(true);
   const [saving,           setSaving]           = useState(false);
   const [toast,            setToast]            = useState<{ msg: string; type: "ok" | "err" } | null>(null);
+
+const [payModalOpen,    setPayModalOpen]    = useState(false);
+const [pendingOrderId,  setPendingOrderId]  = useState<string | null>(null);
+const [pendingOrderNum, setPendingOrderNum] = useState<string>("");
 
   /* ── Auth guard ── */
   useEffect(() => {
@@ -502,6 +507,48 @@ export default function StaffDashboard() {
 
   /* ── Complete sale ── */
   const completeSale = async () => {
+  if (!cart.length || !staff) return;
+  setSaving(true);
+  try {
+    const items = cart.map(i => ({ id: i.id, name: i.name, quantity: i.qty, price: i.price }));
+ 
+    // Create the order first with payment_status = 'pending'
+    const res = await fetch("/api/orders", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items,
+        subtotal,
+        discount_amount: discountAmount,
+        discount_code:   selectedDiscount?.code || null,
+        tax:             taxAmount,
+        total,
+        payment_method:  "pending",   // will be updated by modal
+        payment_status:  "pending",   // will be updated after payment
+        status:          "pending",
+        customer_name:   "Walk-in Customer",
+        customer_email:  "",
+        staff_name:      staff.full_name,
+        admin_id:        staff.admin_id,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+ 
+    // Open payment modal with the created order
+    setPendingOrderId(data.id ?? data.order_id ?? null);
+    setPendingOrderNum(data.order_number);
+    setPayModalOpen(true);
+ 
+  } catch (err) {
+    showToast((err as Error).message || "Failed to create order", "err");
+  } finally {
+    setSaving(false);
+  }
+  };
+
+  /*
+  const completeSale = async () => {
     if (!cart.length || !staff) return;
     setSaving(true);
     try {
@@ -551,6 +598,53 @@ export default function StaffDashboard() {
       setSaving(false);
     }
   };
+  */
+
+  //Mpesa Handler
+const handlePaymentSuccess = async (
+  receipt: string,
+  amountPaid: number,
+  mode: "mpesa_full" | "cash_full" | "cash_and_mpesa"
+) => {
+  const methodLabel = mode === "cash_full" ? "cash" : mode === "mpesa_full" ? "mpesa" : "cash+mpesa";
+ 
+  // Update the order to paid
+  if (pendingOrderId) {
+    await fetch(`/api/orders/${pendingOrderId}`, {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        payment_status:  "paid",
+        payment_method:  methodLabel,
+        status:          "completed",
+        mpesa_receipt:   receipt !== "CASH" ? receipt : null,
+      }),
+    }).catch(() => { /* silent — order was already created */ });
+  }
+ 
+  showToast(`${pendingOrderNum} paid · ${settings.currency} ${amountPaid.toLocaleString()} (${methodLabel})`);
+ 
+  // Print receipt
+  printReceipt({
+    orderNumber:     pendingOrderNum,
+    items:           cart,
+    subtotal,
+    discount_amount: discountAmount,
+    discount_code:   selectedDiscount?.code || null,
+    tax:             taxAmount,
+    total,
+    paymentMethod:   methodLabel,
+    staffName:       staff?.full_name,
+  });
+ 
+  // Reset
+  setCart([]);
+  setSelectedDiscount(null);
+  setPayModalOpen(false);
+  setPendingOrderId(null);
+  setPendingOrderNum("");
+  fetchAll();
+};
 
   /* ── Stock helpers ── */
   const stockClass = (s: number) => s === 0 ? "badge bad" : s <= 8 ? "badge warn" : "badge ok";
@@ -825,9 +919,17 @@ export default function StaffDashboard() {
 
                   <div>
                     <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 500 }}>Payment Method</div>
-                    <select className="payment-select" value={payMethod} onChange={e => setPayMethod(e.target.value)}>
-                      <option>Card</option><option>Cash</option><option>Mobile</option>
-                    </select>
+                    <button
+                    className="complete-btn"
+                    onClick={completeSale}
+                    disabled={cart.length === 0 || saving}
+                    >
+                    {saving
+                    ? "Creating order…"
+                    : cart.length === 0
+                    ? "Add items to complete"
+                    : `Collect Payment — ${formatCurrency(total, settings.currency)}`}
+                    </button>
                   </div>
 
                   <div style={{ fontSize: 11, color: "var(--muted)", background: "var(--bg)", borderRadius: 7, padding: "0.6rem 0.75rem", lineHeight: 1.6 }}>
@@ -957,6 +1059,31 @@ export default function StaffDashboard() {
 
         </main>
       </div>
+
+  {payModalOpen && staff && (
+    <MpesaPaymentModal
+      adminId={staff.admin_id}
+      orderId={pendingOrderId}
+      orderNumber={pendingOrderNum}
+      exactAmount={total}
+      currency={settings.currency}
+      onSuccess={handlePaymentSuccess}
+      onClose={() => {
+        // If they close without paying, mark order as cancelled
+        if (pendingOrderId) {
+          fetch(`/api/orders/${pendingOrderId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "cancelled", payment_status: "failed" }),
+          }).catch(() => {});
+        }
+        setPayModalOpen(false);
+        setPendingOrderId(null);
+        setPendingOrderNum("");
+      }}
+    />
+  )}
+
     </>
   );
 }

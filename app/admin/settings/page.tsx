@@ -13,6 +13,7 @@ interface StoreSettings {
   address:     string;
   currency:    string;
   timezone:    string;
+  mpesa_till:  string;
 }
 interface TaxSettings {
   tax_enabled:    boolean;
@@ -48,32 +49,33 @@ interface StoredUser {
   domain:     string | null;
   phone:      string | null;
   address:    string | null;
+  mpesa_till?: string | null;
 }
 interface ConfirmState {
-  open:     boolean;
-  title:    string;
-  message:  string;
-  danger:   boolean;
+  open:      boolean;
+  title:     string;
+  message:   string;
+  danger:    boolean;
   onConfirm: () => void;
 }
 
 const TABS = ["Store", "Profile", "Tax & Billing", "Notifications", "Inventory", "Security", "Danger Zone"] as const;
+type Tab = typeof TABS[number];
 
 /* ── Password strength calculator ── */
 function getPasswordStrength(pw: string): { score: number; label: string; color: string } {
   if (!pw) return { score: 0, label: "", color: "#e2e0d8" };
   let score = 0;
-  if (pw.length >= 8)  score++;
-  if (pw.length >= 12) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (pw.length >= 8)            score++;
+  if (pw.length >= 12)           score++;
+  if (/[A-Z]/.test(pw))         score++;
+  if (/[0-9]/.test(pw))         score++;
+  if (/[^A-Za-z0-9]/.test(pw))  score++;
   if (score <= 1) return { score, label: "Weak",   color: "#dc2626" };
   if (score <= 2) return { score, label: "Fair",   color: "#d97706" };
   if (score <= 3) return { score, label: "Good",   color: "#2563eb" };
   return              { score, label: "Strong", color: "#16a34a" };
 }
-type Tab = typeof TABS[number];
 
 /* ── Helpers ── */
 function getStoredUser(): StoredUser | null {
@@ -96,11 +98,11 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: "0.5px", textTransform: "uppercase",
   color: "#4a4a40", marginBottom: 5,
 };
-const sectionStyle: React.CSSProperties  = { display: "flex", flexDirection: "column", gap: "1.1rem" };
-const rowStyle: React.CSSProperties      = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" };
-const cardStyle: React.CSSProperties     = { background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden" };
-const cardHeaderStyle: React.CSSProperties = { padding: "1rem 1.25rem", borderBottom: "1px solid #e2e0d8", display: "flex", alignItems: "center", justifyContent: "space-between" };
-const cardBodyStyle: React.CSSProperties = { padding: "1.25rem" };
+const sectionStyle: React.CSSProperties     = { display: "flex", flexDirection: "column", gap: "1.1rem" };
+const rowStyle: React.CSSProperties         = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" };
+const cardStyle: React.CSSProperties        = { background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden" };
+const cardHeaderStyle: React.CSSProperties  = { padding: "1rem 1.25rem", borderBottom: "1px solid #e2e0d8", display: "flex", alignItems: "center", justifyContent: "space-between" };
+const cardBodyStyle: React.CSSProperties    = { padding: "1.25rem" };
 
 /* ── SVG Icons ── */
 function IconWarning() {
@@ -127,7 +129,6 @@ function IconInfo() {
     </svg>
   );
 }
-
 function IconDanger() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -138,82 +139,147 @@ function IconDanger() {
 }
 
 /* ─────────────────────────────────────────
+   M-PESA TILL SECTION
+   Lives inside the Store tab. Has its own
+   local saving state so feedback is instant
+   without blocking the rest of the form.
+───────────────────────────────────────── */
+function MpesaTillSection({
+  mpesaTill,
+  onSave,
+}: {
+  mpesaTill: string;
+  onSave:    (till: string) => Promise<void>;
+}) {
+  const [till,   setTill]   = useState(mpesaTill);
+  const [saving, setSaving] = useState(false);
+  const [saved,  setSaved]  = useState(false);
+
+  /* Keep local state in sync if the parent re-fetches */
+  useEffect(() => { setTill(mpesaTill); }, [mpesaTill]);
+
+  const handleSave = async () => {
+    if (!till.trim()) return;
+    setSaving(true);
+    await onSave(till.trim());
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  return (
+    <div style={{ ...cardStyle }}>
+      <div style={cardHeaderStyle}>
+        <div>
+          <span style={{ fontSize: 13, fontWeight: 500 }}>M-Pesa Till Number</span>
+          <div style={{ fontSize: 11, color: "#9a9a8e", marginTop: 2 }}>
+            Customer payments will be sent directly to this till
+          </div>
+        </div>
+        {/* Lipa Na M-Pesa badge */}
+        <div style={{ display: "flex", alignItems: "center", gap: 5, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 100, padding: "4px 11px", flexShrink: 0 }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#16a34a" }} />
+          <span style={{ fontSize: 10, fontWeight: 700, color: "#16a34a", letterSpacing: "0.4px" }}>LIPA NA M-PESA</span>
+        </div>
+      </div>
+
+      <div style={cardBodyStyle}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "0.75rem", alignItems: "flex-end" }}>
+          <div>
+            <label style={labelStyle}>Till Number</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="e.g. 123456"
+              value={till}
+              onChange={e => setTill(e.target.value.replace(/\D/g, ""))}
+              style={{
+                ...fieldStyle,
+                borderColor: saved ? "#16a34a" : "#c8c6bc",
+                transition: "border-color 0.2s",
+              }}
+            />
+            <div style={{ fontSize: 11, color: "#9a9a8e", marginTop: 4 }}>
+              Your Lipa Na M-Pesa Buy Goods till number
+            </div>
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={saving || !till.trim()}
+            style={{
+              padding: "9px 20px",
+              background: saved ? "#16a34a" : saving ? "#9a9a8e" : "#141410",
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: saving || !till.trim() ? "not-allowed" : "pointer",
+              fontFamily: "inherit",
+              transition: "background 0.2s",
+              whiteSpace: "nowrap",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            {saved ? (
+              <>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Saved
+              </>
+            ) : saving ? "Saving…" : "Save Till"}
+          </button>
+        </div>
+
+        {/* Warning — no till set */}
+        {!till.trim() && (
+          <div style={{ marginTop: "0.85rem", padding: "10px 12px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, fontSize: 12, color: "#92400e", display: "flex", alignItems: "flex-start", gap: 7 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>No till number set. Staff won&apos;t be able to send M-Pesa payment requests to customers.</span>
+          </div>
+        )}
+
+        {/* Info note when till is set */}
+        {till.trim() && !saved && (
+          <div style={{ marginTop: "0.85rem", padding: "10px 12px", background: "#f5f4f0", border: "1px solid #e2e0d8", borderRadius: 8, fontSize: 12, color: "#4a4a40", display: "flex", alignItems: "center", gap: 7 }}>
+            <IconInfo />
+            Till <strong style={{ fontFamily: "monospace" }}>{till}</strong> will be used for all customer M-Pesa payment prompts at checkout.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
    CONFIRM MODAL
 ───────────────────────────────────────── */
 function ConfirmModal({ state, onCancel }: { state: ConfirmState; onCancel: () => void }) {
   if (!state.open) return null;
   return (
     <>
-      {/* Backdrop */}
-      <div
-        onClick={onCancel}
-        style={{
-          position: "fixed", inset: 0,
-          background: "rgba(0,0,0,0.35)",
-          zIndex: 1000,
-          animation: "fadeIn 0.15s ease",
-        }}
-      />
-      {/* Dialog */}
-      <div style={{
-        position: "fixed", top: "50%", left: "50%",
-        transform: "translate(-50%, -50%)",
-        background: "#fff",
-        borderRadius: 14,
-        padding: "1.75rem",
-        width: "100%", maxWidth: 400,
-        zIndex: 1001,
-        boxShadow: "0 24px 60px rgba(0,0,0,0.18)",
-        animation: "slideUp 0.2s ease",
-      }}>
-        {/* Icon */}
-        <div style={{
-          width: 44, height: 44, borderRadius: "50%",
-          background: state.danger ? "#fef2f2" : "#f5f4f0",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 20, marginBottom: "1rem",
-        }}>
+      <div onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 1000, animation: "fadeIn 0.15s ease" }} />
+      <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", background: "#fff", borderRadius: 14, padding: "1.75rem", width: "100%", maxWidth: 400, zIndex: 1001, boxShadow: "0 24px 60px rgba(0,0,0,0.18)", animation: "slideUp 0.2s ease" }}>
+        <div style={{ width: 44, height: 44, borderRadius: "50%", background: state.danger ? "#fef2f2" : "#f5f4f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: "1rem" }}>
           {state.danger ? <IconWarning /> : <IconSave />}
         </div>
-
-        <div style={{ fontSize: 15, fontWeight: 600, color: "#141410", marginBottom: 8 }}>
-          {state.title}
-        </div>
-        <div style={{ fontSize: 13, color: "#9a9a8e", lineHeight: 1.6, marginBottom: "1.5rem" }}>
-          {state.message}
-        </div>
-
+        <div style={{ fontSize: 15, fontWeight: 600, color: "#141410", marginBottom: 8 }}>{state.title}</div>
+        <div style={{ fontSize: 13, color: "#9a9a8e", lineHeight: 1.6, marginBottom: "1.5rem" }}>{state.message}</div>
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button
-            onClick={onCancel}
-            style={{
-              padding: "8px 18px", background: "#fff",
-              color: "#4a4a40", border: "1px solid #c8c6bc",
-              borderRadius: 8, fontSize: 13, cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => { state.onConfirm(); onCancel(); }}
-            style={{
-              padding: "8px 18px",
-              background: state.danger ? "#dc2626" : "#141410",
-              color: "#fff", border: "none",
-              borderRadius: 8, fontSize: 13, fontWeight: 500,
-              cursor: "pointer", fontFamily: "inherit",
-            }}
-          >
+          <button onClick={onCancel} style={{ padding: "8px 18px", background: "#fff", color: "#4a4a40", border: "1px solid #c8c6bc", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+          <button onClick={() => { state.onConfirm(); onCancel(); }} style={{ padding: "8px 18px", background: state.danger ? "#dc2626" : "#141410", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}>
             {state.danger ? "Yes, proceed" : "Confirm"}
           </button>
         </div>
       </div>
-
-      <style>{`
-        @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
-        @keyframes slideUp { from{opacity:0;transform:translate(-50%,-46%)} to{opacity:1;transform:translate(-50%,-50%)} }
-      `}</style>
+      <style>{`@keyframes fadeIn{from{opacity:0}to{opacity:1}} @keyframes slideUp{from{opacity:0;transform:translate(-50%,-46%)}to{opacity:1;transform:translate(-50%,-50%)}}`}</style>
     </>
   );
 }
@@ -221,20 +287,14 @@ function ConfirmModal({ state, onCancel }: { state: ConfirmState; onCancel: () =
 /* ── Toast ── */
 function Toast({ msg, type = "success" }: { msg: string; type?: "success" | "error" }) {
   return (
-    <div style={{
-      position: "fixed", bottom: "2rem", right: "2rem",
-      background: type === "error" ? "#dc2626" : "#141410",
-      color: "#fff", padding: "0.85rem 1.25rem", borderRadius: 10,
-      fontSize: 13, display: "flex", alignItems: "center", gap: 10,
-      boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
-      animation: "toastIn 0.3s ease", zIndex: 1100,
-    }}>
+    <div style={{ position: "fixed", bottom: "2rem", right: "2rem", background: type === "error" ? "#dc2626" : "#141410", color: "#fff", padding: "0.85rem 1.25rem", borderRadius: 10, fontSize: 13, display: "flex", alignItems: "center", gap: 10, boxShadow: "0 8px 30px rgba(0,0,0,0.2)", animation: "toastIn 0.3s ease", zIndex: 1100 }}>
       <span style={{ display: "inline-flex", alignItems: "center" }}>
         {type === "error"
           ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
           : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         }
-      </span> {msg}
+      </span>
+      {msg}
       <style>{`@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}`}</style>
     </div>
   );
@@ -274,16 +334,14 @@ function Spinner() {
   );
 }
 
-/* ── Danger Row Component ── */
-function DangerRow({
-  title, desc, tables, btn, destructive = false, onConfirm,
-}: {
-  title:       string;
-  desc:        string;
-  tables:      string[];
-  btn:         string;
+/* ── Danger Row ── */
+function DangerRow({ title, desc, tables, btn, destructive = false, onConfirm }: {
+  title:        string;
+  desc:         string;
+  tables:       string[];
+  btn:          string;
   destructive?: boolean;
-  onConfirm:   () => void;
+  onConfirm:    () => void;
 }) {
   return (
     <div style={{ borderRadius: 8, border: "1px solid #fecaca", overflow: "hidden" }}>
@@ -291,7 +349,6 @@ function DangerRow({
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: destructive ? "#dc2626" : "#141410", marginBottom: 4 }}>{title}</div>
           <div style={{ fontSize: 12, color: "#9a9a8e", lineHeight: 1.5, marginBottom: 8 }}>{desc}</div>
-          {/* Tables affected */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
             {tables.map(t => (
               <span key={t} style={{ fontSize: 10, fontFamily: "monospace", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "1px 6px", borderRadius: 4 }}>
@@ -302,14 +359,7 @@ function DangerRow({
         </div>
         <button
           onClick={onConfirm}
-          style={{
-            padding: "8px 16px", flexShrink: 0,
-            background: destructive ? "#dc2626" : "#fff",
-            color: destructive ? "#fff" : "#dc2626",
-            border: destructive ? "none" : "1px solid #fecaca",
-            borderRadius: 8, fontSize: 12, fontWeight: 500,
-            cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit",
-          }}
+          style={{ padding: "8px 16px", flexShrink: 0, background: destructive ? "#dc2626" : "#fff", color: destructive ? "#fff" : "#dc2626", border: destructive ? "none" : "1px solid #fecaca", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit" }}
         >
           {btn}
         </button>
@@ -322,26 +372,21 @@ function DangerRow({
    MAIN PAGE
 ───────────────────────────────────────── */
 export default function AdminSettingsPage() {
-  const [activeTab,  setActiveTab]  = useState<Tab>("Store");
-  const { refresh: refreshStore } = useStore();
-  const [toast,      setToast]      = useState<{ msg: string; type: "success" | "error" } | null>(null);
-  const [saving,     setSaving]     = useState(false);
-  const [fetching,   setFetching]   = useState(true);
+  const [activeTab,     setActiveTab]     = useState<Tab>("Store");
+  const { refresh: refreshStore }         = useStore();
+  const [toast,         setToast]         = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const [saving,        setSaving]        = useState(false);
+  const [fetching,      setFetching]      = useState(true);
   const [inventoryMode, setInventoryMode] = useState<"auto" | "manual">("manual");
+  const [confirm,       setConfirm]       = useState<ConfirmState>({ open: false, title: "", message: "", danger: false, onConfirm: () => {} });
 
-  /* ── Confirm modal state ── */
-  const [confirm, setConfirm] = useState<ConfirmState>({
-    open: false, title: "", message: "", danger: false, onConfirm: () => {},
-  });
-
-  const openConfirm = (title: string, message: string, danger: boolean, onConfirm: () => void) => {
+  const openConfirm = (title: string, message: string, danger: boolean, onConfirm: () => void) =>
     setConfirm({ open: true, title, message, danger, onConfirm });
-  };
   const closeConfirm = () => setConfirm(c => ({ ...c, open: false }));
 
   const user = getStoredUser();
 
-  /* ── Form state — store pre-filled from localStorage ── */
+  /* ── Form state ── */
   const [store, setStore] = useState<StoreSettings>({
     store_name: user?.store_name ?? "",
     domain:     user?.domain     ?? "",
@@ -350,6 +395,7 @@ export default function AdminSettingsPage() {
     address:    user?.address    ?? "",
     currency:   "KES",
     timezone:   "Africa/Nairobi",
+    mpesa_till: user?.mpesa_till ?? "",
   });
   const [tax, setTax] = useState<TaxSettings>({
     tax_enabled: true, tax_rate: "16", tax_name: "VAT", tax_inclusive: false, receipt_footer: "",
@@ -376,7 +422,7 @@ export default function AdminSettingsPage() {
     try {
       const res  = await fetch(`/api/settings${user?.id ? `?admin_id=${user.id}` : ""}`);
       const data = await res.json();
-      // Store info: prefer localStorage for user-specific fields, API for regional settings
+
       setStore({
         store_name: user?.store_name ?? data.store_name ?? "",
         domain:     user?.domain     ?? data.domain     ?? "",
@@ -385,13 +431,26 @@ export default function AdminSettingsPage() {
         address:    data.address     ?? user?.address   ?? "",
         currency:   data.currency    ?? "KES",
         timezone:   data.timezone    ?? "Africa/Nairobi",
+        mpesa_till: data.mpesa_till  ?? user?.mpesa_till ?? "",   // ← hydrated from API
       });
-      setTax({ tax_enabled: !!data.tax_enabled, tax_rate: String(data.tax_rate ?? "16"), tax_name: data.tax_name ?? "VAT", tax_inclusive: !!data.tax_inclusive, receipt_footer: data.receipt_footer ?? "" });
+      setTax({
+        tax_enabled:    !!data.tax_enabled,
+        tax_rate:       String(data.tax_rate ?? "16"),
+        tax_name:       data.tax_name       ?? "VAT",
+        tax_inclusive:  !!data.tax_inclusive,
+        receipt_footer: data.receipt_footer ?? "",
+      });
       setInventoryMode(data.auto_deduct_inventory ? "auto" : "manual");
-      setNotif({ notif_new_order: !!data.notif_new_order, notif_low_stock: !!data.notif_low_stock, notif_daily_report: !!data.notif_daily_report, notif_staff_login: !!data.notif_staff_login, notif_email: data.notif_email ?? "" });
+      setNotif({
+        notif_new_order:    !!data.notif_new_order,
+        notif_low_stock:    !!data.notif_low_stock,
+        notif_daily_report: !!data.notif_daily_report,
+        notif_staff_login:  !!data.notif_staff_login,
+        notif_email:        data.notif_email ?? "",
+      });
       if (user) {
         const parts = user.full_name.split(" ");
-        setProfile({ firstName: parts[0] ?? "", lastName: parts.slice(1).join(" ") ?? "", email: user.email ?? "", phone: "" });
+        setProfile({ firstName: parts[0] ?? "", lastName: parts.slice(1).join(" "), email: user.email ?? "", phone: "" });
       }
     } catch {
       showToast("Failed to load settings", "error");
@@ -402,20 +461,25 @@ export default function AdminSettingsPage() {
 
   useEffect(() => { fetchSettings(); }, [fetchSettings]);
 
-  /* ── Actual save actions (called after confirm) ── */
+  /* ── Core save (store + tax + notif) ── */
   const doSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-                  ...store, 
-                  ...tax, 
-                  ...notif, 
-                  auto_deduct_inventory: inventoryMode === "auto" ? 1 : 0,
-                  admin_id: user?.id }) });
+      const res = await fetch("/api/settings", {
+        method:  "PUT",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          ...store,
+          ...tax,
+          ...notif,
+          auto_deduct_inventory: inventoryMode === "auto" ? 1 : 0,
+          admin_id: user?.id,
+        }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      // Keep localStorage in sync with updated store fields
+      // Keep localStorage in sync
       const updatedUser = getStoredUser();
       if (updatedUser) {
         localStorage.setItem("user", JSON.stringify({
@@ -425,20 +489,50 @@ export default function AdminSettingsPage() {
           email:      store.email,
           phone:      store.phone,
           address:    store.address,
+          mpesa_till: store.mpesa_till,
         }));
       }
       showToast("Settings saved successfully");
-      refreshStore(); // update global currency/timezone context
+      refreshStore();
     } catch (err) {
       showToast((err as Error).message || "Failed to save", "error");
     } finally { setSaving(false); }
   };
 
+  /* ── Till-only save (called from MpesaTillSection, no confirm needed) ── */
+  const saveTill = async (till: string) => {
+    try {
+      const res = await fetch("/api/settings", {
+        method:  "PUT",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ mpesa_till: till, admin_id: user?.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      // Keep both local state and localStorage in sync
+      setStore(s => ({ ...s, mpesa_till: till }));
+      const updatedUser = getStoredUser();
+      if (updatedUser) {
+        localStorage.setItem("user", JSON.stringify({ ...updatedUser, mpesa_till: till }));
+      }
+      showToast("Till number saved");
+    } catch (err) {
+      showToast((err as Error).message || "Failed to save till number", "error");
+      throw err; // re-throw so MpesaTillSection doesn't show "Saved"
+    }
+  };
+
+  /* ── Profile save ── */
   const doSaveProfile = async () => {
     if (!user) return showToast("Not logged in", "error");
     setSaving(true);
     try {
-      const res = await fetch("/api/settings/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: user.id, full_name: `${profile.firstName} ${profile.lastName}`.trim(), email: profile.email, phone: profile.phone }) });
+      const res = await fetch("/api/settings/profile", {
+        method:  "PUT",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ user_id: user.id, full_name: `${profile.firstName} ${profile.lastName}`.trim(), email: profile.email, phone: profile.phone }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       localStorage.setItem("user", JSON.stringify({ ...user, ...data.user }));
@@ -448,11 +542,16 @@ export default function AdminSettingsPage() {
     } finally { setSaving(false); }
   };
 
+  /* ── Password change ── */
   const doChangePassword = async () => {
     if (!user) return showToast("Not logged in", "error");
     setSaving(true);
     try {
-      const res = await fetch("/api/settings/password", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: user.id, currentPassword: security.currentPassword, newPassword: security.newPassword }) });
+      const res = await fetch("/api/settings/password", {
+        method:  "PUT",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ user_id: user.id, currentPassword: security.currentPassword, newPassword: security.newPassword }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       showToast("Password updated successfully");
@@ -462,17 +561,18 @@ export default function AdminSettingsPage() {
     } finally { setSaving(false); }
   };
 
-  /* ── Confirm wrappers (open modal → then do action) ── */
+  /* ── Confirm wrappers ── */
   const handleSave = () =>
     openConfirm("Save Settings", "Are you sure you want to save these changes?", false, doSave);
-
   const handleSaveProfile = () =>
     openConfirm("Update Profile", "This will update your name, email and phone number.", false, doSaveProfile);
-
   const handleChangePassword = () => {
-    if (!security.currentPassword || !security.newPassword) return showToast("Please fill in all password fields.", "error");
-    if (security.newPassword !== security.confirmPassword) return showToast("New passwords do not match.", "error");
-    if (security.newPassword.length < 8) return showToast("Password must be at least 8 characters.", "error");
+    if (!security.currentPassword || !security.newPassword)
+      return showToast("Please fill in all password fields.", "error");
+    if (security.newPassword !== security.confirmPassword)
+      return showToast("New passwords do not match.", "error");
+    if (security.newPassword.length < 8)
+      return showToast("Password must be at least 8 characters.", "error");
     openConfirm("Change Password", "Are you sure you want to change your password? You will need to use the new password on your next login.", false, doChangePassword);
   };
 
@@ -487,7 +587,9 @@ export default function AdminSettingsPage() {
 
       <header className="header">
         <div className="header-title">Settings</div>
-        <div className="header-date">{new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date())}</div>
+        <div className="header-date">
+          {new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date())}
+        </div>
       </header>
 
       <main className="main">
@@ -495,13 +597,17 @@ export default function AdminSettingsPage() {
         {/* Tab bar */}
         <div style={{ display: "flex", gap: 2, background: "#fff", border: "1px solid #e2e0d8", borderRadius: 10, padding: 4, width: "fit-content", flexWrap: "wrap" }}>
           {TABS.map(t => (
-            <button key={t} onClick={() => setActiveTab(t)} style={{
-              padding: "7px 16px", border: "none", borderRadius: 7,
-              fontFamily: "inherit", fontSize: 13, cursor: "pointer", transition: "all 0.15s",
-              background: activeTab === t ? (t === "Danger Zone" ? "#dc2626" : "#141410") : "transparent",
-              color: activeTab === t ? "#fff" : (t === "Danger Zone" ? "#dc2626" : "#9a9a8e"),
-              fontWeight: activeTab === t ? 500 : 400,
-            }}>
+            <button
+              key={t}
+              onClick={() => setActiveTab(t)}
+              style={{
+                padding: "7px 16px", border: "none", borderRadius: 7,
+                fontFamily: "inherit", fontSize: 13, cursor: "pointer", transition: "all 0.15s",
+                background: activeTab === t ? (t === "Danger Zone" ? "#dc2626" : "#141410") : "transparent",
+                color:      activeTab === t ? "#fff" : (t === "Danger Zone" ? "#dc2626" : "#9a9a8e"),
+                fontWeight: activeTab === t ? 500 : 400,
+              }}
+            >
               {t}
             </button>
           ))}
@@ -509,11 +615,20 @@ export default function AdminSettingsPage() {
 
         {fetching ? <Spinner /> : (
           <>
-            {/* ══ STORE ══ */}
+            {/* ══════════════════════════════════════
+                STORE TAB
+                — Store Info
+                — Regional Settings
+                — M-Pesa Till          ← new card
+            ══════════════════════════════════════ */}
             {activeTab === "Store" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+                {/* Store Information */}
                 <div style={cardStyle}>
-                  <div style={cardHeaderStyle}><span style={{ fontSize: 13, fontWeight: 500 }}>Store Information</span></div>
+                  <div style={cardHeaderStyle}>
+                    <span style={{ fontSize: 13, fontWeight: 500 }}>Store Information</span>
+                  </div>
                   <div style={cardBodyStyle}>
                     <div style={sectionStyle}>
                       <div style={rowStyle}>
@@ -524,8 +639,10 @@ export default function AdminSettingsPage() {
                         <div>
                           <label style={labelStyle}>Domain</label>
                           <div style={{ display: "flex", alignItems: "stretch", background: "#f5f4f0", border: "1px solid #c8c6bc", borderRadius: 8, overflow: "hidden" }}>
-                            <input style={{ ...fieldStyle, border: "none", background: "transparent", flex: 1 }} value={store.domain} onChange={e => setStore(s => ({ ...s, domain: e.target.value }))} readOnly={true} />
-                            <span style={{ padding: "0 12px", background: "#e2e0d8", fontSize: 12, fontWeight: 500, color: "#4a4a40", display: "flex", alignItems: "center", whiteSpace: "nowrap" }}>.upendoapps.com</span>
+                            <input style={{ ...fieldStyle, border: "none", background: "transparent", flex: 1 }} value={store.domain} readOnly />
+                            <span style={{ padding: "0 12px", background: "#e2e0d8", fontSize: 12, fontWeight: 500, color: "#4a4a40", display: "flex", alignItems: "center", whiteSpace: "nowrap" }}>
+                              .upendoapps.com
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -547,8 +664,11 @@ export default function AdminSettingsPage() {
                   </div>
                 </div>
 
+                {/* Regional Settings */}
                 <div style={cardStyle}>
-                  <div style={cardHeaderStyle}><span style={{ fontSize: 13, fontWeight: 500 }}>Regional Settings</span></div>
+                  <div style={cardHeaderStyle}>
+                    <span style={{ fontSize: 13, fontWeight: 500 }}>Regional Settings</span>
+                  </div>
                   <div style={cardBodyStyle}>
                     <div style={rowStyle}>
                       <div>
@@ -576,6 +696,12 @@ export default function AdminSettingsPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* ── M-Pesa Till ── */}
+                <MpesaTillSection
+                  mpesaTill={store.mpesa_till}
+                  onSave={saveTill}
+                />
 
                 <div style={{ display: "flex", justifyContent: "flex-end" }}>
                   <SaveButton onClick={handleSave} loading={saving} />
@@ -610,7 +736,6 @@ export default function AdminSettingsPage() {
                           <input style={fieldStyle} value={profile.lastName} onChange={e => setProfile(p => ({ ...p, lastName: e.target.value }))} />
                         </div>
                       </div>
-
                       <div>
                         <label style={labelStyle}>Role</label>
                         <input style={{ ...fieldStyle, background: "#e2e0d8", color: "#9a9a8e", cursor: "not-allowed" }} value={user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Admin"} readOnly />
@@ -653,9 +778,9 @@ export default function AdminSettingsPage() {
                       </div>
                       <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, padding: "0.75rem 1rem", fontSize: 12, color: "#1e40af" }}>
                         <span style={{ display: "inline-flex", alignItems: "flex-start", gap: 7 }}>
-          <span style={{ marginTop: 1, flexShrink: 0 }}><IconInfo /></span>
-          <span>With {tax.tax_name || "tax"} at {tax.tax_rate || 0}%, a 100 {store.currency} item will show {(100 * (1 + Number(tax.tax_rate) / 100)).toFixed(2)} {store.currency} at checkout.</span>
-        </span>
+                          <span style={{ marginTop: 1, flexShrink: 0 }}><IconInfo /></span>
+                          <span>With {tax.tax_name || "tax"} at {tax.tax_rate || 0}%, a 100 {store.currency} item will show {(100 * (1 + Number(tax.tax_rate) / 100)).toFixed(2)} {store.currency} at checkout.</span>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -684,10 +809,10 @@ export default function AdminSettingsPage() {
                   <div style={cardHeaderStyle}><span style={{ fontSize: 13, fontWeight: 500 }}>Email Notifications</span></div>
                   <div style={cardBodyStyle}>
                     {[
-                      { key: "notif_new_order",    label: "New Order",      desc: "Get notified whenever a new sale is recorded" },
-                      { key: "notif_low_stock",    label: "Low Stock Alert", desc: "Alert when a product drops below 10 units" },
-                      { key: "notif_daily_report", label: "Daily Summary",   desc: "Receive a daily sales report every morning" },
-                      { key: "notif_staff_login",  label: "Staff Login",     desc: "Alert when a staff member signs in" },
+                      { key: "notif_new_order",    label: "New Order",       desc: "Get notified whenever a new sale is recorded" },
+                      { key: "notif_low_stock",    label: "Low Stock Alert",  desc: "Alert when a product drops below 10 units" },
+                      { key: "notif_daily_report", label: "Daily Summary",    desc: "Receive a daily sales report every morning" },
+                      { key: "notif_staff_login",  label: "Staff Login",      desc: "Alert when a staff member signs in" },
                     ].map(({ key, label, desc }) => (
                       <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.85rem 0", borderBottom: "1px solid #e2e0d8" }}>
                         <div>
@@ -716,216 +841,154 @@ export default function AdminSettingsPage() {
               </div>
             )}
 
-             {/* ══ INVENTORY  ══ */}
+            {/* ══ INVENTORY ══ */}
             {activeTab === "Inventory" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <InventorySettingsCard
-              inventoryMode={inventoryMode}
-              setInventoryMode={setInventoryMode}
-              />
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <SaveButton onClick={handleSave} loading={saving} />
-            </div>
-            </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <InventorySettingsCard inventoryMode={inventoryMode} setInventoryMode={setInventoryMode} />
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <SaveButton onClick={handleSave} loading={saving} />
+                </div>
+              </div>
             )}
 
             {/* ══ SECURITY ══ */}
             {activeTab === "Security" && (() => {
-              const strength = getPasswordStrength(security.newPassword);
-              const confirmOk = security.confirmPassword.length > 0 && security.confirmPassword === security.newPassword;
+              const strength   = getPasswordStrength(security.newPassword);
+              const confirmOk  = security.confirmPassword.length > 0 && security.confirmPassword === security.newPassword;
               const confirmErr = security.confirmPassword.length > 0 && security.confirmPassword !== security.newPassword;
               return (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
-                {/* ── Change Password ── */}
-                <div style={cardStyle}>
-                  <div style={cardHeaderStyle}>
-                    <span style={{ fontSize: 13, fontWeight: 500 }}>Change Password</span>
-                    <span style={{ fontSize: 11, color: "#9a9a8e" }}>Stored as bcrypt hash in the database</span>
-                  </div>
-                  <div style={cardBodyStyle}>
-                    <div style={sectionStyle}>
-
-                      {/* Current password */}
-                      <div>
-                        <label style={labelStyle}>Current Password *</label>
-                        <input
-                          style={fieldStyle}
-                          type="password"
-                          placeholder="Enter your current password"
-                          value={security.currentPassword}
-                          onChange={e => setSecurity(s => ({ ...s, currentPassword: e.target.value }))}
-                        />
-                      </div>
-
-                      {/* New password + strength meter */}
-                      <div>
-                        <label style={labelStyle}>New Password *</label>
-                        <input
-                          style={{
-                            ...fieldStyle,
-                            borderColor: security.newPassword
-                              ? strength.color
-                              : "#c8c6bc",
-                          }}
-                          type="password"
-                          placeholder="Min. 8 characters"
-                          value={security.newPassword}
-                          onChange={e => setSecurity(s => ({ ...s, newPassword: e.target.value }))}
-                        />
-                        {/* Strength bar */}
-                        {security.newPassword && (
-                          <div style={{ marginTop: 8 }}>
-                            <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
-                              {[1,2,3,4,5].map(i => (
-                                <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= strength.score ? strength.color : "#e2e0d8", transition: "background 0.2s" }} />
-                              ))}
+                  <div style={cardStyle}>
+                    <div style={cardHeaderStyle}>
+                      <span style={{ fontSize: 13, fontWeight: 500 }}>Change Password</span>
+                      <span style={{ fontSize: 11, color: "#9a9a8e" }}>Stored as bcrypt hash in the database</span>
+                    </div>
+                    <div style={cardBodyStyle}>
+                      <div style={sectionStyle}>
+                        <div>
+                          <label style={labelStyle}>Current Password *</label>
+                          <input style={fieldStyle} type="password" placeholder="Enter your current password" value={security.currentPassword} onChange={e => setSecurity(s => ({ ...s, currentPassword: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>New Password *</label>
+                          <input
+                            style={{ ...fieldStyle, borderColor: security.newPassword ? strength.color : "#c8c6bc" }}
+                            type="password" placeholder="Min. 8 characters"
+                            value={security.newPassword}
+                            onChange={e => setSecurity(s => ({ ...s, newPassword: e.target.value }))}
+                          />
+                          {security.newPassword && (
+                            <div style={{ marginTop: 8 }}>
+                              <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+                                {[1,2,3,4,5].map(i => (
+                                  <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= strength.score ? strength.color : "#e2e0d8", transition: "background 0.2s" }} />
+                                ))}
+                              </div>
+                              <div style={{ fontSize: 11, color: strength.color, fontWeight: 500 }}>
+                                {strength.label}
+                                {strength.score < 3 && (
+                                  <span style={{ color: "#9a9a8e", fontWeight: 400 }}>
+                                    {" — "}
+                                    {!/[A-Z]/.test(security.newPassword) && "add uppercase · "}
+                                    {!/[0-9]/.test(security.newPassword) && "add a number · "}
+                                    {!/[^A-Za-z0-9]/.test(security.newPassword) && "add a symbol · "}
+                                    {security.newPassword.length < 12 && "use 12+ chars"}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <div style={{ fontSize: 11, color: strength.color, fontWeight: 500 }}>
-                              {strength.label}
-                              {strength.score < 3 && (
-                                <span style={{ color: "#9a9a8e", fontWeight: 400 }}>
-                                  {" — "}
-                                  {!/[A-Z]/.test(security.newPassword) && "add uppercase · "}
-                                  {!/[0-9]/.test(security.newPassword) && "add a number · "}
-                                  {!/[^A-Za-z0-9]/.test(security.newPassword) && "add a symbol · "}
-                                  {security.newPassword.length < 12 && "use 12+ chars"}
-                                </span>
-                              )}
-                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Confirm New Password *</label>
+                          <input
+                            style={{ ...fieldStyle, borderColor: confirmErr ? "#dc2626" : confirmOk ? "#16a34a" : "#c8c6bc" }}
+                            type="password" placeholder="Repeat new password"
+                            value={security.confirmPassword}
+                            onChange={e => setSecurity(s => ({ ...s, confirmPassword: e.target.value }))}
+                          />
+                          {confirmErr && <p style={{ fontSize: 11, color: "#dc2626", marginTop: 4 }}>Passwords do not match</p>}
+                          {confirmOk  && <p style={{ fontSize: 11, color: "#16a34a", marginTop: 4 }}>✓ Passwords match</p>}
+                        </div>
+                        <div style={{ background: "#f5f4f0", borderRadius: 8, padding: "0.75rem 1rem" }}>
+                          <p style={{ fontSize: 11, fontWeight: 600, color: "#4a4a40", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Requirements</p>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                            {[
+                              { label: "At least 8 characters",         met: security.newPassword.length >= 8 },
+                              { label: "At least one uppercase letter",  met: /[A-Z]/.test(security.newPassword) },
+                              { label: "At least one number",            met: /[0-9]/.test(security.newPassword) },
+                              { label: "At least one special character", met: /[^A-Za-z0-9]/.test(security.newPassword) },
+                            ].map(req => (
+                              <div key={req.label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={req.met ? "#16a34a" : "#c8c6bc"} strokeWidth="2.5" strokeLinecap="round">
+                                  {req.met
+                                    ? <><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>
+                                    : <circle cx="12" cy="12" r="10"/>}
+                                </svg>
+                                <span style={{ color: req.met ? "#16a34a" : "#9a9a8e" }}>{req.label}</span>
+                              </div>
+                            ))}
                           </div>
-                        )}
-                      </div>
-
-                      {/* Confirm password */}
-                      <div>
-                        <label style={labelStyle}>Confirm New Password *</label>
-                        <input
-                          style={{
-                            ...fieldStyle,
-                            borderColor: confirmErr ? "#dc2626" : confirmOk ? "#16a34a" : "#c8c6bc",
-                          }}
-                          type="password"
-                          placeholder="Repeat new password"
-                          value={security.confirmPassword}
-                          onChange={e => setSecurity(s => ({ ...s, confirmPassword: e.target.value }))}
-                        />
-                        {confirmErr && (
-                          <p style={{ fontSize: 11, color: "#dc2626", marginTop: 4 }}>Passwords do not match</p>
-                        )}
-                        {confirmOk && (
-                          <p style={{ fontSize: 11, color: "#16a34a", marginTop: 4 }}>✓ Passwords match</p>
-                        )}
-                      </div>
-
-                      {/* Requirements checklist */}
-                      <div style={{ background: "#f5f4f0", borderRadius: 8, padding: "0.75rem 1rem" }}>
-                        <p style={{ fontSize: 11, fontWeight: 600, color: "#4a4a40", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>Requirements</p>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                          {[
-                            { label: "At least 8 characters",          met: security.newPassword.length >= 8 },
-                            { label: "At least one uppercase letter",   met: /[A-Z]/.test(security.newPassword) },
-                            { label: "At least one number",             met: /[0-9]/.test(security.newPassword) },
-                            { label: "At least one special character",  met: /[^A-Za-z0-9]/.test(security.newPassword) },
-                          ].map(req => (
-                            <div key={req.label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                                stroke={req.met ? "#16a34a" : "#c8c6bc"} strokeWidth="2.5" strokeLinecap="round">
-                                {req.met
-                                  ? <><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>
-                                  : <circle cx="12" cy="12" r="10"/>
-                                }
-                              </svg>
-                              <span style={{ color: req.met ? "#16a34a" : "#9a9a8e" }}>{req.label}</span>
-                            </div>
-                          ))}
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                          <button
+                            onClick={handleChangePassword}
+                            disabled={saving || !confirmOk || strength.score < 2}
+                            style={{ padding: "9px 20px", background: saving || !confirmOk || strength.score < 2 ? "#9a9a8e" : "#141410", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: saving || !confirmOk || strength.score < 2 ? "not-allowed" : "pointer", fontFamily: "inherit" }}
+                          >
+                            {saving ? "Updating…" : "Update Password"}
+                          </button>
                         </div>
                       </div>
+                    </div>
+                  </div>
 
-                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <div style={cardStyle}>
+                    <div style={cardHeaderStyle}><span style={{ fontSize: 13, fontWeight: 500 }}>Account Info</span></div>
+                    <div style={cardBodyStyle}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                        {[
+                          { label: "Admin ID",  value: user?.id         ?? "—",    mono: true  },
+                          { label: "Email",     value: user?.email      ?? "—",    mono: false },
+                          { label: "Role",      value: user?.role       ?? "admin", mono: false },
+                          { label: "Store",     value: user?.store_name ?? "—",    mono: false },
+                        ].map(row => (
+                          <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.65rem 0.85rem", background: "#f5f4f0", borderRadius: 8 }}>
+                            <span style={{ fontSize: 12, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px" } as React.CSSProperties}>{row.label}</span>
+                            <span style={{ fontSize: 13, fontWeight: 500, fontFamily: row.mono ? "monospace" : "inherit", color: "#141410", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {row.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={cardStyle}>
+                    <div style={cardHeaderStyle}><span style={{ fontSize: 13, fontWeight: 500 }}>Session</span></div>
+                    <div style={cardBodyStyle}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 3 }}>Sign out of this session</div>
+                          <div style={{ fontSize: 12, color: "#9a9a8e" }}>Clear your session.</div>
+                        </div>
                         <button
-                          onClick={handleChangePassword}
-                          disabled={saving || !confirmOk || strength.score < 2}
-                          style={{
-                            padding: "9px 20px",
-                            background: saving || !confirmOk || strength.score < 2 ? "#9a9a8e" : "#141410",
-                            color: "#fff", border: "none", borderRadius: 8,
-                            fontSize: 13, fontWeight: 500,
-                            cursor: saving || !confirmOk || strength.score < 2 ? "not-allowed" : "pointer",
-                            fontFamily: "inherit",
-                          }}
+                          onClick={() => openConfirm("Sign Out", "Are you sure you want to sign out? You will need to log in again.", false, () => { localStorage.removeItem("user"); window.location.href = "/"; })}
+                          style={{ padding: "8px 16px", background: "#f5f4f0", color: "#141410", border: "1px solid #c8c6bc", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit", flexShrink: 0 }}
                         >
-                          {saving ? "Updating…" : "Update Password"}
+                          Sign Out
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                {/* ── Account Info ── */}
-                <div style={cardStyle}>
-                  <div style={cardHeaderStyle}><span style={{ fontSize: 13, fontWeight: 500 }}>Account Info</span></div>
-                  <div style={cardBodyStyle}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                      {[
-                        { label: "Admin ID",    value: user?.id ?? "—",         mono: true  },
-                        { label: "Email",       value: user?.email ?? "—",      mono: false },
-                        { label: "Role",        value: user?.role ?? "admin",   mono: false },
-                        { label: "Store",       value: user?.store_name ?? "—", mono: false },
-                      ].map(row => (
-                        <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.65rem 0.85rem", background: "#f5f4f0", borderRadius: 8 }}>
-                          <span style={{ fontSize: 12, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px" } as React.CSSProperties}>{row.label}</span>
-                          <span style={{ fontSize: 13, fontWeight: 500, fontFamily: row.mono ? "monospace" : "inherit", color: "#141410", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {row.value}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── Sign Out All Devices ── */}
-                <div style={cardStyle}>
-                  <div style={cardHeaderStyle}>
-                    <span style={{ fontSize: 13, fontWeight: 500 }}>Session</span>
-                  </div>
-                  <div style={cardBodyStyle}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 3 }}>Sign out of this session</div>
-                        <div style={{ fontSize: 12, color: "#9a9a8e" }}>
-                          Clear your session.
-                        </div>
-                      </div>
-                      <button
-                        onClick={() =>
-                          openConfirm(
-                            "Sign Out",
-                            "Are you sure you want to sign out? You will need to log in again.",
-                            false,
-                            () => {
-                              localStorage.removeItem("user");
-                              window.location.href = "/";
-                            }
-                          )
-                        }
-                        style={{ padding: "8px 16px", background: "#f5f4f0", color: "#141410", border: "1px solid #c8c6bc", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit", flexShrink: 0 }}
-                      >
-                        Sign Out
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
               );
             })()}
 
             {/* ══ DANGER ZONE ══ */}
             {activeTab === "Danger Zone" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-
-                {/* Warning banner */}
                 <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "0.85rem 1.1rem", display: "flex", alignItems: "flex-start", gap: 10, fontSize: 12, color: "#7f1d1d" }}>
                   <span style={{ marginTop: 1, flexShrink: 0 }}><IconDanger /></span>
                   <span>The actions below are <strong>permanent and irreversible</strong>. They operate directly on your database. Make sure you know what you&apos;re doing before proceeding.</span>
@@ -939,111 +1002,71 @@ export default function AdminSettingsPage() {
                   <div style={cardBodyStyle}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
-                      {/* ── Clear All Sales ── */}
                       <DangerRow
                         title="Clear All Sales Data"
                         desc="Permanently DELETE all rows from the orders table scoped to your store. Stock movements from sales are also cleared. Customer order counts are reset to 0."
                         tables={["orders", "stock_movements (sale type)"]}
                         btn="Clear Sales Data"
-                        onConfirm={() =>
-                          openConfirm(
-                            "Clear All Sales Data",
-                            "This will permanently delete every order and sale record from your database. Customer totals will be reset. This CANNOT be undone.",
-                            true,
-                            async () => {
-                              if (!user?.id) return showToast("Not logged in", "error");
-                              try {
-                                const res = await fetch(`/api/admin/clear-sales?admin_id=${user.id}`, { method: "DELETE" });
-                                const data = await res.json();
-                                if (!res.ok) throw new Error(data.error);
-                                showToast(`Cleared ${data.deleted} sales records`);
-                              } catch (err) {
-                                showToast((err as Error).message || "Failed to clear sales", "error");
-                              }
-                            }
-                          )
-                        }
+                        onConfirm={() => openConfirm("Clear All Sales Data", "This will permanently delete every order and sale record from your database. Customer totals will be reset. This CANNOT be undone.", true, async () => {
+                          if (!user?.id) return showToast("Not logged in", "error");
+                          try {
+                            const res = await fetch(`/api/admin/clear-sales?admin_id=${user.id}`, { method: "DELETE" });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error);
+                            showToast(`Cleared ${data.deleted} sales records`);
+                          } catch (err) { showToast((err as Error).message || "Failed to clear sales", "error"); }
+                        })}
                       />
 
-                      {/* ── Reset Inventory ── */}
                       <DangerRow
                         title="Reset Inventory"
                         desc="Sets stock = 0 for every product in your catalogue. Product names, prices and SKUs are preserved. All stock_movements history is wiped."
                         tables={["products.stock → 0", "stock_movements"]}
                         btn="Reset Inventory"
-                        onConfirm={() =>
-                          openConfirm(
-                            "Reset Inventory",
-                            "This will set stock to 0 for every product and delete all stock movement history. Products themselves are preserved. Are you sure?",
-                            true,
-                            async () => {
-                              if (!user?.id) return showToast("Not logged in", "error");
-                              try {
-                                const res = await fetch(`/api/admin/reset-inventory?admin_id=${user.id}`, { method: "DELETE" });
-                                const data = await res.json();
-                                if (!res.ok) throw new Error(data.error);
-                                showToast(`Reset ${data.updated} products to 0 stock`);
-                              } catch (err) {
-                                showToast((err as Error).message || "Failed to reset inventory", "error");
-                              }
-                            }
-                          )
-                        }
+                        onConfirm={() => openConfirm("Reset Inventory", "This will set stock to 0 for every product and delete all stock movement history. Products themselves are preserved. Are you sure?", true, async () => {
+                          if (!user?.id) return showToast("Not logged in", "error");
+                          try {
+                            const res = await fetch(`/api/admin/reset-inventory?admin_id=${user.id}`, { method: "DELETE" });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error);
+                            showToast(`Reset ${data.updated} products to 0 stock`);
+                          } catch (err) { showToast((err as Error).message || "Failed to reset inventory", "error"); }
+                        })}
                       />
 
-                      {/* ── Delete All Customers ── */}
                       <DangerRow
                         title="Delete All Customers"
                         desc="Permanently removes every customer record from your store. Orders are preserved but will show no linked customer."
                         tables={["customers"]}
                         btn="Delete Customers"
-                        onConfirm={() =>
-                          openConfirm(
-                            "Delete All Customers",
-                            "This will permanently delete every customer record. This cannot be undone. Orders will be preserved but unlinked.",
-                            true,
-                            async () => {
-                              if (!user?.id) return showToast("Not logged in", "error");
-                              try {
-                                const res = await fetch(`/api/admin/clear-customers?admin_id=${user.id}`, { method: "DELETE" });
-                                const data = await res.json();
-                                if (!res.ok) throw new Error(data.error);
-                                showToast(`Deleted ${data.deleted} customer records`);
-                              } catch (err) {
-                                showToast((err as Error).message || "Failed to delete customers", "error");
-                              }
-                            }
-                          )
-                        }
+                        onConfirm={() => openConfirm("Delete All Customers", "This will permanently delete every customer record. This cannot be undone. Orders will be preserved but unlinked.", true, async () => {
+                          if (!user?.id) return showToast("Not logged in", "error");
+                          try {
+                            const res = await fetch(`/api/admin/clear-customers?admin_id=${user.id}`, { method: "DELETE" });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error);
+                            showToast(`Deleted ${data.deleted} customer records`);
+                          } catch (err) { showToast((err as Error).message || "Failed to delete customers", "error"); }
+                        })}
                       />
 
-                      {/* ── Delete Store Account ── */}
                       <DangerRow
                         title="Delete Store Account"
                         desc="Nuclear option — deletes your admin account and ALL associated data: products, orders, staff, customers, settings, and stock history."
                         tables={["users", "staff", "products", "orders", "customers", "stock_movements", "settings"]}
                         btn="Delete Store"
                         destructive
-                        onConfirm={() =>
-                          openConfirm(
-                            "Delete Store Account",
-                            "This will permanently delete your admin account and every piece of data associated with it. You will be signed out immediately. THIS CANNOT BE UNDONE.",
-                            true,
-                            async () => {
-                              if (!user?.id) return showToast("Not logged in", "error");
-                              try {
-                                const res = await fetch(`/api/admin/delete-store?admin_id=${user.id}`, { method: "DELETE" });
-                                if (!res.ok) throw new Error("Failed");
-                                localStorage.removeItem("user");
-                                localStorage.removeItem("read_notifs");
-                                showToast("Store deleted. Redirecting…");
-                                setTimeout(() => { window.location.href = "https://pos.upendoapps.com";}, 1500);
-                              } catch (err) {
-                                showToast((err as Error).message || "Failed to delete store", "error");
-                              }
-                            }
-                          )
-                        }
+                        onConfirm={() => openConfirm("Delete Store Account", "This will permanently delete your admin account and every piece of data associated with it. You will be signed out immediately. THIS CANNOT BE UNDONE.", true, async () => {
+                          if (!user?.id) return showToast("Not logged in", "error");
+                          try {
+                            const res = await fetch(`/api/admin/delete-store?admin_id=${user.id}`, { method: "DELETE" });
+                            if (!res.ok) throw new Error("Failed");
+                            localStorage.removeItem("user");
+                            localStorage.removeItem("read_notifs");
+                            showToast("Store deleted. Redirecting…");
+                            setTimeout(() => { window.location.href = "https://pos.upendoapps.com"; }, 1500);
+                          } catch (err) { showToast((err as Error).message || "Failed to delete store", "error"); }
+                        })}
                       />
 
                     </div>

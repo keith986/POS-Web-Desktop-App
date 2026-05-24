@@ -153,3 +153,10 @@ export function requiredPlan(href: string): PlanId | null {
 export function planLabel(plan: PlanId): string {
   return plan.charAt(0).toUpperCase() + plan.slice(1);
 }
+
+//Staff limits per plan (used for UI messaging and enforcement)
+export const STAFF_LIMITS: Record<PlanId, number> = {
+  starter:    2,
+  pro:        10,
+  enterprise: Infinity,
+};
