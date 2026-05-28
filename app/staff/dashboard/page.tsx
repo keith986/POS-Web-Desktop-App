@@ -195,6 +195,7 @@ function printReceipt(order: { orderNumber: string; items: CartItem[]; subtotal:
   win.document.write(buildReceiptHtml({ orderNumber: order.orderNumber, dateStr: new Date().toLocaleString(), itemLines, subtotal: order.subtotal, discountAmount: order.discount_amount, discountCode: order.discount_code, tax: order.tax, total: order.total, paymentMethod: order.paymentMethod, staffName: order.staffName }));
   win.document.close();
 }
+
 function printSaleReceipt(sale: Sale, staffName: string) {
   const win = window.open("", "_blank", "width=320,height=600");
   if (!win) return;
@@ -227,13 +228,12 @@ export default function StaffDashboard() {
   const [catFilter,        setCatFilter]        = useState("All");
   const [fetching,         setFetching]         = useState(true);
 
-  // saving = creating the pending order (brief spinner on button)
-  const [saving,          setSaving]          = useState(false);
-  // payModalOpen = payment modal is visible
-  const [payModalOpen,    setPayModalOpen]    = useState(false);
-  // pending order awaiting payment confirmation
-  const [pendingOrderId,  setPendingOrderId]  = useState<string | null>(null);
-  const [pendingOrderNum, setPendingOrderNum] = useState<string>("");
+  /*
+   * payModalOpen — payment modal is visible
+   * No "pending order" state anymore: the order is created INSIDE
+   * handlePaymentSuccess, i.e. only after the customer has actually paid.
+   */
+  const [payModalOpen, setPayModalOpen] = useState(false);
 
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
 
@@ -282,10 +282,10 @@ export default function StaffDashboard() {
       const [prodData, settData, salesData, discData] = await Promise.all([
         prodRes.json(), settRes.json(), salesRes.json(), discRes.json(),
       ]);
-      if (Array.isArray(prodData))  setProducts(prodData.filter((p: Product) => p.status === "active"));
+      if (Array.isArray(prodData))     setProducts(prodData.filter((p: Product) => p.status === "active"));
       if (settData && !settData.error) setSettings({ tax_enabled: Boolean(settData.tax_enabled), tax_rate: Number(settData.tax_rate) || 16, tax_name: settData.tax_name || "VAT", tax_inclusive: Boolean(settData.tax_inclusive), currency: settData.currency || "KES" });
-      if (Array.isArray(discData))  setDiscounts(discData.filter((d: Discount) => d.is_active));
-      if (Array.isArray(salesData)) setSales(salesData.map((s: Sale) => ({ ...s, items: parseItems(s.items), discount_amount: Number(s.discount_amount) || 0 })));
+      if (Array.isArray(discData))     setDiscounts(discData.filter((d: Discount) => d.is_active));
+      if (Array.isArray(salesData))    setSales(salesData.map((s: Sale) => ({ ...s, items: parseItems(s.items), discount_amount: Number(s.discount_amount) || 0 })));
     } catch { showToast("Failed to load data", "err"); }
     finally  { setFetching(false); }
   }, [staff?.admin_id, staff?.id]);
@@ -297,6 +297,7 @@ export default function StaffDashboard() {
     const cats = Array.from(new Set(products.map(p => p.category))).sort();
     return ["All", ...cats];
   }, [products]);
+
   const filtered = useMemo(() => products.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.sku ?? "").toLowerCase().includes(search.toLowerCase());
     const matchCat    = catFilter === "All" || p.category === catFilter;
@@ -336,14 +337,32 @@ export default function StaffDashboard() {
   const stockLabel = (s: number) => s === 0 ? "Out of stock" : s <= 8 ? `Low — ${s} left` : `${s} in stock`;
 
   /* ──────────────────────────────────────────────────────────────
-     STEP 1 — "Collect Payment" creates a PENDING order, then
-     opens the payment modal. The DB record stays pending until
-     handlePaymentSuccess patches it to completed.
+     "Collect Payment" — just opens the modal.
+     NO order is created here. Zero DB writes until payment is done.
   ────────────────────────────────────────────────────────────── */
-  const handleCollectPayment = async () => {
+  const handleCollectPayment = () => {
     if (!cart.length || !staff) return;
-    setSaving(true);
+    setPayModalOpen(true);
+  };
+
+  /* ──────────────────────────────────────────────────────────────
+     handlePaymentSuccess — called by MpesaPaymentModal ONLY after
+     the customer has actually paid (cash confirmed or M-Pesa STK
+     receipt received). We create the completed order here.
+  ────────────────────────────────────────────────────────────── */
+  const handlePaymentSuccess = async (
+    receipt:    string,
+    amountPaid: number,
+    mode:       "mpesa_full" | "cash_full" | "cash_and_mpesa"
+  ) => {
+    if (!staff) return;
+
+    const methodLabel =
+      mode === "cash_full"       ? "cash"       :
+      mode === "mpesa_full"      ? "mpesa"      : "cash+mpesa";
+
     try {
+      /* Create the order as COMPLETED right away — no pending state */
       const res = await fetch("/api/orders", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
@@ -354,9 +373,10 @@ export default function StaffDashboard() {
           discount_code:   selectedDiscount?.code || null,
           tax:             taxAmount,
           total,
-          payment_method:  "pending",
-          payment_status:  "pending",
-          status:          "pending",
+          payment_method:  methodLabel,
+          payment_status:  "paid",
+          status:          "completed",
+          mpesa_receipt:   receipt !== "CASH" ? receipt : null,
           customer_name:   "Walk-in Customer",
           customer_email:  "",
           staff_name:      staff.full_name,
@@ -365,77 +385,40 @@ export default function StaffDashboard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setPendingOrderId(data.id ?? data.order_id ?? null);
-      setPendingOrderNum(data.order_number);
-      setPayModalOpen(true);
+
+      const orderNum = data.order_number ?? "—";
+
+      showToast(`${orderNum} complete · ${settings.currency} ${amountPaid.toLocaleString()} (${methodLabel})`);
+
+      printReceipt({
+        orderNumber:     orderNum,
+        items:           cart,
+        subtotal,
+        discount_amount: discountAmount,
+        discount_code:   selectedDiscount?.code || null,
+        tax:             taxAmount,
+        total,
+        paymentMethod:   methodLabel,
+        staffName:       staff.full_name,
+      });
+
     } catch (err) {
-      showToast((err as Error).message || "Failed to create order", "err");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  /* ──────────────────────────────────────────────────────────────
-     STEP 2 — Called by MpesaPaymentModal ONLY after payment is
-     confirmed (cash counted or M-Pesa receipt received).
-     Patches the order to completed, prints receipt, resets cart.
-  ────────────────────────────────────────────────────────────── */
-  const handlePaymentSuccess = async (
-    receipt:    string,
-    amountPaid: number,
-    mode:       "mpesa_full" | "cash_full" | "cash_and_mpesa"
-  ) => {
-    const methodLabel = mode === "cash_full" ? "cash" : mode === "mpesa_full" ? "mpesa" : "cash+mpesa";
-
-    if (pendingOrderId) {
-      await fetch(`/api/orders/${pendingOrderId}`, {
-        method:  "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          payment_status: "paid",
-          payment_method: methodLabel,
-          status:         "completed",
-          mpesa_receipt:  receipt !== "CASH" ? receipt : null,
-        }),
-      }).catch(() => {});
+      /* Order creation failed after payment — still show a warning
+         but don't block the staff member or lose the cart data */
+      showToast(`Payment received but order save failed: ${(err as Error).message}`, "err");
     }
 
-    showToast(`${pendingOrderNum} paid · ${settings.currency} ${amountPaid.toLocaleString()} (${methodLabel})`);
-
-    printReceipt({
-      orderNumber:     pendingOrderNum,
-      items:           cart,
-      subtotal,
-      discount_amount: discountAmount,
-      discount_code:   selectedDiscount?.code || null,
-      tax:             taxAmount,
-      total,
-      paymentMethod:   methodLabel,
-      staffName:       staff?.full_name,
-    });
-
-    // Reset
+    /* Always reset modal + cart after a successful payment */
+    setPayModalOpen(false);
     setCart([]);
     setSelectedDiscount(null);
-    setPayModalOpen(false);
-    setPendingOrderId(null);
-    setPendingOrderNum("");
     fetchAll();
   };
 
-  /* ── Cancel payment — mark order cancelled, keep cart intact ── */
+  /* ── Close modal — no cleanup needed (no pending order was created) ── */
   const handlePaymentClose = () => {
-    if (pendingOrderId) {
-      fetch(`/api/orders/${pendingOrderId}`, {
-        method:  "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ status: "cancelled", payment_status: "failed" }),
-      }).catch(() => {});
-    }
     setPayModalOpen(false);
-    setPendingOrderId(null);
-    setPendingOrderNum("");
-    // Cart stays so staff can retry
+    /* Cart stays intact so staff can try again */
   };
 
   const shiftTotal = sales.reduce((s, r) => s + r.total, 0);
@@ -443,7 +426,9 @@ export default function StaffDashboard() {
 
   if (!ready || !staff) return null;
 
-  const dater = new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date());
+  const dater = new Intl.DateTimeFormat("en-US", {
+    weekday: "short", day: "numeric", month: "short", year: "numeric",
+  }).format(new Date());
 
   return (
     <>
@@ -487,9 +472,9 @@ export default function StaffDashboard() {
               <div className="stat-strip">
                 {[
                   { label: "Shift Sales",   value: fetching ? "…" : formatCurrency(shiftTotal, settings.currency), sub: "Today on your shift" },
-                  { label: "Transactions",  value: fetching ? "…" : String(sales.length),  sub: "This shift"   },
-                  { label: "Items in Cart", value: String(cartCount),                       sub: "Pending sale" },
-                  { label: "Low Stock",     value: fetching ? "…" : String(lowStockCt),     sub: "Products"     },
+                  { label: "Transactions",  value: fetching ? "…" : String(sales.length), sub: "This shift"   },
+                  { label: "Items in Cart", value: String(cartCount),                      sub: "Pending sale" },
+                  { label: "Low Stock",     value: fetching ? "…" : String(lowStockCt),    sub: "Products"     },
                 ].map(s => (
                   <div className="stat-card" key={s.label}>
                     <div className="stat-label">{s.label}</div>
@@ -502,48 +487,54 @@ export default function StaffDashboard() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <div className="card">
                   <div className="card-header"><span className="card-title">Recent Sales</span><span className="card-meta">{sales.length} this shift</span></div>
-                  {fetching ? <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Loading…</div>
-                  : sales.length === 0 ? <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No sales yet today.</div>
-                  : (
-                    <table className="tbl">
-                      <thead><tr><th>Order</th><th>Items</th><th>Total</th><th>Method</th></tr></thead>
-                      <tbody>
-                        {sales.slice(0, 4).map(s => {
-                          const items = parseItems(s.items);
-                          const itemStr = items.length > 0 ? items.map(i => `${i.name}${i.quantity > 1 ? ` ×${i.quantity}` : ""}`).join(", ") : "—";
-                          return (
-                            <tr key={s.id}>
-                              <td style={{ fontWeight: 500, color: "var(--ink)" }}>{s.order_number}</td>
-                              <td style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{itemStr}</td>
-                              <td style={{ fontWeight: 500, color: "var(--ink)" }}>{formatCurrency(s.total, settings.currency)}</td>
-                              <td><span className="badge info"><span className="badge-dot" />{s.payment_method}</span></td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  )}
+                  {fetching
+                    ? <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Loading…</div>
+                    : sales.length === 0
+                      ? <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No sales yet today.</div>
+                      : (
+                        <table className="tbl">
+                          <thead><tr><th>Order</th><th>Items</th><th>Total</th><th>Method</th></tr></thead>
+                          <tbody>
+                            {sales.slice(0, 4).map(s => {
+                              const items   = parseItems(s.items);
+                              const itemStr = items.length > 0 ? items.map(i => `${i.name}${i.quantity > 1 ? ` ×${i.quantity}` : ""}`).join(", ") : "—";
+                              return (
+                                <tr key={s.id}>
+                                  <td style={{ fontWeight: 500, color: "var(--ink)" }}>{s.order_number}</td>
+                                  <td style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{itemStr}</td>
+                                  <td style={{ fontWeight: 500, color: "var(--ink)" }}>{formatCurrency(s.total, settings.currency)}</td>
+                                  <td><span className="badge info"><span className="badge-dot" />{s.payment_method}</span></td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      )}
                 </div>
 
                 <div className="card">
                   <div className="card-header"><span className="card-title">Stock Alerts</span><span className="card-meta">View only</span></div>
-                  {fetching ? <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Loading…</div>
-                  : products.filter(p => p.stock <= 8).length === 0
-                  ? <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>All products well stocked</div>
-                  : (
-                    <div style={{ paddingBottom: "0.5rem" }}>
-                      {products.filter(p => p.stock <= 8).map(p => (
-                        <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "0.7rem 1.25rem", borderBottom: "1px solid var(--border)" }}>
-                          <CategoryIcon category={p.category} size={16} />
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</div>
-                            <div style={{ fontSize: 11, color: "var(--muted)" }}>{p.sku ?? p.category}</div>
-                          </div>
-                          <span className={stockClass(p.stock)}><span className="badge-dot" />{stockLabel(p.stock)}</span>
+                  {fetching
+                    ? <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Loading…</div>
+                    : products.filter(p => p.stock <= 8).length === 0
+                      ? <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          All products well stocked
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      : (
+                        <div style={{ paddingBottom: "0.5rem" }}>
+                          {products.filter(p => p.stock <= 8).map(p => (
+                            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "0.7rem 1.25rem", borderBottom: "1px solid var(--border)" }}>
+                              <CategoryIcon category={p.category} size={16} />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</div>
+                                <div style={{ fontSize: 11, color: "var(--muted)" }}>{p.sku ?? p.category}</div>
+                              </div>
+                              <span className={stockClass(p.stock)}><span className="badge-dot" />{stockLabel(p.stock)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                 </div>
               </div>
             </>
@@ -553,7 +544,7 @@ export default function StaffDashboard() {
           {activeTab === "Record Sale" && (
             <div className="sale-layout">
 
-              {/* Left — product picker + cart items */}
+              {/* Left — product picker + cart */}
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
                 <div className="card">
@@ -620,7 +611,7 @@ export default function StaffDashboard() {
                 </div>
               </div>
 
-              {/* ── RIGHT — Sale Summary (SINGLE action button) ── */}
+              {/* ── RIGHT — Sale Summary ── */}
               <div className="summary-card">
                 <div className="summary-header">Sale Summary</div>
                 <div className="summary-body">
@@ -668,17 +659,15 @@ export default function StaffDashboard() {
                     Time:  <strong style={{ color: "var(--ink)" }}>{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</strong>
                   </div>
 
-                  {/* ── SINGLE BUTTON — opens payment modal ── */}
+                  {/* ── SINGLE BUTTON ── */}
                   <button
                     className="complete-btn"
                     onClick={handleCollectPayment}
-                    disabled={cart.length === 0 || saving}
+                    disabled={cart.length === 0}
                   >
-                    {saving
-                      ? "Preparing order…"
-                      : cart.length === 0
-                        ? "Add items to continue"
-                        : `Collect Payment — ${formatCurrency(total, settings.currency)}`}
+                    {cart.length === 0
+                      ? "Add items to continue"
+                      : `Collect Payment — ${formatCurrency(total, settings.currency)}`}
                   </button>
 
                   {cart.length > 0 && (
@@ -732,30 +721,32 @@ export default function StaffDashboard() {
           {activeTab === "Sales History" && (
             <div className="card">
               <div className="card-header"><span className="card-title">Sales History — Today</span><span className="card-meta">{sales.length} transactions · {formatCurrency(shiftTotal, settings.currency)}</span></div>
-              {fetching ? <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Loading…</div>
-              : sales.length === 0 ? <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No sales recorded today.</div>
-              : (
-                <table className="tbl">
-                  <thead><tr><th>Order</th><th>Time</th><th>Items</th><th>Total</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
-                  <tbody>
-                    {sales.map(s => {
-                      const items = parseItems(s.items);
-                      const itemStr = items.length > 0 ? items.map(i => `${i.name}${i.quantity > 1 ? ` ×${i.quantity}` : ""}`).join(", ") : "—";
-                      return (
-                        <tr key={s.id}>
-                          <td style={{ fontWeight: 500, color: "var(--ink)" }}>{s.order_number}</td>
-                          <td>{formatTime(s.created_at)}</td>
-                          <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{itemStr}</td>
-                          <td style={{ fontWeight: 500, color: "var(--ink)" }}>{formatCurrency(s.total, settings.currency)}</td>
-                          <td><span className="badge info"><span className="badge-dot" />{s.payment_method}</span></td>
-                          <td><span className={`badge ${s.status === "completed" ? "ok" : "warn"}`}><span className="badge-dot" />{s.status === "completed" ? "Completed" : s.status}</span></td>
-                          <td><button onClick={() => printSaleReceipt(s, staff?.full_name || "Staff")} style={{ fontSize: 11, padding: "4px 10px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}>Print</button></td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
+              {fetching
+                ? <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Loading…</div>
+                : sales.length === 0
+                  ? <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No sales recorded today.</div>
+                  : (
+                    <table className="tbl">
+                      <thead><tr><th>Order</th><th>Time</th><th>Items</th><th>Total</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
+                      <tbody>
+                        {sales.map(s => {
+                          const items   = parseItems(s.items);
+                          const itemStr = items.length > 0 ? items.map(i => `${i.name}${i.quantity > 1 ? ` ×${i.quantity}` : ""}`).join(", ") : "—";
+                          return (
+                            <tr key={s.id}>
+                              <td style={{ fontWeight: 500, color: "var(--ink)" }}>{s.order_number}</td>
+                              <td>{formatTime(s.created_at)}</td>
+                              <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{itemStr}</td>
+                              <td style={{ fontWeight: 500, color: "var(--ink)" }}>{formatCurrency(s.total, settings.currency)}</td>
+                              <td><span className="badge info"><span className="badge-dot" />{s.payment_method}</span></td>
+                              <td><span className={`badge ${s.status === "completed" ? "ok" : "warn"}`}><span className="badge-dot" />{s.status === "completed" ? "Completed" : s.status}</span></td>
+                              <td><button onClick={() => printSaleReceipt(s, staff?.full_name || "Staff")} style={{ fontSize: 11, padding: "4px 10px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}>Print</button></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
             </div>
           )}
 
@@ -767,12 +758,12 @@ export default function StaffDashboard() {
         </main>
       </div>
 
-      {/* Payment modal — renders outside staff-shell so it overlays everything */}
+      {/* ── PAYMENT MODAL — no orderId needed, order is created on success ── */}
       {payModalOpen && staff && (
         <MpesaPaymentModal
           adminId={staff.admin_id}
-          orderId={pendingOrderId}
-          orderNumber={pendingOrderNum}
+          orderId={null}
+          orderNumber={`DRAFT-${Date.now()}`}
           exactAmount={total}
           currency={settings.currency}
           onSuccess={handlePaymentSuccess}
