@@ -202,7 +202,7 @@ export default function MpesaPaymentModal({
             </div>
           </div>
           {step !== "waiting" && (
-            <button onClick={onClose} style={{ background: "#f5f4f0", border: "none", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 18, color: "#4a4a40", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+            <button onClick={onClose} style={{ background: "#f5f4f0", border: "none", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 18, color: "#4a4a40", display: "flex", alignItems: "center", justifyContent: "center" }}>close</button>
           )}
         </div>
 
@@ -288,9 +288,9 @@ export default function MpesaPaymentModal({
                 <label style={lbl}>Payment Method</label>
                 <div style={{ display: "flex", gap: 6 }}>
                   {([
-                    { id: "mpesa_full",     label: "📱 M-Pesa"       },
-                    { id: "cash_full",      label: "💵 Cash"          },
-                    { id: "cash_and_mpesa", label: "💵 + 📱 Split"    },
+                    { id: "mpesa_full",     label: "M-Pesa"       },
+                    { id: "cash_full",      label: "Cash"          },
+                    { id: "cash_and_mpesa", label: "M-Pesa + Cash"    },
                   ] as { id: PaymentMode; label: string }[]).map(opt => (
                     <button key={opt.id} onClick={() => { setMode(opt.id); setError(""); setCashAmount(""); }} style={modeBtn(mode === opt.id)}>
                       {opt.label}
