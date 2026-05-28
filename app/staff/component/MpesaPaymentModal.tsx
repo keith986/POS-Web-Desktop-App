@@ -202,7 +202,7 @@ export default function MpesaPaymentModal({
             </div>
           </div>
           {step !== "waiting" && (
-            <button onClick={onClose} style={{ background: "#f5f4f0", border: "none", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 18, color: "#4a4a40", display: "flex", alignItems: "center", justifyContent: "center" }}>close</button>
+            <button onClick={onClose} style={{ background: "#f5f4f0", border: "none", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 18, color: "#4a4a40", display: "flex", alignItems: "center", justifyContent: "center" }}>x</button>
           )}
         </div>
 
