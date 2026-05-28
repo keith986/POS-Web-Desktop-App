@@ -414,6 +414,21 @@ export async function initDb(): Promise<void> {
   console.log("✅ Table: notifications");
 
   await conn.query(`
+    CREATE TABLE IF NOT EXISTS support_messages (
+  id         CHAR(36)     NOT NULL DEFAULT (UUID()),
+  admin_id   CHAR(36)     NOT NULL,
+  sender     ENUM('admin','super_admin') NOT NULL DEFAULT 'admin',
+  title      VARCHAR(255) NOT NULL DEFAULT 'Support',
+  message    TEXT         NOT NULL,
+  created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  INDEX idx_support_admin_id (admin_id),
+  INDEX idx_support_created_at (created_at)
+);
+`);
+  console.log("✅ Table: support_messages");
+
+  await conn.query(`
   CREATE TABLE IF NOT EXISTS site_analytics (
   id              INT UNSIGNED    NOT NULL AUTO_INCREMENT,
   domain          VARCHAR(100)    NOT NULL,      -- matches users.domain

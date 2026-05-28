@@ -38,6 +38,12 @@ interface PaymentRow extends RowDataPacket {
   result_desc: string; store_name: string; domain: string;
   user_email: string; sub_status: string; next_billing_date: string;
 }
+interface BillingRow extends RowDataPacket {
+  admin_id: string; charge_id: string | null; subscription_id: string | null;
+  amount: number; plan: string | null; status: string; mpesa_receipt: string | null;
+  subscription_status: string | null; next_billing_date: string | null; created_at: string;
+  store_name: string; domain: string; user_email: string;
+}
 interface AnalyticsRow extends RowDataPacket {
   domain: string; store_name: string;
   total_visits: number; total_clicks: number;
@@ -238,27 +244,38 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ orders });
     }
 
-    /* ── PAYMENTS — mpesa_transactions + subscriptions ── */
-    if (section === "payments") {
-      const [payments] = await pool.query<PaymentRow[]>(`
+    /* ── BILLING — subscriptions and completed mpesa transactions ── */
+    if (section === "billing" || section === "payments") {
+      const [payments] = await pool.query<BillingRow[]>(`
         SELECT
-          mt.id,
-          mt.amount,
-          mt.phone,
-          mt.plan,
-          mt.status,
+          u.id AS admin_id,
+          mt.id AS charge_id,
+          s.id AS subscription_id,
+          COALESCE(mt.amount, 0) AS amount,
+          s.plan,
+          COALESCE(mt.status, s.status, 'unknown') AS status,
           mt.mpesa_receipt,
-          mt.result_desc,
-          mt.created_at,
+          s.status AS subscription_status,
+          s.next_billing_date,
+          COALESCE(mt.created_at, s.updated_at, s.created_at) AS created_at,
           u.store_name,
           u.domain,
-          u.email          AS user_email,
-          s.status         AS sub_status,
-          s.next_billing_date
-        FROM mpesa_transactions mt
-        LEFT JOIN users         u ON mt.user_id = u.id
-        LEFT JOIN subscriptions s ON s.user_id  = mt.user_id
-        ORDER BY mt.created_at DESC
+          u.email AS user_email
+        FROM users u
+        LEFT JOIN subscriptions s ON s.user_id = u.id
+        LEFT JOIN (
+          SELECT m1.*
+          FROM mpesa_transactions m1
+          JOIN (
+            SELECT user_id, MAX(created_at) AS latest
+            FROM mpesa_transactions
+            WHERE status = 'completed'
+            GROUP BY user_id
+          ) m2 ON m1.user_id = m2.user_id AND m1.created_at = m2.latest AND m1.status = 'completed'
+        ) mt ON mt.user_id = u.id
+        WHERE u.email != 'admin@postore.app'
+          AND (mt.id IS NOT NULL OR s.status IN ('active','paid'))
+        ORDER BY created_at DESC
         LIMIT 200
       `);
       return NextResponse.json({ payments });
@@ -364,9 +381,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const body = await request.json();
-    const { action, userId, domain } = body as {
-      action: string; userId: string; domain?: string;
+    const { action, userId, id, domain } = body as {
+      action: string; userId?: string; id?: string; domain?: string;
     };
+    const targetId = userId || id || null;
 
     if (action === "activate_user") {
       await pool.query(
@@ -464,13 +482,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: true, message: "Staff member deleted" });
     }
 
-    if (action === "mark_payment_paid") {
-      // userId here holds the mpesa_transaction id passed from the frontend
+    if (action === "mark_payment_paid" || action === "mark_billing_paid") {
+      if (!targetId) return NextResponse.json({ error: "Missing transaction id" }, { status: 400 });
       await pool.query(
         "UPDATE mpesa_transactions SET status = 'completed' WHERE id = ?",
-        [userId]
+        [targetId]
       );
       return NextResponse.json({ success: true, message: "Transaction marked as completed" });
+    }
+
+    if (action === "refund_billing") {
+      if (!targetId) return NextResponse.json({ error: "Missing transaction id" }, { status: 400 });
+      await pool.query(
+        "UPDATE mpesa_transactions SET status = 'refunded' WHERE id = ?",
+        [targetId]
+      );
+      return NextResponse.json({ success: true, message: "Transaction marked as refunded" });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

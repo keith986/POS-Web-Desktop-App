@@ -70,6 +70,7 @@ const BASE_STORE: NavItem[] = [
   { href: "/admin/products",     icon: "tag",        label: "Products"     },
   { href: "/admin/staff",        icon: "staff",      label: "Staff"        },
   { href: "/admin/subscription", icon: "creditcard", label: "Subscription" },
+  { href: "/admin/support",      icon: "clipboard",  label: "Support"      },
   { href: "/admin/settings",     icon: "cog",        label: "Settings"     },
 ];
 const POS_FEATURES: NavItem[] = [
