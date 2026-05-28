@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import bcrypt from "bcryptjs";
 
 const HexIcon = () => (
@@ -32,6 +32,8 @@ export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [accessError, setAccessError] = useState("");
+  const [paymentWarning, setPaymentWarning] = useState(null);
   const [loading, setLoading] = useState(false);
   const [theme, setTheme] = useState(
     () => localStorage.getItem("postore-theme") || "dark"
@@ -52,11 +54,34 @@ export default function Login({ onLogin }) {
     }, 100);
   };
 
+  const validateAccess = async () => {
+    const access = await window.electronAPI.validateAccess();
+    if (!access.allowed) {
+      setAccessError(access.message || "Access blocked by subscription rules.");
+      return { allowed: false };
+    }
+
+    if (access.warning) {
+      setPaymentWarning(access.warning);
+    }
+
+    setAccessError("");
+    return { allowed: true, warning: access.warning };
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setAccessError("");
+    setPaymentWarning(null);
     setLoading(true);
     try {
+      const access = await validateAccess();
+      if (!access.allowed) {
+        setLoading(false);
+        return;
+      }
+
       const result = await window.electronAPI.queryDatabase(
         "SELECT * FROM users WHERE email = ? AND is_active = 1",
         [email.trim().toLowerCase()]
@@ -73,8 +98,12 @@ export default function Login({ onLogin }) {
         setLoading(false);
         return;
       }
+
       window.electronAPI.loginSuccess();
-      onLogin({ id: user.id, name: user.full_name, email: user.email, role: user.role });
+      onLogin(
+        { id: user.id, name: user.full_name, email: user.email, role: user.role },
+        access.warning ? { message: access.warning } : null
+      );
     } catch (err) {
       console.error("Login error:", err);
       setError("Login failed. Please try again.");
@@ -127,6 +156,12 @@ export default function Login({ onLogin }) {
           </div>
 
           {error && <div className="form-error">{error}</div>}
+          {accessError && <div className="form-error">{accessError}</div>}
+          {paymentWarning && (
+            <div className="form-alert" style={{ marginBottom: 12, borderColor: "#f59e0b", color: "#f8b400" }}>
+              {paymentWarning}
+            </div>
+          )}
 
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? "Signing in..." : "Sign In"}

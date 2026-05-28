@@ -15,6 +15,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   startSync: () => ipcRenderer.invoke("sync-start"),
   getSyncStatus: () => ipcRenderer.invoke("sync-status"),
 
+  // Access validation
+  validateAccess: () => ipcRenderer.invoke("validate-access"),
+
   // App
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
 

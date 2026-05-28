@@ -203,6 +203,23 @@ interface AnalyticsSummary {
   unique_visitors: number; last_visit: string;
 }
 
+/* Extra types for new admin tabs */
+interface SettingsData {
+  platform_name?: string;
+  support_email?: string;
+  default_currency?: string;
+  [k: string]: unknown;
+}
+interface Subscription {
+  id: string; store_name: string; domain: string; plan: string; status: string; expires_at?: string; amount?: number;
+}
+interface BillingRecord {
+  id: string; store_name: string; domain: string; amount: number; status: string; created_at: string; reference?: string;
+}
+interface SupportMessage {
+  id: string; subject: string; message: string; email: string; created_at: string; status?: string;
+}
+
 /* ── Helpers ── */
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   active:    { bg: "#dcfce7", color: "#16a34a" },
@@ -296,15 +313,19 @@ function ConfirmModal({ message, onConfirm, onCancel }: {
 }
 
 const TABS = [
-  { key: "overview",  label: "Overview",  Icon: Icons.Overview    },
-  { key: "users",     label: "Users",     Icon: Icons.Users       },
-  { key: "staff",     label: "Staff",     Icon: Icons.Staff       },
-  { key: "orders",    label: "Orders",    Icon: Icons.Package     },
-  { key: "payments",  label: "Payments",  Icon: Icons.CreditCard  },
-  { key: "domains",   label: "Domains",   Icon: Icons.Globe       },
-  { key: "analytics", label: "Analytics", Icon: Icons.Analytics   },
-  { key: "activity",  label: "Activity",  Icon: Icons.Bell        },
-  { key: "logs",      label: "Logs",      Icon: Icons.Terminal    },
+  { key: "overview",  label: "Overview",      Icon: Icons.Overview    },
+  { key: "users",     label: "Users",         Icon: Icons.Users       },
+  { key: "staff",     label: "Staff",         Icon: Icons.Staff       },
+  { key: "orders",    label: "Orders",        Icon: Icons.Package     },
+  { key: "payments",  label: "Payments",      Icon: Icons.CreditCard  },
+  { key: "domains",   label: "Domains",       Icon: Icons.Globe       },
+  { key: "analytics", label: "Analytics",     Icon: Icons.Analytics   },
+  { key: "activity",  label: "Activity",      Icon: Icons.Bell        },
+  { key: "logs",      label: "Logs",          Icon: Icons.Terminal    },
+  { key: "settings",  label: "Settings",      Icon: Icons.Server      },
+  { key: "subscriptions", label: "Subscriptions", Icon: Icons.CreditCard },
+  { key: "billing",   label: "Billing",       Icon: Icons.Revenue     },
+  { key: "support",   label: "Support",       Icon: Icons.Bell        },
 ];
 
 /* ══════════════════════════════════════════════════════════
@@ -322,7 +343,12 @@ export default function SuperAdminPage() {
   const [domains, setDomains]           = useState<DomainStat[]>([]);
   const [payments, setPayments]         = useState<Payment[]>([]);
   const [analytics, setAnalytics]       = useState<AnalyticsSummary[]>([]);
+  const [settingsData, setSettingsData] = useState<SettingsData | null>(null);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [billingRecords, setBillingRecords] = useState<BillingRecord[]>([]);
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
   const [loading, setLoading]           = useState(true);
+  const [settingsText, setSettingsText] = useState("");
   const [search, setSearch]             = useState("");
   const [orderFilter, setOrderFilter]   = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
@@ -351,15 +377,19 @@ export default function SuperAdminPage() {
         headers: { Authorization: `Bearer ${user?.id}` },
       });
       const data = await res.json();
-      if (section === "overview")  setStats(data);
-      if (section === "users")     setUsers(data.users      ?? []);
-      if (section === "staff")     setStaff(data.staff      ?? []);
-      if (section === "orders")    setOrders(data.orders    ?? []);
-      if (section === "activity")  setNotifs(data.notifications ?? []);
-      if (section === "logs")      setLogs(data.logs        ?? []);
-      if (section === "domains")   setDomains(data.domains  ?? []);
-      if (section === "payments")  setPayments(data.payments ?? []);
-      if (section === "analytics") setAnalytics(data.analytics ?? []);
+      if (section === "overview")      setStats(data);
+      if (section === "users")         setUsers(data.users      ?? []);
+      if (section === "staff")         setStaff(data.staff      ?? []);
+      if (section === "orders")        setOrders(data.orders    ?? []);
+      if (section === "activity")      setNotifs(data.notifications ?? []);
+      if (section === "logs")          setLogs(data.logs        ?? []);
+      if (section === "domains")       setDomains(data.domains  ?? []);
+      if (section === "payments")      setPayments(data.payments ?? []);
+      if (section === "analytics")     setAnalytics(data.analytics ?? []);
+      if (section === "settings")      setSettingsData(data.settings ?? null);
+      if (section === "subscriptions") setSubscriptions(data.subscriptions ?? []);
+      if (section === "billing")       setBillingRecords(data.billing ?? []);
+      if (section === "support")       setSupportMessages(data.support ?? []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -368,6 +398,11 @@ export default function SuperAdminPage() {
   }, []);
 
   useEffect(() => { fetchData(activeTab); }, [activeTab, fetchData]);
+
+  useEffect(() => {
+    if (settingsData) setSettingsText(JSON.stringify(settingsData, null, 2));
+    else setSettingsText("");
+  }, [settingsData]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -397,6 +432,22 @@ export default function SuperAdminPage() {
     } catch {
       flash("Network error", false);
     }
+  };
+
+  /* Save platform settings (small helper for Settings tab) */
+  const saveSettings = async (payload: SettingsData) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      const res = await fetch("/api/admin/super", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.id}` },
+        body: JSON.stringify({ action: "update_settings", settings: payload }),
+      });
+      const data = await res.json();
+      if (data.success) flash(data.message || "Settings saved");
+      else flash(data.error || "Save failed", false);
+      fetchData("settings");
+    } catch { flash("Network error", false); }
   };
 
   const askConfirm = (message: string, fn: () => void) =>
@@ -795,6 +846,118 @@ export default function SuperAdminPage() {
                                 adminAction("mark_payment_paid", p.id)
                               )} />
                           )}
+                        </div>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── SETTINGS ── */}
+        {activeTab === "settings" && (
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e0d8", padding: 18 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>Platform Settings</div>
+              <div style={{ fontSize: 12, color: "#9ca3af" }}>Edit JSON and save</div>
+            </div>
+            <textarea value={settingsText} onChange={e => setSettingsText(e.target.value)} style={{ width: "100%", minHeight: 220, fontFamily: "monospace", fontSize: 13, padding: 12, border: "1px solid #e5e7eb", borderRadius: 8 }} />
+            <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+              <button onClick={() => { try { saveSettings(JSON.parse(settingsText)); } catch { flash("Invalid JSON", false); } }} style={{ background: "#d4522a", color: "#fff", padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer" }}>Save</button>
+              <button onClick={() => fetchData("settings")} style={{ background: "transparent", border: "1px solid #e2e0d8", padding: "8px 12px", borderRadius: 8 }}>Reload</button>
+            </div>
+          </div>
+        )}
+
+        {/* ── SUBSCRIPTIONS ── */}
+        {activeTab === "subscriptions" && !loading && (
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e0d8", overflow: "hidden" }}>
+            <div style={{ padding: "1rem 1.5rem", borderBottom: "1px solid #e2e0d8", fontWeight: 600, fontSize: 14 }}>Subscriptions ({subscriptions.length})</div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead><tr>{["Store","Domain","Plan","Status","Expires","Amount","Actions"].map(h => <Th key={h}>{h}</Th>)}</tr></thead>
+                <tbody>
+                  {subscriptions.length === 0 ? (
+                    <tr><td colSpan={7} style={{ padding: "3rem", textAlign: "center", color: "#9ca3af" }}>No subscriptions</td></tr>
+                  ) : subscriptions.map((s, i) => (
+                    <tr key={s.id} style={{ borderTop: "1px solid #f3f4f6", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                      <Td style={{ fontWeight: 600 }}>{s.store_name}</Td>
+                      <Td style={{ color: "#6b7280" }}>{s.domain || "—"}</Td>
+                      <Td>{s.plan || "—"}</Td>
+                      <Td><Badge status={s.status || "active"} /></Td>
+                      <Td style={{ color: "#9ca3af" }}>{s.expires_at ? new Date(s.expires_at).toLocaleDateString() : "—"}</Td>
+                      <Td style={{ fontWeight: 700, color: "#16a34a" }}>{s.amount ? `KES ${Number(s.amount).toLocaleString()}` : "—"}</Td>
+                      <Td>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {s.status !== "suspended" && (
+                            <ActionBtn label="Suspend" color="#d97706" icon={<Icons.Ban />} onClick={() => askConfirm(`Suspend subscription for ${s.store_name}?`, () => adminAction("suspend_subscription", s.id))} />
+                          )}
+                          <ActionBtn label="Renew" color="#16a34a" icon={<Icons.Check />} onClick={() => adminAction("renew_subscription", s.id)} />
+                        </div>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── BILLING ── */}
+        {activeTab === "billing" && !loading && (
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e0d8", overflow: "hidden" }}>
+            <div style={{ padding: "1rem 1.5rem", borderBottom: "1px solid #e2e0d8", fontWeight: 600, fontSize: 14 }}>Billing Records ({billingRecords.length})</div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead><tr>{["Store","Domain","Amount","Status","Reference","Date","Actions"].map(h => <Th key={h}>{h}</Th>)}</tr></thead>
+                <tbody>
+                  {billingRecords.length === 0 ? (
+                    <tr><td colSpan={7} style={{ padding: "3rem", textAlign: "center", color: "#9ca3af" }}>No billing records</td></tr>
+                  ) : billingRecords.map((b, i) => (
+                    <tr key={b.id} style={{ borderTop: "1px solid #f3f4f6", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                      <Td style={{ fontWeight: 600 }}>{b.store_name}</Td>
+                      <Td style={{ color: "#6b7280" }}>{b.domain || "—"}</Td>
+                      <Td style={{ fontWeight: 700, color: "#16a34a" }}>KES {Number(b.amount || 0).toLocaleString()}</Td>
+                      <Td><Badge status={b.status} /></Td>
+                      <Td style={{ fontFamily: "monospace", fontSize: 12 }}>{b.reference || "—"}</Td>
+                      <Td style={{ color: "#9ca3af" }}>{new Date(b.created_at).toLocaleString()}</Td>
+                      <Td>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {b.status !== "refunded" && (
+                            <ActionBtn label="Refund" color="#dc2626" icon={<Icons.Trash />} onClick={() => askConfirm(`Refund ${b.reference || b.id}?`, () => adminAction("refund_billing", b.id))} />
+                          )}
+                        </div>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── SUPPORT ── */}
+        {activeTab === "support" && !loading && (
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e2e0d8", overflow: "hidden" }}>
+            <div style={{ padding: "1rem 1.5rem", borderBottom: "1px solid #e2e0d8", fontWeight: 600, fontSize: 14 }}>Support Messages ({supportMessages.length})</div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead><tr>{["Subject","Email","Message","Date","Status","Actions"].map(h => <Th key={h}>{h}</Th>)}</tr></thead>
+                <tbody>
+                  {supportMessages.length === 0 ? (
+                    <tr><td colSpan={6} style={{ padding: "3rem", textAlign: "center", color: "#9ca3af" }}>No messages</td></tr>
+                  ) : supportMessages.map((m, i) => (
+                    <tr key={m.id} style={{ borderTop: "1px solid #f3f4f6", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                      <Td style={{ fontWeight: 600 }}>{m.subject}</Td>
+                      <Td style={{ color: "#6b7280" }}>{m.email}</Td>
+                      <Td style={{ maxWidth: 420 }}>{m.message}</Td>
+                      <Td style={{ color: "#9ca3af" }}>{new Date(m.created_at).toLocaleString()}</Td>
+                      <Td><Badge status={m.status || "info"} /></Td>
+                      <Td>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <ActionBtn label="Close" color="#d97706" icon={<Icons.Ban />} onClick={() => askConfirm(`Close support message?`, () => adminAction("close_support", m.id))} />
                         </div>
                       </Td>
                     </tr>

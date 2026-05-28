@@ -44,6 +44,9 @@ export default function Setup({ onSetupComplete }) {
         [data.admin.id, data.admin.full_name, data.admin.email, data.admin.password]
       );
 
+      await window.electronAPI.setStoreData("adminId", data.admin.id);
+      await window.electronAPI.setStoreData("lastSync", new Date().toISOString());
+
       // Save staff
       for (const s of data.staff) {
         await window.electronAPI.executeDatabase(
@@ -68,6 +71,14 @@ export default function Setup({ onSetupComplete }) {
         domain: data.admin.domain,
         pos_type: data.admin.pos_type,
       });
+
+      const access = await window.electronAPI.validateAccess();
+      if (!access.allowed) {
+        setError(access.message || "Subscription validation failed. Connect to the internet and try again.");
+        setStep("domain");
+        setLoading(false);
+        return;
+      }
 
       setStep("done");
       setTimeout(() => onSetupComplete(), 1500);

@@ -166,6 +166,8 @@ const startSync = async () => {
       }
     }
 
+    const accessManager = require("./accessManager");
+    await accessManager.markOnlineSync();
     syncStatus.lastSync = new Date().toISOString();
     syncStatus.error = null;
     syncStatus.syncing = false;

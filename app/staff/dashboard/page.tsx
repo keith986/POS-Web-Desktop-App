@@ -67,7 +67,11 @@ interface Discount {
 
 /* ─── Helpers ────────────────────────────────────────────────── */
 function formatCurrency(n: number, currency = "KES"): string {
-  return `${currency} ${Number(n).toLocaleString("en-KE", { minimumFractionDigits: 2 })}`;
+  const safe = Number(n);
+  if (!Number.isFinite(safe)) {
+    return `${currency} 0.00`;
+  }
+  return `${currency} ${safe.toLocaleString("en-KE", { minimumFractionDigits: 2 })}`;
 }
 function formatTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -285,7 +289,12 @@ export default function StaffDashboard() {
       if (Array.isArray(prodData))     setProducts(prodData.filter((p: Product) => p.status === "active"));
       if (settData && !settData.error) setSettings({ tax_enabled: Boolean(settData.tax_enabled), tax_rate: Number(settData.tax_rate) || 16, tax_name: settData.tax_name || "VAT", tax_inclusive: Boolean(settData.tax_inclusive), currency: settData.currency || "KES" });
       if (Array.isArray(discData))     setDiscounts(discData.filter((d: Discount) => d.is_active));
-      if (Array.isArray(salesData))    setSales(salesData.map((s: Sale) => ({ ...s, items: parseItems(s.items), discount_amount: Number(s.discount_amount) || 0 })));
+      if (Array.isArray(salesData))    setSales(salesData.map((s: Sale) => ({
+        ...s,
+        items: parseItems(s.items),
+        discount_amount: Number(s.discount_amount) || 0,
+        total: Number(s.total) || 0,
+      })));
     } catch { showToast("Failed to load data", "err"); }
     finally  { setFetching(false); }
   }, [staff?.admin_id, staff?.id]);
@@ -421,7 +430,7 @@ export default function StaffDashboard() {
     /* Cart stays intact so staff can try again */
   };
 
-  const shiftTotal = sales.reduce((s, r) => s + r.total, 0);
+  const shiftTotal = sales.reduce((s, r) => s + (Number(r.total) || 0), 0);
   const lowStockCt = products.filter(p => p.stock > 0 && p.stock <= 8).length;
 
   if (!ready || !staff) return null;

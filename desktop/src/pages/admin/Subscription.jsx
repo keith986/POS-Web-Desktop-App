@@ -36,8 +36,8 @@ function StatusBadge({ status, daysLeft }) {
     active:  { bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.25)",  color: "#22c55e", label: daysLeft != null ? `Active · ${daysLeft}d left` : "Active" },
     expired: { bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.25)",  color: "#ef4444", label: "Expired"         },
     due:     { bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.25)", color: "#f97316", label: "Payment Due"     },
-    none:    { bg: "rgba(255,255,255,0.06)",border: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)", label: "No Subscription" },
-  }[status] ?? { bg: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)", label: "Unknown" };
+    none:    { bg: "var(--surface-muted)", border: "var(--surface-border)", color: "var(--text-2)", label: "No Subscription" },
+  }[status] ?? { bg: "var(--surface-muted)", border: "var(--surface-border)", color: "var(--text-2)", label: "Unknown" };
 
   return (
     <span style={{
@@ -60,21 +60,21 @@ function PaymentRow({ p }) {
     success: { color: "#22c55e", bg: "rgba(34,197,94,0.1)",  label: "Paid"    },
     failed:  { color: "#ef4444", bg: "rgba(239,68,68,0.1)",  label: "Failed"  },
     pending: { color: "#f97316", bg: "rgba(249,115,22,0.1)", label: "Pending" },
-  }[p.status] ?? { color: "#9ca3af", bg: "rgba(255,255,255,0.05)", label: p.status };
+  }[p.status] ?? { color: "var(--text-2)", bg: "var(--surface-muted)", label: p.status };
 
   return (
-    <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+    <tr style={{ borderBottom: "1px solid var(--surface-border)" }}>
       <td style={{ padding: "12px 16px" }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: "#fff" }}>{formatDate(p.date)}</div>
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 2, textTransform: "capitalize" }}>{p.period}</div>
+        <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text)" }}>{formatDate(p.date)}</div>
+        <div style={{ fontSize: 11, color: "var(--text-2)", marginTop: 2, textTransform: "capitalize" }}>{p.period}</div>
       </td>
       <td style={{ padding: "12px 16px" }}>
-        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", fontFamily: "monospace" }}>
+        <span style={{ fontSize: 12, color: "var(--text-2)", fontFamily: "monospace" }}>
           {p.mpesaReceipt ?? (p.checkoutRequestId ? `···${p.checkoutRequestId.slice(-6)}` : "—")}
         </span>
       </td>
       <td style={{ padding: "12px 16px" }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>Ksh {Number(p.amount).toLocaleString()}</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>Ksh {Number(p.amount).toLocaleString()}</span>
       </td>
       <td style={{ padding: "12px 16px" }}>
         <span style={{ fontSize: 11, fontWeight: 600, color: s.color, background: s.bg, padding: "3px 10px", borderRadius: 100 }}>
@@ -91,14 +91,14 @@ function PaymentRow({ p }) {
 function StatCard({ label, value, sub, accent }) {
   return (
     <div style={{
-      background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+      background: "var(--surface)", border: "1px solid var(--surface-border)",
       borderRadius: 12, padding: "1.1rem 1.25rem",
     }}>
-      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+      <div style={{ fontSize: 11, color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
         {label}
       </div>
-      <div style={{ marginBottom: 4, color: accent ?? "#fff" }}>{value}</div>
-      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{sub}</div>
+      <div style={{ marginBottom: 4, color: accent ?? "var(--text)" }}>{value}</div>
+      <div style={{ fontSize: 11, color: "var(--text-3)" }}>{sub}</div>
     </div>
   );
 }
@@ -257,22 +257,22 @@ useEffect(() => {
 
   // ── Styles matching the desktop dark theme ──
   const card = {
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.08)",
+    background: "var(--surface)",
+    border: "1px solid var(--surface-border)",
     borderRadius: 12,
     padding: "1.25rem 1.5rem",
   };
 
   const thStyle = {
     textAlign: "left", padding: "10px 16px",
-    fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)",
+    fontSize: 11, fontWeight: 600, color: "var(--text-2)",
     textTransform: "uppercase", letterSpacing: "0.5px",
-    borderBottom: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.02)",
+    borderBottom: "1px solid var(--surface-border)",
+    background: "var(--surface-alt)",
   };
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "'DM Sans', -apple-system, sans-serif", color: "#fff", maxWidth: 860, margin: "0 auto" }}>
+    <div style={{ padding: "2rem", fontFamily: "'DM Sans', -apple-system, sans-serif", color: "var(--text)", maxWidth: 860, margin: "0 auto" }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         * { box-sizing: border-box; }
@@ -282,14 +282,14 @@ useEffect(() => {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.75rem", flexWrap: "wrap", gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, letterSpacing: "-0.5px" }}>Subscription</h1>
-          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", margin: "4px 0 0" }}>{dater}</p>
+          <p style={{ fontSize: 13, color: "var(--text-2)", margin: "4px 0 0" }}>{dater}</p>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {/* Online/offline indicator */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: isOnline ? "#22c55e" : "#ef4444", animation: isOnline ? "none" : "none" }} />
-            <span style={{ color: isOnline ? "#22c55e" : "#ef4444", fontWeight: 500 }}>{isOnline ? "Online" : "Offline"}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", background: "var(--surface-muted)", border: "1px solid var(--surface-border)", borderRadius: 8, fontSize: 12 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: isOnline ? "var(--green)" : "var(--red)" }} />
+            <span style={{ color: isOnline ? "var(--green)" : "var(--red)", fontWeight: 500 }}>{isOnline ? "Online" : "Offline"}</span>
           </div>
 
           {/* Sync button */}
@@ -299,9 +299,9 @@ useEffect(() => {
             style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "6px 14px", borderRadius: 8,
-              background: isOnline ? "rgba(249,115,22,0.12)" : "rgba(255,255,255,0.04)",
-              border: `1px solid ${isOnline ? "rgba(249,115,22,0.3)" : "rgba(255,255,255,0.08)"}`,
-              color: isOnline ? "#f97316" : "rgba(255,255,255,0.25)",
+              background: isOnline ? "rgba(249,115,22,0.12)" : "var(--surface-muted)",
+              border: `1px solid ${isOnline ? "rgba(249,115,22,0.3)" : "var(--surface-border)"}`,
+              color: isOnline ? "#f97316" : "var(--text-2)",
               fontSize: 12, fontWeight: 600, cursor: isOnline ? "pointer" : "not-allowed",
               fontFamily: "inherit", transition: "all 0.15s",
             }}
@@ -343,7 +343,7 @@ useEffect(() => {
 
       {/* Last sync note */}
       {lastSync && (
-        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginBottom: "1rem" }}>
+        <div style={{ fontSize: 11, color: "var(--text-2)", marginBottom: "1rem" }}>
           Last synced: {new Date(lastSync).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
           {!isOnline && <span style={{ marginLeft: 8, color: "#f97316" }}>· Showing cached data</span>}
         </div>
@@ -351,8 +351,8 @@ useEffect(() => {
 
       {/* ── Loading ── */}
       {loading && (
-        <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "center", padding: "3rem", gap: 12, color: "rgba(255,255,255,0.4)", fontSize: 14 }}>
-          <div style={{ width: 20, height: 20, border: "2px solid rgba(255,255,255,0.1)", borderTop: "2px solid #f97316", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "center", padding: "3rem", gap: 12, color: "var(--text-2)", fontSize: 14 }}>
+          <div style={{ width: 20, height: 20, border: "2px solid var(--surface-border)", borderTop: "2px solid var(--yellow)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
           Loading subscription…
         </div>
       )}
@@ -372,9 +372,9 @@ useEffect(() => {
             </svg>
             }
           </div>
-          <div style={{ fontSize: 14, fontWeight: 500, color: "#ef4444", marginBottom: 8 }}>{error}</div>
+          <div style={{ fontSize: 14, fontWeight: 500, color: "var(--red)", marginBottom: 8 }}>{error}</div>
           {isOnline && (
-            <button onClick={handleSync} style={{ marginTop: 8, padding: "8px 20px", background: "#f97316", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+            <button onClick={handleSync} style={{ marginTop: 8, padding: "8px 20px", background: "var(--accent)", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
               Try Again
             </button>
           )}
@@ -415,10 +415,10 @@ useEffect(() => {
             ].map(t => (
               <button key={t.id} onClick={() => setTab(t.id)} style={{
                 padding: "7px 18px",
-                background: tab === t.id ? "#f97316" : "rgba(255,255,255,0.06)",
-                border: `1px solid ${tab === t.id ? "#f97316" : "rgba(255,255,255,0.1)"}`,
+                background: tab === t.id ? "#f97316" : "var(--surface-muted)",
+                border: `1px solid ${tab === t.id ? "#f97316" : "var(--surface-border)"}`,
                 borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 500,
-                color: tab === t.id ? "#fff" : "rgba(255,255,255,0.5)",
+                color: tab === t.id ? "#fff" : "var(--text-2)",
                 fontFamily: "inherit", transition: "all 0.15s",
               }}>
                 {t.label}
@@ -432,7 +432,7 @@ useEffect(() => {
 
               {/* Detail card */}
               <div style={card}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 16 }}>
                   Subscription Details
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem 2rem" }}>
@@ -443,8 +443,8 @@ useEffect(() => {
                     { label: "Last Amount", value: sub?.amount != null ? `Ksh ${Number(sub.amount).toLocaleString()}` : "—"   },
                   ].map(row => (
                     <div key={row.label}>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>{row.label}</div>
-                      <div style={{ fontSize: 14, fontWeight: 500, color: "#fff" }}>{row.value}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-2)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 5 }}>{row.label}</div>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text)" }}>{row.value}</div>
                     </div>
                   ))}
                 </div>
@@ -453,10 +453,10 @@ useEffect(() => {
                 {sub?.status === "active" && sub.daysLeft != null && (
                   <div style={{ marginTop: 20 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Subscription period</span>
+                      <span style={{ fontSize: 12, color: "var(--text-2)" }}>Subscription period</span>
                       <span style={{ fontSize: 12, fontWeight: 600, color: daysColor(sub.daysLeft) }}>{sub.daysLeft} days remaining</span>
                     </div>
-                    <div style={{ height: 5, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ height: 5, background: "var(--surface-muted)", borderRadius: 3, overflow: "hidden" }}>
                       <div style={{
                         height: "100%", borderRadius: 3,
                         background: daysColor(sub.daysLeft),
@@ -491,10 +491,10 @@ useEffect(() => {
                       </svg>
                     </span>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "#ef4444" }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--red)" }}>
                         {sub?.status === "none" ? "No active subscription" : "Your subscription has expired"}
                       </div>
-                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
+                      <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 2 }}>
                         Subscribe to unlock full access to POStore features.
                       </div>
                     </div>
@@ -523,7 +523,7 @@ useEffect(() => {
                     </span>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: "#f97316" }}>Expiring soon</div>
-                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 2 }}>
+                      <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 2 }}>
                         Your subscription expires in {sub.daysLeft} day{sub.daysLeft !== 1 ? "s" : ""}. Renew to avoid interruption.
                       </div>
                     </div>
@@ -544,10 +544,10 @@ useEffect(() => {
               {/* CTA card */}
               <div style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", marginBottom: 4 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>
                     {sub?.status === "active" ? "Extend or upgrade your plan" : "Get started with a plan"}
                   </div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+                  <div style={{ fontSize: 12, color: "var(--text-2)" }}>
                     Monthly, Quarterly, and Yearly options available. Payment via M-Pesa.
                   </div>
                 </div>
@@ -577,7 +577,7 @@ useEffect(() => {
 
           {/* ══ HISTORY TAB ══ */}
           {tab === "history" && (
-            <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", borderRadius: 12, overflow: "hidden" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr>
@@ -591,7 +591,7 @@ useEffect(() => {
                     sub.payments.map(p => <PaymentRow key={p.id} p={p} />)
                   ) : (
                     <tr>
-                      <td colSpan={4} style={{ padding: "3rem", textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 13 }}>
+                      <td colSpan={4} style={{ padding: "3rem", textAlign: "center", color: "var(--text-2)", fontSize: 13 }}>
                         <div style={{ fontSize: 28, marginBottom: 10 }}>🧾</div>
                         No payments found.
                         {!isOnline && <div style={{ marginTop: 6, fontSize: 12, color: "#f97316" }}>Connect to the internet to sync payment history.</div>}
@@ -601,7 +601,7 @@ useEffect(() => {
                 </tbody>
               </table>
               {!!sub?.payments?.length && (
-                <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+                <div style={{ padding: "10px 16px", borderTop: "1px solid var(--surface-border)", fontSize: 12, color: "var(--text-2)" }}>
                   Showing {sub.payments.length} transaction{sub.payments.length !== 1 ? "s" : ""}
                   {!isOnline && <span style={{ marginLeft: 8, color: "#f97316" }}>· Cached</span>}
                 </div>

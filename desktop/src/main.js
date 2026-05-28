@@ -113,6 +113,7 @@ function setupIPC() {
 
   // ── Database operations ───────────────────────────────────────
   const db = require("./db/database");
+  const accessManager = require("./utils/accessManager");
 
   ipcMain.handle("db-init", async () => {
     return await db.initialize();
@@ -153,6 +154,10 @@ function setupIPC() {
   ipcMain.handle("sync-status", async () => {
     const sync = require("./utils/syncManager");
     return sync.getStatus();
+  });
+
+  ipcMain.handle("validate-access", async () => {
+    return await accessManager.validateAccess();
   });
 
   // ── App info ──────────────────────────────────────────────────

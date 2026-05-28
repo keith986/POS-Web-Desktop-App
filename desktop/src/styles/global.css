@@ -6,6 +6,11 @@
   --bg-3: #1e1e1e;
   --border: #2a2a2a;
   --border-light: #333;
+  --surface: rgba(255,255,255,0.04);
+  --surface-border: rgba(255,255,255,0.08);
+  --surface-muted: rgba(255,255,255,0.06);
+  --surface-alt: rgba(255,255,255,0.02);
+  --surface-strong: rgba(255,255,255,0.12);
   --text: #f0f0f0;
   --text-2: #999;
   --text-3: #666;
@@ -20,6 +25,16 @@
 }
 
 :root[data-theme="light"] {
+  --bg: #F5F0E8;
+  --bg-2: #FDFAF5;
+  --bg-3: #EDE8DF;
+  --border: #D8D0C4;
+  --border-light: #C8BFB2;
+  --surface: rgba(0,0,0,0.04);
+  --surface-border: rgba(0,0,0,0.1);
+  --surface-muted: rgba(0,0,0,0.04);
+  --surface-alt: rgba(0,0,0,0.03);
+  --surface-strong: rgba(0,0,0,0.08);
   --bg: #F5F0E8;
   --bg-2: #FDFAF5;
   --bg-3: #EDE8DF;
