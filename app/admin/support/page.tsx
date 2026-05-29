@@ -65,7 +65,7 @@ export default function AdminSupportPage() {
   if (!adminId) return (<div style={{ padding: 24 }}>Please login as admin to use Support.</div>);
 
   return (
-    <div style={{ padding: 20, maxWidth: 900, margin: '0 auto' }}>
+    <div style={{ padding: 20, maxWidth: 1100, margin: '0 auto', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{ margin: 0 }}>Support Chat</h2>
@@ -80,10 +80,10 @@ export default function AdminSupportPage() {
         ) : messages.length === 0 ? (
           <div style={{ padding: 24, color: '#9ca3af' }}>No messages yet — send the first message.</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: '60vh', overflowY: 'auto', paddingRight: 8 }}>
             {messages.map(msg => (
-              <div key={msg.id} style={{ alignSelf: msg.sender === 'admin' ? 'flex-end' : 'flex-start', maxWidth: '85%', padding: 12, borderRadius: 14, background: msg.sender === 'admin' ? '#dbeafe' : '#f3f4f6', color: '#111827' }}>
-                <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.message}</div>
+              <div key={msg.id} style={{ alignSelf: msg.sender === 'admin' ? 'flex-end' : 'flex-start', maxWidth: '85%', padding: 12, borderRadius: 14, background: msg.sender === 'admin' ? '#dbeafe' : '#f3f4f6', color: '#111827', wordBreak: 'break-word' }}>
+                <div style={{ whiteSpace: 'pre-wrap' }}>{msg.message}</div>
                 <div style={{ marginTop: 6, fontSize: 11, color: '#6b7280' }}>{msg.time}</div>
               </div>
             ))}
