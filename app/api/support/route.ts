@@ -5,7 +5,7 @@ import { RowDataPacket } from "mysql2";
 interface SupportRow extends RowDataPacket {
   id: string;
   admin_id: string;
-  sender: "admin" | "super_admin";
+  sender: "admin" | "super_admin" | "staff";
   title: string;
   message: string;
   created_at: string;
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "admin_id, sender and message are required" }, { status: 400 });
   }
 
-  if (!["admin", "super_admin"].includes(sender)) {
+  if (!["admin", "super_admin", "staff"].includes(sender)) {
     return NextResponse.json({ error: "Invalid sender" }, { status: 400 });
   }
 

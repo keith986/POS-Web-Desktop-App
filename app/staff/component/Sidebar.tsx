@@ -45,6 +45,7 @@ const SaleIcon = Ic("M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10
 const BoxIcon  = Ic("M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12");
 const HistIcon = Ic("M12 8v4l3 3M3.05 11a9 9 0 1 0 .5-3M3 4v4h4");
 const SettIcon  = Ic("M12 20a8 8 0 100-16 8 8 0 000 16zM12 14a2 2 0 100-4 2 2 0 000 4zM12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41");
+function ChatIcon() { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M7 8h10M7 12h6"/></svg>; }
 function IcoOut() { return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>; }
 
 const NAV = [
@@ -52,6 +53,7 @@ const NAV = [
   { icon: SaleIcon, label: "Record Sale"  },
   { icon: BoxIcon,  label: "Products"     },
   { icon: HistIcon, label: "Sales History"},
+  { icon: ChatIcon, label: "Support"      },
   { icon: SettIcon,  label: "Settings"     },
 ];
 

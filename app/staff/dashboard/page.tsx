@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Sidebar from "@/app/staff/component/Sidebar";
 import staffCss from "@/app/staff/component/staffStyles";
 import StaffSettingsTab from "@/app/staff/component/StaffSettingsTab";
+import StaffSupportTab from "@/app/staff/component/StaffSupportTab";
 import MpesaPaymentModal from "@/app/staff/component/MpesaPaymentModal";
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -140,12 +141,13 @@ function CategoryIcon({ category, size = 18 }: { category: string; size?: number
   );
 }
 
-const TABS = ["Dashboard", "Record Sale", "Products", "Sales History", "Settings"];
+const TABS = ["Dashboard", "Record Sale", "Products", "Sales History", "Support", "Settings"];
 const HEADER_TITLES: Record<string, string> = {
   "Dashboard":     "Staff Dashboard",
   "Record Sale":   "Record a Sale",
   "Products":      "Product Catalogue",
   "Sales History": "Sales History",
+  "Support":       "Staff Support",
   "Settings":      "My Settings",
 };
 const SearchIcon = () => (
@@ -757,6 +759,11 @@ export default function StaffDashboard() {
                     </table>
                   )}
             </div>
+          )}
+
+          {/* ══ SUPPORT ══ */}
+          {activeTab === "Support" && (
+            <StaffSupportTab staff={staff} />
           )}
 
           {/* ══ SETTINGS ══ */}
