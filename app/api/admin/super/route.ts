@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/app/_lib/db";
 import { RowDataPacket } from "mysql2";
+import bcrypt from "bcryptjs";
 import { execSync } from "child_process";
 import fs from "fs";
 
