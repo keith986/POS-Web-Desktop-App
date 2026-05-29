@@ -482,6 +482,36 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: true, message: "Staff member deleted" });
     }
 
+    if (action === "reset_user_password") {
+      const newPassword = body?.new_password;
+      if (!userId || !newPassword) return NextResponse.json({ error: "Missing user or new password" }, { status: 400 });
+      const hash = await bcrypt.hash(String(newPassword), 10);
+      await pool.query("UPDATE users SET password = ? WHERE id = ? AND email != 'admin@postore.app'", [hash, userId]);
+      return NextResponse.json({ success: true, message: "User password reset" });
+    }
+
+    if (action === "reset_staff_password") {
+      const newPassword = body?.new_password;
+      if (!userId || !newPassword) return NextResponse.json({ error: "Missing staff or new password" }, { status: 400 });
+      const hash = await bcrypt.hash(String(newPassword), 10);
+      await pool.query("UPDATE staff SET password = ? WHERE id = ?", [hash, userId]);
+      return NextResponse.json({ success: true, message: "Staff password reset" });
+    }
+
+    if (action === "change_super_password") {
+      const currentPassword = body?.current_password;
+      const newPassword = body?.new_password;
+      if (!currentPassword || !newPassword) return NextResponse.json({ error: "Missing current or new password" }, { status: 400 });
+      const [rows] = await pool.query<RowDataPacket[]>("SELECT password FROM users WHERE email = 'admin@postore.app' LIMIT 1");
+      if (rows.length === 0) return NextResponse.json({ error: "Super admin account not found" }, { status: 404 });
+      const storedHash = String((rows[0] as { password: string }).password);
+      const matches = await bcrypt.compare(String(currentPassword), storedHash);
+      if (!matches) return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 });
+      const hash = await bcrypt.hash(String(newPassword), 10);
+      await pool.query("UPDATE users SET password = ? WHERE email = 'admin@postore.app'", [hash]);
+      return NextResponse.json({ success: true, message: "Super admin password updated" });
+    }
+
     if (action === "mark_payment_paid" || action === "mark_billing_paid") {
       if (!targetId) return NextResponse.json({ error: "Missing transaction id" }, { status: 400 });
       await pool.query(

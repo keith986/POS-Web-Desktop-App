@@ -15,6 +15,7 @@ export default function AdminSupportPage() {
   const [text,     setText]     = useState("");
   const [loading,  setLoading]  = useState(false);
   const [sending,  setSending]  = useState(false);
+  const [notice,   setNotice]   = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
   const [adminId,  setAdminId]  = useState<string | null>(null);
   const bottomRef  = useRef<HTMLDivElement>(null);
 
@@ -47,6 +48,11 @@ export default function AdminSupportPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const flash = (text: string, type: "success" | "error" | "info" = "info") => {
+    setNotice({ text, type });
+    window.setTimeout(() => setNotice(null), 4500);
+  };
+
   /* ── Send message ── */
   const send = async () => {
     if (!adminId || !text.trim() || sending) return;
@@ -69,11 +75,11 @@ export default function AdminSupportPage() {
           time:    "just now",
         }]);
       } else {
-        alert(body.error || "Send failed");
+        flash(body.error || "Send failed", "error");
       }
     } catch (err) {
       console.error(err);
-      alert("Send failed");
+      flash("Send failed", "error");
     } finally { setSending(false); }
   };
 
@@ -129,6 +135,11 @@ export default function AdminSupportPage() {
           Refresh
         </button>
       </header>
+      {notice && (
+        <div style={{ margin: "0 0 1rem", padding: "1rem 1.25rem", borderRadius: 12, background: notice.type === "success" ? "#ecfdf5" : "#fef2f2", border: notice.type === "success" ? "1px solid #bbf7d0" : "1px solid #fecaca", color: notice.type === "success" ? "#166534" : "#991b1b" }}>
+          {notice.text}
+        </div>
+      )}
 
       <main className="main">
 
@@ -138,7 +149,7 @@ export default function AdminSupportPage() {
             {
               label: "Support Channel",
               value: "Live Chat",
-              sub:   "Direct line to Super Admin",
+              sub:   "Direct line to our Customer Care",
             },
             {
               label: "Messages",
@@ -153,7 +164,7 @@ export default function AdminSupportPage() {
                   Online
                 </span>
               ),
-              sub: "Super Admin is reachable",
+              sub: "Customer Care is reachable",
             },
           ].map(s => (
             <div key={s.label} style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, padding: "1.1rem 1.25rem" }}>
@@ -174,7 +185,7 @@ export default function AdminSupportPage() {
               <div style={{ width: 34, height: 34, borderRadius: "50%", background: "#141410", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 600, flexShrink: 0 }}>SA</div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#141410" }}>POStore Support</div>
-                <div style={{ fontSize: 11, color: "#9a9a8e", marginTop: 1 }}>Super Admin · typically replies within a few hours</div>
+                <div style={{ fontSize: 11, color: "#9a9a8e", marginTop: 1 }}>Customer Care · typically replies within a few hours</div>
               </div>
             </div>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 100, padding: "3px 10px", fontSize: 11, fontWeight: 500, color: "#16a34a" }}>

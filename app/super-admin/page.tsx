@@ -180,6 +180,10 @@ export default function SuperAdminPage() {
   const [search,     setSearch]     = useState("");
   const [page,       setPage]       = useState(1);
   const PER_PAGE = 12;
+  const [notice,     setNotice]     = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
+  const [superCurrentPassword, setSuperCurrentPassword] = useState("");
+  const [superNewPassword,     setSuperNewPassword]     = useState("");
+  const [superConfirmPassword, setSuperConfirmPassword] = useState("");
 
   /* ── Support ── */
   const [conversations,    setConversations]    = useState<SupportConversation[]>([]);
@@ -216,6 +220,54 @@ export default function SuperAdminPage() {
   useEffect(() => {
     if (activeTab !== "support") fetchSection(activeTab);
   }, [activeTab, fetchSection]);
+
+  const flash = (text: string, type: "success" | "error" | "info" = "info") => {
+    setNotice({ text, type });
+    window.setTimeout(() => setNotice(null), 4500);
+  };
+
+  const runAdminAction = async (action: string, userId?: string, extra?: Record<string, unknown>) => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      const body = { action, userId, ...extra };
+      const res = await fetch("/api/admin/super", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.id}` },
+        body: JSON.stringify(body),
+      });
+      const result = await res.json();
+      if (result.success) {
+        flash(result.message ?? "Done", "success");
+        if (activeTab !== "support") fetchSection(activeTab);
+        if (action === "change_super_password") {
+          setSuperCurrentPassword("");
+          setSuperNewPassword("");
+          setSuperConfirmPassword("");
+        }
+        return true;
+      }
+      flash(result.error ?? "Operation failed", "error");
+      return false;
+    } catch {
+      flash("Server error", "error");
+      return false;
+    }
+  };
+
+  const messageAdmin = (adminId: string) => {
+    setSelectedAdminId(adminId);
+    setActiveTab("support");
+  };
+
+  const resetPassword = async (targetId: string, action: "reset_user_password" | "reset_staff_password") => {
+    const newPassword = window.prompt("Enter a new password:", "");
+    if (!newPassword) return;
+    await runAdminAction(action, targetId, { new_password: newPassword });
+  };
+
+  const toggleAccount = async (targetId: string, wantsActive: boolean, isStaff = false) => {
+    await runAdminAction(wantsActive ? (isStaff ? "activate_staff" : "activate_user") : (isStaff ? "deactivate_staff" : "deactivate_user"), targetId);
+  };
 
   /* ── Support loaders ── */
   const loadConversations = useCallback(async () => {
@@ -262,10 +314,15 @@ export default function SuperAdminPage() {
       const body = await res.json();
       if (body.success) {
         setSupportText("");
+        flash("Reply sent", "success");
         await loadMessages(selectedAdminId);
         await loadConversations();
+        return;
       }
-    } catch { /* silent */ }
+      flash(body.error || "Could not send reply", "error");
+    } catch {
+      flash("Could not send reply", "error");
+    }
   };
 
   /* ── Shared table header style ── */
@@ -373,10 +430,24 @@ export default function SuperAdminPage() {
               >
                 <IcoRefresh /> Refresh
               </button>
+
+              <button
+                onClick={() => { localStorage.removeItem("user"); router.push("/login"); }}
+                className="sa-refresh-btn"
+                style={{ borderColor: "#fecaca", color: "#dc2626" }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Logout
+              </button>
             </div>
           </header>
 
           <main className="sa-main">
+            {notice && (
+              <div style={{ padding: "0.9rem 1rem", borderRadius: 10, border: `1px solid ${notice.type === "error" ? "#fecaca" : notice.type === "success" ? "#bbf7d0" : "#c7d2fe"}`, background: notice.type === "error" ? "#fef2f2" : notice.type === "success" ? "#f0fdf4" : "#eff6ff", color: notice.type === "error" ? "#991b1b" : notice.type === "success" ? "#166534" : "#1d4ed8", marginBottom: "1rem" }}>
+                {notice.text}
+              </div>
+            )}
 
             {/* ══ OVERVIEW ══ */}
             {activeTab === "overview" && !loading && stats && (
@@ -385,7 +456,6 @@ export default function SuperAdminPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "1rem" }}>
                   {Object.entries(stats).map(([k, v]) => {
                     const isRevenue = k.toLowerCase().includes("revenue") || k.toLowerCase().includes("amount");
-                    const isCount   = typeof v === "number";
                     return (
                       <div key={k} className="sa-stat">
                         <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>{k.replace(/_/g, " ")}</div>
@@ -412,10 +482,11 @@ export default function SuperAdminPage() {
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                       <thead><tr>
                         {["ID", "Name", "Email", "Store", "Plan", "Status", "Joined"].map(h => <th key={h} style={TH}>{h}</th>)}
+                        <th style={TH}>Actions</th>
                       </tr></thead>
                       <tbody>
                         {paginated.length === 0
-                          ? <tr><td colSpan={7} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No users found.</td></tr>
+                          ? <tr><td colSpan={8} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No users found.</td></tr>
                           : paginated.map((r, i) => (
                             <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }} {...rowHover}>
                               <td style={{ ...TD, fontFamily: "monospace", fontSize: 11, color: "#9a9a8e" }}>{shortId(r.id)}</td>
@@ -427,6 +498,13 @@ export default function SuperAdminPage() {
                               </td>
                               <td style={TD}>{statusBadge(r.status ?? r.subdomain_status)}</td>
                               <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDate(r.created_at)}</td>
+                              <td style={{ ...TD, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                <button onClick={() => messageAdmin(String(r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Message</button>
+                                <button onClick={() => resetPassword(String(r.id), "reset_user_password")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Reset</button>
+                                <button onClick={() => toggleAccount(String(r.id), String(r.subdomain_status) !== "active", false)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.subdomain_status) !== "active" ? "#dcfce7" : "#fef2f2", color: String(r.subdomain_status) !== "active" ? "#166534" : "#991b1b", cursor: "pointer" }}>
+                                  {String(r.subdomain_status) !== "active" ? "Activate" : "Deactivate"}
+                                </button>
+                              </td>
                             </tr>
                           ))}
                       </tbody>
@@ -449,10 +527,11 @@ export default function SuperAdminPage() {
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                       <thead><tr>
                         {["ID", "Name", "Email", "Store", "Role", "Status", "Joined"].map(h => <th key={h} style={TH}>{h}</th>)}
+                        <th style={TH}>Actions</th>
                       </tr></thead>
                       <tbody>
                         {paginated.length === 0
-                          ? <tr><td colSpan={7} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No staff found.</td></tr>
+                          ? <tr><td colSpan={8} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No staff found.</td></tr>
                           : paginated.map((r, i) => (
                             <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }} {...rowHover}>
                               <td style={{ ...TD, fontFamily: "monospace", fontSize: 11, color: "#9a9a8e" }}>{shortId(r.id)}</td>
@@ -462,6 +541,13 @@ export default function SuperAdminPage() {
                               <td style={TD}><Badge label={String(r.shift_role ?? r.role ?? "staff")} type="neutral" /></td>
                               <td style={TD}>{statusBadge(r.status)}</td>
                               <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDate(r.created_at)}</td>
+                              <td style={{ ...TD, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                <button onClick={() => messageAdmin(String(r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Message</button>
+                                <button onClick={() => resetPassword(String(r.id), "reset_staff_password")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Reset</button>
+                                <button onClick={() => toggleAccount(String(r.id), String(r.status) !== "active", true)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.status) !== "active" ? "#dcfce7" : "#fef2f2", color: String(r.status) !== "active" ? "#166534" : "#991b1b", cursor: "pointer" }}>
+                                  {String(r.status) !== "active" ? "Activate" : "Deactivate"}
+                                </button>
+                              </td>
                             </tr>
                           ))}
                       </tbody>
@@ -543,18 +629,51 @@ export default function SuperAdminPage() {
             {activeTab === "settings" && (
               <div className="sa-card" style={{ padding: "1.5rem" }}>
                 {loading ? <Spinner label="Loading settings…" /> : (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-                    {data.length === 0
-                      ? <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "2rem", color: "#9a9a8e", fontSize: 13 }}>No settings data.</div>
-                      : data.map((r, i) => (
-                        Object.entries(r).map(([k, v]) => (
-                          <div key={`${i}-${k}`}>
-                            <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{k.replace(/_/g, " ")}</div>
-                            <div style={{ fontSize: 14, fontWeight: 500, color: "#141410" }}>{String(v ?? "—")}</div>
-                          </div>
-                        ))
-                      ))}
-                  </div>
+                  <>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                      {data.length === 0
+                        ? <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "2rem", color: "#9a9a8e", fontSize: 13 }}>No settings data.</div>
+                        : data.map((r, i) => (
+                          Object.entries(r).map(([k, v]) => (
+                            <div key={`${i}-${k}`}>
+                              <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{k.replace(/_/g, " ")}</div>
+                              <div style={{ fontSize: 14, fontWeight: 500, color: "#141410" }}>{String(v ?? "—")}</div>
+                            </div>
+                          ))
+                        ))}
+                    </div>
+                    <div style={{ marginTop: "2rem", padding: "1.5rem", border: "1px solid #e2e0d8", borderRadius: 16, background: "#ffffff" }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: "1rem" }}>Change Super Admin Password</div>
+                      <div style={{ display: "grid", gap: "1rem", maxWidth: 520 }}>
+                        <label style={{ display: "grid", gap: 6, fontSize: 12, color: "#7a7a74" }}>
+                          Current password
+                          <input type="password" value={superCurrentPassword} onChange={e => setSuperCurrentPassword(e.target.value)} style={{ padding: "0.85rem 1rem", borderRadius: 12, border: "1px solid #d9d6ce", outline: "none", width: "100%" }} />
+                        </label>
+                        <label style={{ display: "grid", gap: 6, fontSize: 12, color: "#7a7a74" }}>
+                          New password
+                          <input type="password" value={superNewPassword} onChange={e => setSuperNewPassword(e.target.value)} style={{ padding: "0.85rem 1rem", borderRadius: 12, border: "1px solid #d9d6ce", outline: "none", width: "100%" }} />
+                        </label>
+                        <label style={{ display: "grid", gap: 6, fontSize: 12, color: "#7a7a74" }}>
+                          Confirm new password
+                          <input type="password" value={superConfirmPassword} onChange={e => setSuperConfirmPassword(e.target.value)} style={{ padding: "0.85rem 1rem", borderRadius: 12, border: "1px solid #d9d6ce", outline: "none", width: "100%" }} />
+                        </label>
+                        <button onClick={async () => {
+                          if (!superCurrentPassword || !superNewPassword || !superConfirmPassword) {
+                            flash("Please fill all password fields", "error");
+                            return;
+                          }
+                          if (superNewPassword !== superConfirmPassword) {
+                            flash("New passwords do not match", "error");
+                            return;
+                          }
+                          await runAdminAction("change_super_password", undefined, {
+                            current_password: superCurrentPassword,
+                            new_password: superNewPassword,
+                          });
+                        }} style={{ width: "fit-content", padding: "0.85rem 1.25rem", borderRadius: 12, border: "none", background: "#141410", color: "#fff", cursor: "pointer" }}>Update password</button>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -628,7 +747,10 @@ export default function SuperAdminPage() {
                         : messages.length === 0
                           ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9a9a8e", fontSize: 13 }}>No messages yet.</div>
                           : messages.map(m => (
-                            <div key={m.id} style={{ display: "flex", flexDirection: "column", alignItems: m.sender === "super_admin" ? "flex-end" : "flex-start", gap: 3 }}>
+                            <div key={m.id} style={{ display: "flex", flexDirection: "column", alignItems: m.sender === "super_admin" ? "flex-end" : "flex-start", gap: 4 }}>
+                              <div style={{ fontSize: 10, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.4px", paddingLeft: m.sender === "admin" ? 4 : 0, paddingRight: m.sender === "super_admin" ? 4 : 0 }}>
+                                {m.sender === "admin" ? "Admin" : "You"}
+                              </div>
                               <div style={{
                                 maxWidth: "72%", padding: "10px 14px", borderRadius: 12,
                                 background: m.sender === "super_admin" ? "#141410" : "#fff",
