@@ -8,6 +8,7 @@ interface SupportMessage {
   message: string;
   title:   string | null;
   time:    string;
+  is_new?: boolean;
 }
 
 export default function AdminSupportPage() {
@@ -218,9 +219,12 @@ export default function AdminSupportPage() {
                 return (
                   <div key={msg.id} className="msg-bubble" style={{ alignSelf: isAdmin ? "flex-end" : "flex-start", maxWidth: "78%", display: "flex", flexDirection: "column", gap: 4 }}>
                     {/* Sender label */}
-                    <div style={{ fontSize: 10, fontWeight: 500, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.4px", paddingLeft: isAdmin ? 0 : 4, paddingRight: isAdmin ? 4 : 0, textAlign: isAdmin ? "right" : "left" }}>
-                      {isAdmin ? "You" : "Super Admin"}
-                    </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: isAdmin ? "flex-end" : "flex-start" }}>
+                            <div style={{ fontSize: 10, fontWeight: 500, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.4px", paddingLeft: isAdmin ? 0 : 4, paddingRight: isAdmin ? 4 : 0, textAlign: isAdmin ? "right" : "left" }}>
+                              {isAdmin ? "You" : "Super Admin"}
+                            </div>
+                            {msg.is_new ? <div style={{ background: "#ef4444", color: "#fff", padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 600 }}>New</div> : null}
+                          </div>
                     {/* Bubble */}
                     <div style={{
                       padding: "10px 14px",

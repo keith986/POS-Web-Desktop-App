@@ -32,13 +32,6 @@ interface LogRow extends RowDataPacket {
   title: string; message: string; created_at: string;
   domain: string; store_name: string;
 }
-// Joins mpesa_transactions + users + subscriptions
-interface PaymentRow extends RowDataPacket {
-  id: string; amount: number; phone: string; plan: string;
-  status: string; mpesa_receipt: string; created_at: string;
-  result_desc: string; store_name: string; domain: string;
-  user_email: string; sub_status: string; next_billing_date: string;
-}
 interface BillingRow extends RowDataPacket {
   admin_id: string; charge_id: string | null; subscription_id: string | null;
   amount: number; plan: string | null; status: string; mpesa_receipt: string | null;

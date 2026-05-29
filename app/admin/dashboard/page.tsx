@@ -414,6 +414,7 @@ export default function AdminDashboard() {
   const [data,      setData]     = useState<DashboardData | null>(null);
   const [fetching,  setFetching] = useState(true);
   const [error,     setError]    = useState<string | null>(null);
+  const [supportUnread, setSupportUnread] = useState(0);
  
 
 useEffect(() => {
@@ -459,6 +460,24 @@ useEffect(() => {
   }, [adminUser?.id]);
 
   useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
+
+  /* Check support unread for super-admins */
+  useEffect(() => {
+    const fetchSupportUnread = async () => {
+      if (!adminUser?.id) return;
+      try {
+        const res = await fetch(`/api/support?super_admin=1`, { headers: { Authorization: `Bearer ${adminUser.id}` } });
+        const body = await res.json();
+        if (Array.isArray(body)) {
+          const total = body.reduce((s: number, c: any) => s + (Number(c.unread_count || 0)), 0);
+          setSupportUnread(total);
+        }
+      } catch { /* ignore */ }
+    };
+    fetchSupportUnread();
+    const iv = setInterval(fetchSupportUnread, 30000);
+    return () => clearInterval(iv);
+  }, [adminUser?.id]);
 
   const dater = new Intl.DateTimeFormat("en-US", {
     month: "short", day: "numeric", year: "numeric",
@@ -525,6 +544,13 @@ if (!checked) return (
       </header>
 
       <main className="main">
+
+        {supportUnread > 0 && (
+          <div style={{ marginBottom: "1rem", padding: "0.85rem 1rem", borderRadius: 12, background: "#fff7ed", border: "1px solid #ffedd5", color: "#92400e", display: "flex", alignItems: "center", gap: 10 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#92400e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            You have {supportUnread} new support message{supportUnread !== 1 ? "s" : ""}. <a href="/admin/support" style={{ marginLeft: 8, color: "#92400e", fontWeight: 700 }}>Open Support</a>
+          </div>
+        )}
 
         {fetching ? <Spinner /> : error ? (
           <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: "1.25rem", color: "#dc2626", fontSize: 13, textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>

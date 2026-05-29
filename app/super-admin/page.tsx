@@ -13,6 +13,8 @@ interface SupportConversation {
   last_message:  string;
   time:          string;
   message_count: number;
+  unread_count?:  number;
+  role?: string;
 }
 interface SupportMessage {
   id:     string;
@@ -71,6 +73,14 @@ function extractArray(body: unknown): Record<string, unknown>[] | null {
     return arr ?? null;
   }
   return null;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? value as T[] : [];
 }
 
 /* ─── Status badge ── */
@@ -276,17 +286,31 @@ export default function SuperAdminPage() {
       const user = JSON.parse(localStorage.getItem("user") || "null");
       const res  = await fetch("/api/support?super_admin=1", { headers: { Authorization: `Bearer ${user?.id}` } });
       const body = await res.json();
-      if (Array.isArray(body)) setConversations(body as SupportConversation[]);
+      const convs = Array.isArray(body)
+        ? body as SupportConversation[]
+        : isObject(body)
+          ? parseArray<SupportConversation>(body.conversations)
+          : [];
+      setConversations(convs);
+      if (selectedAdminId === null && convs.length > 0) {
+        setSelectedAdminId(convs[0].admin_id);
+      }
     } catch { setConversations([]); }
     finally  { setSupportLoading(false); }
-  }, []);
+  }, [selectedAdminId]);
 
   const loadMessages = useCallback(async (adminId: string) => {
     setSupportLoading(true);
     try {
-      const res  = await fetch(`/api/support?admin_id=${encodeURIComponent(adminId)}`);
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      const res  = await fetch(`/api/support?admin_id=${encodeURIComponent(adminId)}`, { headers: { Authorization: `Bearer ${user?.id}` } });
       const body = await res.json();
-      if (Array.isArray(body)) setMessages(body as SupportMessage[]);
+      const msgs = Array.isArray(body)
+        ? body as SupportMessage[]
+        : isObject(body)
+          ? parseArray<SupportMessage>(body.messages)
+          : [];
+      setMessages(msgs);
     } catch { setMessages([]); }
     finally  { setSupportLoading(false); }
   }, []);
@@ -380,11 +404,14 @@ export default function SuperAdminPage() {
               <button key={t.key} className={`sa-nav-btn ${activeTab === t.key ? "active" : ""}`} onClick={() => changeTab(t.key)}>
                 {t.icon}
                 {t.label}
-                {t.key === "support" && conversations.length > 0 && (
-                  <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, background: activeTab === "support" ? "rgba(255,255,255,0.25)" : "#dc2626", color: "#fff", borderRadius: 100, padding: "1px 7px" }}>
-                    {conversations.length}
-                  </span>
-                )}
+                {t.key === "support" && conversations.length > 0 && (() => {
+                  const totalUnread = conversations.reduce((s, c) => s + (Number(c.unread_count || 0)), 0);
+                  return (
+                    <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, background: activeTab === "support" ? "rgba(255,255,255,0.25)" : "#dc2626", color: "#fff", borderRadius: 100, padding: "1px 7px" }}>
+                      {totalUnread > 0 ? totalUnread : conversations.length}
+                    </span>
+                  );
+                })()}
               </button>
             ))}
           </nav>
@@ -689,31 +716,52 @@ export default function SuperAdminPage() {
                     <span style={{ fontSize: 11, color: "#9a9a8e" }}>{conversations.length} active</span>
                   </div>
                   <div style={{ flex: 1, overflowY: "auto" }}>
-                    {supportLoading && !selectedAdminId
-                      ? <Spinner label="Loading…" />
-                      : conversations.length === 0
-                        ? <div style={{ padding: "2rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No conversations yet.</div>
-                        : conversations.map(c => (
-                          <button
-                            key={c.admin_id}
-                            onClick={() => setSelectedAdminId(c.admin_id)}
-                            style={{
-                              display: "block", width: "100%", textAlign: "left",
-                              padding: "0.9rem 1.25rem", borderBottom: "1px solid #e2e0d8",
-                              border: "none",
-                              background: selectedAdminId === c.admin_id ? "#f5f4f0" : "transparent",
-                              cursor: "pointer", transition: "background 0.1s",
-                              borderLeft: selectedAdminId === c.admin_id ? "3px solid #141410" : "3px solid transparent",
-                            }}
-                          >
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
-                              <div style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>{c.full_name}</div>
+                    {supportLoading && !selectedAdminId ? (
+                      <Spinner label="Loading…" />
+                    ) : conversations.length > 0 ? (
+                      conversations.map(c => (
+                        <button
+                          key={c.admin_id}
+                          onClick={() => setSelectedAdminId(c.admin_id)}
+                          style={{
+                            display: "block", width: "100%", textAlign: "left",
+                            padding: "0.9rem 1.25rem", borderBottom: "1px solid #e2e0d8",
+                            border: "none",
+                            background: selectedAdminId === c.admin_id ? "#f5f4f0" : "transparent",
+                            cursor: "pointer", transition: "background 0.1s",
+                            borderLeft: selectedAdminId === c.admin_id ? "3px solid #141410" : "3px solid transparent",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>{c.full_name}</div>
+                            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                              {c.unread_count ? <div style={{ background: "#ef4444", color: "#fff", padding: "2px 8px", borderRadius: 12, fontSize: 12, fontWeight: 600 }}>{c.unread_count}</div> : null}
                               <div style={{ fontSize: 10, color: "#9a9a8e" }}>{c.message_count} msg</div>
                             </div>
-                            <div style={{ fontSize: 12, color: "#9a9a8e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.last_message}</div>
-                            <div style={{ fontSize: 10, color: "#c8c6bc", marginTop: 3 }}>{c.email}</div>
-                          </button>
-                        ))}
+                          </div>
+                          <div style={{ fontSize: 12, color: "#9a9a8e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.last_message}</div>
+                          <div style={{ fontSize: 10, color: "#c8c6bc", marginTop: 3 }}>{c.email}</div>
+                        </button>
+                      ))
+                    ) : selectedAdminId ? (
+                      <button
+                        style={{
+                          display: "block", width: "100%", textAlign: "left",
+                          padding: "0.9rem 1.25rem", borderBottom: "1px solid #e2e0d8",
+                          border: "none", background: "#f5f4f0",
+                          cursor: "default", transition: "background 0.1s",
+                          borderLeft: "3px solid #141410",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>{selectedAdminId}</div>
+                          <div style={{ fontSize: 10, color: "#9a9a8e" }}>{messages.length} msg</div>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#9a9a8e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{messages[0]?.message ?? "Conversation loaded"}</div>
+                      </button>
+                    ) : (
+                      <div style={{ padding: "2rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No conversations yet.</div>
+                    )}
                   </div>
                 </div>
 
@@ -730,7 +778,7 @@ export default function SuperAdminPage() {
                               </div>
                               <div>
                                 <div style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>{conv?.full_name ?? selectedAdminId}</div>
-                                <div style={{ fontSize: 11, color: "#9a9a8e" }}>{conv?.email}</div>
+                                <div style={{ fontSize: 11, color: "#9a9a8e" }}>{conv?.role ? conv.role.toUpperCase() : "ADMIN"} · {conv?.email}</div>
                               </div>
                             </div>
                           );

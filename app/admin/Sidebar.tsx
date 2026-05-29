@@ -242,11 +242,12 @@ function getInitials(name: string) {
 }
 
 function NavSection({
-  section, userPlan, isActive, pendingOrders, router, initialOpen, subscriptionExpired,
+  section, userPlan, isActive, pendingOrders, router, initialOpen, subscriptionExpired, supportNew,
 }: {
   section: NavSection; userPlan: PlanId; isActive: (href: string) => boolean;
   pendingOrders: number; router: ReturnType<typeof useRouter>;
   initialOpen: boolean; subscriptionExpired: boolean;
+  supportNew?: boolean;
 }) {
   const [open, setOpen] = useState(
     () => initialOpen || section.items.some(i => isActive(i.href))
@@ -308,6 +309,9 @@ function NavSection({
               {label}
               {href === "/admin/orders" && pendingOrders > 0 && (
                 <span className="nav-badge">{pendingOrders > 99 ? "99+" : pendingOrders}</span>
+              )}
+              {href === "/admin/support" && supportNew && (
+                <span style={{ marginLeft: 8, background: "#ef4444", color: "#fff", padding: "2px 8px", borderRadius: 10, fontSize: 11, fontWeight: 700 }}>New</span>
               )}
             </Link>
           );
@@ -458,6 +462,7 @@ export default function Sidebar() {
   const router   = useRouter();
 
   const [user,          setUser]          = useState<User | null>(null);
+  const [supportNew,    setSupportNew]    = useState(false);
   const [pendingOrders, setPendingOrders] = useState(0);
   const [switcherOpen,  setSwitcherOpen]  = useState(false);
   const [switching,     setSwitching]     = useState(false);
@@ -502,7 +507,20 @@ export default function Sidebar() {
     if (!user?.id) return;
     fetchPendingCount(user.id);
     const t = setInterval(() => fetchPendingCount(user.id), 60000);
-    return () => clearInterval(t);
+    // check support new messages for this admin
+    const fetchSupportNew = async () => {
+      try {
+        const res = await fetch(`/api/support?admin_id=${user.id}`);
+        const body = await res.json();
+        if (Array.isArray(body)) {
+          const hasNew = body.some((m: any) => m.is_new === true);
+          setSupportNew(hasNew);
+        }
+      } catch { /* silent */ }
+    };
+    fetchSupportNew();
+    const s = setInterval(fetchSupportNew, 30000);
+    return () => { clearInterval(t); clearInterval(s); };
   }, [user?.id, fetchPendingCount]);
 
   const handleSwitch = async (newType: PosType) => {
@@ -619,6 +637,7 @@ export default function Sidebar() {
             router={router}
             initialOpen={idx === 0}
             subscriptionExpired={subscriptionExpired}
+            supportNew={supportNew}
           />
         ))}
 
