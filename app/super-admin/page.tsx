@@ -3,314 +3,673 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+/* ─── Types ── */
 type TabKey = "overview" | "users" | "staff" | "orders" | "logs" | "billing" | "settings" | "support";
 
 interface SupportConversation {
-  admin_id: string;
-  full_name: string;
-  email: string;
-  last_message: string;
-  time: string;
+  admin_id:      string;
+  full_name:     string;
+  email:         string;
+  last_message:  string;
+  time:          string;
   message_count: number;
 }
 interface SupportMessage {
-  id: string;
+  id:     string;
   sender: "admin" | "super_admin";
   message: string;
-  time: string;
+  time:   string;
 }
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "overview", label: "Overview" },
-  { key: "users", label: "Users" },
-  { key: "staff", label: "Staff" },
-  { key: "orders", label: "Orders" },
-  { key: "logs", label: "Logs" },
-  { key: "billing", label: "Billing" },
-  { key: "settings", label: "Settings" },
-  { key: "support", label: "Support" },
+const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+  { key: "overview",  label: "Overview",  icon: <IcoOverview /> },
+  { key: "users",     label: "Users",     icon: <IcoUsers />    },
+  { key: "staff",     label: "Staff",     icon: <IcoStaff />    },
+  { key: "orders",    label: "Orders",    icon: <IcoOrders />   },
+  { key: "logs",      label: "Logs",      icon: <IcoLogs />     },
+  { key: "billing",   label: "Billing",   icon: <IcoBilling />  },
+  { key: "settings",  label: "Settings",  icon: <IcoSettings /> },
+  { key: "support",   label: "Support",   icon: <IcoSupport />  },
 ];
 
+/* ─── Icons ── */
+function IcoOverview()  { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>; }
+function IcoUsers()     { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>; }
+function IcoStaff()     { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>; }
+function IcoOrders()    { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>; }
+function IcoLogs()      { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>; }
+function IcoBilling()   { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>; }
+function IcoSettings()  { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>; }
+function IcoSupport()   { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>; }
+function IcoRefresh()   { return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>; }
+function IcoSearch()    { return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>; }
+function IcoChevronL()  { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>; }
+function IcoChevronR()  { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>; }
+function IcoSend()      { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>; }
+
+/* ─── Helpers ── */
 function shortId(id?: unknown) {
   const s = String(id ?? "");
-  if (!s) return "—";
+  if (!s || s === "undefined") return "—";
   if (s.length <= 12) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
+function fmtDate(d?: unknown) {
+  if (!d) return "—";
+  try { return new Date(String(d)).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); }
+  catch { return "—"; }
+}
+function fmtDateTime(d?: unknown) {
+  if (!d) return "—";
+  try { return new Date(String(d)).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); }
+  catch { return "—"; }
+}
+function extractArray(body: unknown): Record<string, unknown>[] | null {
+  if (Array.isArray(body)) return body as Record<string, unknown>[];
+  if (body && typeof body === "object") {
+    const arr = Object.values(body as object).find(Array.isArray);
+    return arr ?? null;
+  }
+  return null;
+}
 
+/* ─── Status badge ── */
+function Badge({ label, type = "neutral" }: { label: string; type?: "ok" | "warn" | "err" | "neutral" | "info" }) {
+  const cfg = {
+    ok:      { bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
+    warn:    { bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+    err:     { bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+    info:    { bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe" },
+    neutral: { bg: "#f5f4f0", color: "#4a4a40", border: "#e2e0d8" },
+  }[type];
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "2px 9px", borderRadius: 100, fontSize: 11, fontWeight: 500, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}>
+      <span style={{ width: 5, height: 5, borderRadius: "50%", background: cfg.color }} />
+      {label}
+    </span>
+  );
+}
+
+function statusBadge(val: unknown) {
+  const s = String(val ?? "").toLowerCase();
+  if (["active", "completed", "paid", "success"].includes(s))   return <Badge label={String(val)} type="ok" />;
+  if (["pending", "processing"].includes(s))                     return <Badge label={String(val)} type="warn" />;
+  if (["inactive", "cancelled", "failed", "expired"].includes(s)) return <Badge label={String(val)} type="err" />;
+  return <Badge label={String(val)} type="neutral" />;
+}
+
+/* ─── Generic table (logs/orders fallback) ── */
+function GenericTable({ data }: { data: Record<string, unknown>[] }) {
+  if (!data.length) return (
+    <div style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No records found.</div>
+  );
+  const keys = Object.keys(data[0]).slice(0, 8);
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <thead>
+          <tr>
+            {keys.map(k => (
+              <th key={k} style={{ textAlign: "left", padding: "0.6rem 1rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "#9a9a8e", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", whiteSpace: "nowrap" }}>
+                {k.replace(/_/g, " ")}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, i) => (
+            <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }}
+              onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = "#fafaf8"}
+              onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = ""}>
+              {keys.map(k => (
+                <td key={k} style={{ padding: "0.75rem 1rem", color: "#4a4a40", whiteSpace: "nowrap", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {["status", "payment_status", "subdomain_status"].includes(k)
+                    ? statusBadge(row[k])
+                    : String(row[k] ?? "—")}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* ─── Spinner ── */
+function Spinner({ label = "Loading…" }: { label?: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "3rem", color: "#9a9a8e", fontSize: 13, gap: 10 }}>
+      <div style={{ width: 18, height: 18, border: "2px solid #e2e0d8", borderTopColor: "#141410", borderRadius: "50%", animation: "sa-spin 0.7s linear infinite" }} />
+      {label}
+      <style>{`@keyframes sa-spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
+
+/* ─── Pagination ── */
+function Pagination({ page, total, onChange }: { page: number; total: number; onChange: (p: number) => void }) {
+  if (total <= 1) return null;
+  const pages = Array.from({ length: Math.min(total, 7) }, (_, i) => {
+    if (total <= 7) return i + 1;
+    if (page <= 4) return i + 1;
+    if (page >= total - 3) return total - 6 + i;
+    return page - 3 + i;
+  });
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0.75rem 1.25rem", borderTop: "1px solid #e2e0d8" }}>
+      <span style={{ fontSize: 12, color: "#9a9a8e", marginRight: "auto" }}>Page {page} of {total}</span>
+      <button onClick={() => onChange(Math.max(1, page - 1))} disabled={page === 1} style={{ width: 28, height: 28, border: "1px solid #e2e0d8", borderRadius: 6, background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: page === 1 ? 0.4 : 1 }}><IcoChevronL /></button>
+      {pages.map(p => (
+        <button key={p} onClick={() => onChange(p)} style={{ width: 28, height: 28, border: `1px solid ${p === page ? "#141410" : "#e2e0d8"}`, borderRadius: 6, background: p === page ? "#141410" : "#fff", color: p === page ? "#fff" : "#141410", cursor: "pointer", fontSize: 12, fontWeight: p === page ? 600 : 400, fontFamily: "inherit" }}>{p}</button>
+      ))}
+      <button onClick={() => onChange(Math.min(total, page + 1))} disabled={page === total} style={{ width: 28, height: 28, border: "1px solid #e2e0d8", borderRadius: 6, background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: page === total ? 0.4 : 1 }}><IcoChevronR /></button>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   MAIN PAGE
+───────────────────────────────────────── */
 export default function SuperAdminPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabKey>("overview");
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<Record<string, unknown>[]>([]);
-  const [stats, setStats] = useState<Record<string, unknown> | null>(null);
-  const [search, setSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab,  setActiveTab]  = useState<TabKey>("overview");
+  const [loading,    setLoading]    = useState(false);
+  const [data,       setData]       = useState<Record<string, unknown>[]>([]);
+  const [stats,      setStats]      = useState<Record<string, unknown> | null>(null);
+  const [search,     setSearch]     = useState("");
+  const [page,       setPage]       = useState(1);
+  const PER_PAGE = 12;
 
-  // Support state
-  const [supportConversations, setSupportConversations] = useState<SupportConversation[]>([]);
-  const [selectedSupportAdminId, setSelectedSupportAdminId] = useState<string | null>(null);
-  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
-  const [supportText, setSupportText] = useState("");
-  const [supportLoading, setSupportLoading] = useState(false);
+  /* ── Support ── */
+  const [conversations,    setConversations]    = useState<SupportConversation[]>([]);
+  const [selectedAdminId,  setSelectedAdminId]  = useState<string | null>(null);
+  const [messages,         setMessages]         = useState<SupportMessage[]>([]);
+  const [supportText,      setSupportText]      = useState("");
+  const [supportLoading,   setSupportLoading]   = useState(false);
 
+  /* ── Auth guard ── */
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "null");
     if (!user || user.email !== "admin@postore.app") router.push("/login");
   }, [router]);
 
+  /* ── Fetch section ── */
   const fetchSection = useCallback(async (section: string) => {
     if (section === "support") return;
     setLoading(true);
     try {
       const user = JSON.parse(localStorage.getItem("user") || "null");
-      const res = await fetch(`/api/admin/super?section=${encodeURIComponent(section)}`, {
+      const res  = await fetch(`/api/admin/super?section=${encodeURIComponent(section)}`, {
         headers: { Authorization: `Bearer ${user?.id}` },
       });
       const body = await res.json();
-      if (section === "overview") {
-        setStats(body || null);
-        setData([]);
-      } else if (Array.isArray(body)) {
-        setData(body as Record<string, unknown>[]);
-        setStats(null);
-      } else {
-        setData([]);
-        setStats(null);
-      }
-    } catch (err) {
-      setData([]);
-      setStats(null);
+      if (section === "overview") { setStats(body || null); setData([]); }
+      else { setData(extractArray(body) ?? []); setStats(null); }
+    } catch {
+      setData([]); setStats(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (activeTab === "support") return;
-    fetchSection(activeTab);
+    if (activeTab !== "support") fetchSection(activeTab);
   }, [activeTab, fetchSection]);
 
-  // Support helpers
-  const loadSupportConversations = useCallback(async () => {
+  /* ── Support loaders ── */
+  const loadConversations = useCallback(async () => {
     setSupportLoading(true);
     try {
       const user = JSON.parse(localStorage.getItem("user") || "null");
-      const res = await fetch(`/api/support?super_admin=1`, { headers: { Authorization: `Bearer ${user?.id}` } });
+      const res  = await fetch("/api/support?super_admin=1", { headers: { Authorization: `Bearer ${user?.id}` } });
       const body = await res.json();
-      if (Array.isArray(body)) setSupportConversations(body as SupportConversation[]);
-    } catch (err) {
-      setSupportConversations([]);
-    } finally {
-      setSupportLoading(false);
-    }
+      if (Array.isArray(body)) setConversations(body as SupportConversation[]);
+    } catch { setConversations([]); }
+    finally  { setSupportLoading(false); }
   }, []);
 
-  const loadSupportConversation = useCallback(async (adminId: string) => {
+  const loadMessages = useCallback(async (adminId: string) => {
     setSupportLoading(true);
     try {
-      const res = await fetch(`/api/support?admin_id=${encodeURIComponent(adminId)}`);
+      const res  = await fetch(`/api/support?admin_id=${encodeURIComponent(adminId)}`);
       const body = await res.json();
-      if (Array.isArray(body)) setSupportMessages(body as SupportMessage[]);
-    } catch {
-      setSupportMessages([]);
-    } finally {
-      setSupportLoading(false);
-    }
+      if (Array.isArray(body)) setMessages(body as SupportMessage[]);
+    } catch { setMessages([]); }
+    finally  { setSupportLoading(false); }
   }, []);
 
-  useEffect(() => {
-    if (activeTab === "support") loadSupportConversations();
-  }, [activeTab, loadSupportConversations]);
+  useEffect(() => { if (activeTab === "support") loadConversations(); }, [activeTab, loadConversations]);
+  useEffect(() => { if (selectedAdminId) loadMessages(selectedAdminId); }, [selectedAdminId, loadMessages]);
 
-  useEffect(() => {
-    if (!selectedSupportAdminId) return;
-    loadSupportConversation(selectedSupportAdminId);
-  }, [selectedSupportAdminId, loadSupportConversation]);
+  /* ── Filtered + paginated ── */
+  const filtered   = data.filter(r => !search || Object.values(r).some(v => String(v ?? "").toLowerCase().includes(search.toLowerCase())));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  const itemsPerPage = 10;
-  const visible = data.filter(r => {
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return Object.values(r).some(v => String(v ?? "").toLowerCase().includes(s));
-  });
-  const pageCount = Math.max(1, Math.ceil(visible.length / itemsPerPage));
-  const paginated = visible.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const changeTab = (t: TabKey) => { setActiveTab(t); setSearch(""); setPage(1); };
+
+  /* ── Send support reply ── */
+  const sendReply = async () => {
+    if (!selectedAdminId || !supportText.trim()) return;
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      const res  = await fetch("/api/support", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.id}` },
+        body:    JSON.stringify({ admin_id: selectedAdminId, sender: "super_admin", message: supportText.trim(), title: "Support Reply" }),
+      });
+      const body = await res.json();
+      if (body.success) {
+        setSupportText("");
+        await loadMessages(selectedAdminId);
+        await loadConversations();
+      }
+    } catch { /* silent */ }
+  };
+
+  /* ── Shared table header style ── */
+  const TH: React.CSSProperties = { textAlign: "left", padding: "0.6rem 1.25rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "#9a9a8e", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", whiteSpace: "nowrap" };
+  const TD: React.CSSProperties = { padding: "0.8rem 1.25rem", fontSize: 13, color: "#4a4a40" };
+  const rowHover = { onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) => (e.currentTarget.style.background = "#fafaf8"), onMouseLeave: (e: React.MouseEvent<HTMLTableRowElement>) => (e.currentTarget.style.background = "") };
+
+  const dater = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date());
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f4f0" }}>
-      <header style={{ padding: "12px 20px", background: "#141410", color: "#fff", display: "flex", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <div style={{ width: 34, height: 34, background: "#d4522a", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>S</div>
-          <div>
-            <div style={{ fontWeight: 700 }}>Super Admin</div>
-            <div style={{ fontSize: 12, color: "#cfcfcf" }}>postore</div>
+    <>
+      <style>{`
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; }
+        .sa-shell { display: flex; min-height: 100vh; background: #f5f4f0; }
+        .sa-sidebar { width: 220px; background: #fff; border-right: 1px solid #e2e0d8; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sa-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .sa-header { background: #fff; border-bottom: 1px solid #e2e0d8; padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: sticky; top: 0; z-index: 10; }
+        .sa-main { flex: 1; padding: 1.75rem 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
+        .sa-nav-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 14px; border: none; background: transparent; border-radius: 8px; font-family: inherit; font-size: 13; cursor: pointer; color: #4a4a40; transition: all 0.15s; text-align: left; }
+        .sa-nav-btn:hover { background: #f5f4f0; color: #141410; }
+        .sa-nav-btn.active { background: #141410; color: #fff; font-weight: 500; }
+        .sa-nav-btn.active svg { color: #fff; }
+        .sa-card { background: #fff; border: 1px solid #e2e0d8; border-radius: 12px; overflow: hidden; }
+        .sa-stat { background: #fff; border: 1px solid #e2e0d8; border-radius: 12px; padding: 1.1rem 1.25rem; }
+        .sa-toolbar { padding: 1rem 1.25rem; border-bottom: 1px solid #e2e0d8; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .sa-search { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 8px; background: #f5f4f0; border: 1px solid #c8c6bc; border-radius: 8px; padding: 0 10px; }
+        .sa-search input { flex: 1; border: none; background: transparent; font-family: inherit; font-size: 13px; color: #141410; outline: none; padding: 7px 0; }
+        .sa-refresh-btn { display: flex; align-items: center; gap: 6px; padding: 7px 14px; background: #fff; color: #141410; border: 1px solid #c8c6bc; border-radius: 7px; font-family: inherit; font-size: 13px; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
+        .sa-refresh-btn:hover { background: #f5f4f0; }
+        @keyframes sa-spin { to { transform: rotate(360deg); } }
+      `}</style>
+
+      <div className="sa-shell">
+
+        {/* ── SIDEBAR ── */}
+        <aside className="sa-sidebar">
+          {/* Logo area */}
+          <div style={{ padding: "1.25rem 1rem 1rem", borderBottom: "1px solid #e2e0d8" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 36, height: 36, background: "#141410", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#141410" }}>Super Admin</div>
+                <div style={{ fontSize: 11, color: "#9a9a8e" }}>POStore Control</div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => { localStorage.removeItem("user"); router.push("/login"); }} style={{ background: "transparent", color: "#fff", border: "1px solid #444", padding: "6px 10px", borderRadius: 6 }}>Logout</button>
-        </div>
-      </header>
 
-      <main style={{ maxWidth: 1200, margin: "16px auto", padding: 12 }}>
-        <div style={{ display: "flex", gap: 16 }}>
-          <aside style={{ width: 260 }}>
-            <div style={{ background: "#fff", padding: 12, borderRadius: 10, border: "1px solid #e5e7eb" }}>
-              {TABS.map(t => (
-                <button key={t.key} onClick={() => { setActiveTab(t.key); setSearch(""); setCurrentPage(1); }} style={{ display: "block", width: "100%", padding: 10, textAlign: "left", border: "none", background: activeTab === t.key ? "#fff0ef" : "transparent", borderRadius: 8, marginBottom: 6 }}>{t.label}</button>
-              ))}
-            </div>
-          </aside>
+          {/* Nav items */}
+          <nav style={{ padding: "0.75rem 0.75rem", flex: 1 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.6px", textTransform: "uppercase", color: "#9a9a8e", padding: "0 6px", marginBottom: 6 }}>Navigation</div>
+            {TABS.map(t => (
+              <button key={t.key} className={`sa-nav-btn ${activeTab === t.key ? "active" : ""}`} onClick={() => changeTab(t.key)}>
+                {t.icon}
+                {t.label}
+                {t.key === "support" && conversations.length > 0 && (
+                  <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, background: activeTab === "support" ? "rgba(255,255,255,0.25)" : "#dc2626", color: "#fff", borderRadius: 100, padding: "1px 7px" }}>
+                    {conversations.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
 
-          <section style={{ flex: 1 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h2 style={{ margin: 0 }}>{TABS.find(t => t.key === activeTab)?.label}</h2>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input placeholder={`Search ${activeTab}...`} value={search} onChange={e => setSearch(e.target.value)} style={{ padding: 8, borderRadius: 8, border: "1px solid #e5e7eb" }} />
-                <button onClick={() => activeTab === "support" ? loadSupportConversations() : fetchSection(activeTab)} style={{ padding: "8px 12px", borderRadius: 8 }}>Refresh</button>
+          {/* Footer */}
+          <div style={{ padding: "0.75rem 1rem", borderTop: "1px solid #e2e0d8" }}>
+            <button
+              onClick={() => { localStorage.removeItem("user"); router.push("/login"); }}
+              style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 10px", border: "1px solid #e2e0d8", borderRadius: 8, background: "#fff", color: "#9a9a8e", fontFamily: "inherit", fontSize: 12, cursor: "pointer", transition: "all 0.15s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#dc2626"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#fecaca"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#9a9a8e"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#e2e0d8"; }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Sign out
+            </button>
+          </div>
+        </aside>
+
+        {/* ── MAIN CONTENT ── */}
+        <div className="sa-content">
+
+          {/* Header */}
+          <header className="sa-header">
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: "#141410" }}>
+                  {TABS.find(t => t.key === activeTab)?.label}
+                </div>
+                <div style={{ fontSize: 11, color: "#9a9a8e" }}>{dater}</div>
               </div>
             </div>
 
-            {loading && <div style={{ padding: 16, color: "#9ca3af" }}>Loading...</div>}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {/* Super admin badge */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 100, padding: "4px 12px" }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#dc2626" }} />
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#dc2626" }}>SUPER ADMIN</span>
+              </div>
 
+              <button
+                onClick={() => activeTab === "support" ? loadConversations() : fetchSection(activeTab)}
+                className="sa-refresh-btn"
+              >
+                <IcoRefresh /> Refresh
+              </button>
+            </div>
+          </header>
+
+          <main className="sa-main">
+
+            {/* ══ OVERVIEW ══ */}
             {activeTab === "overview" && !loading && stats && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12 }}>
-                {Object.entries(stats).map(([k, v]) => (
-                  <div key={k} style={{ background: "#fff", padding: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                    <div style={{ fontWeight: 700 }}>{String(v ?? "-")}</div>
-                    <div style={{ color: "#6b7280" }}>{k}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {(activeTab === "users" || activeTab === "staff" || activeTab === "billing") && !loading && (
-              <div style={{ background: "#fff", padding: 12, borderRadius: 8, border: "1px solid #e5e7eb", overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ background: "#f9fafb" }}>
-                      {activeTab === "billing" ? (
-                        <>
-                          <th style={{ padding: 10 }}>Admin</th>
-                          <th>Store</th>
-                          <th>Domain</th>
-                          <th>Plan</th>
-                          <th>Amount</th>
-                          <th>Date</th>
-                          <th>Actions</th>
-                        </>
-                      ) : (
-                        <>
-                          <th style={{ padding: 10 }}>{activeTab === "users" ? "Admin ID" : "Staff ID"}</th>
-                          <th>Name</th>
-                          <th>Email</th>
-                          <th>Store</th>
-                          <th>Status</th>
-                          <th>Joined</th>
-                          <th>Actions</th>
-                        </>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginated.length === 0 ? (
-                      <tr><td colSpan={8} style={{ padding: 20, color: "#9ca3af" }}>No records</td></tr>
-                    ) : paginated.map((r, i) => (
-                      <tr key={i} style={{ borderTop: "1px solid #f3f4f6" }}>
-                        {activeTab === "billing" ? (
-                          <>
-                            <td style={{ padding: 10, fontWeight: 700 }}>{shortId(r.admin_id ?? r.id)}</td>
-                            <td>{String(r.store_name ?? "-")}</td>
-                            <td>{String(r.domain ?? "-")}</td>
-                            <td>{String(r.plan ?? "-")}</td>
-                            <td style={{ fontWeight: 700 }}>KES {Number(r.amount || 0).toLocaleString()}</td>
-                            <td style={{ color: "#9ca3af" }}>{r.created_at ? new Date(String(r.created_at)).toLocaleString() : "-"}</td>
-                            <td>Actions</td>
-                          </>
-                        ) : (
-                          <>
-                            <td style={{ padding: 10, fontWeight: 700 }}>{shortId(r.id)}</td>
-                            <td style={{ fontWeight: 600 }}>{String(r.full_name ?? "-")}</td>
-                            <td style={{ color: "#6b7280" }}>{String(r.email ?? "-")}</td>
-                            <td>{String(r.store_name ?? "-")}</td>
-                            <td>{String(r.status ?? r.subdomain_status ?? "-")}</td>
-                            <td style={{ color: "#9ca3af" }}>{r.created_at ? new Date(String(r.created_at)).toLocaleDateString() : "-"}</td>
-                            <td>Actions</td>
-                          </>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
-                  <div style={{ color: "#6b7280" }}>Page {currentPage} of {pageCount}</div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {Array.from({ length: pageCount }, (_, i) => i + 1).map(p => (
-                      <button key={p} onClick={() => setCurrentPage(p)} style={{ padding: "6px 8px", borderRadius: 6, background: p === currentPage ? "#d4522a" : "#fff", color: p === currentPage ? "#fff" : "#111" }}>{p}</button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "support" && (
-              <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 12 }}>
-                <div style={{ background: "#fff", padding: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                    <div style={{ fontWeight: 700 }}>Conversations</div>
-                    <button onClick={loadSupportConversations} style={{ padding: "6px 8px", borderRadius: 6 }}>Refresh</button>
-                  </div>
-                  <div style={{ maxHeight: 420, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
-                    {supportConversations.length === 0 ? <div style={{ color: "#9ca3af" }}>No conversations</div> : supportConversations.map(c => (
-                      <button key={c.admin_id} onClick={() => setSelectedSupportAdminId(c.admin_id)} style={{ textAlign: "left", padding: 8, borderRadius: 8, border: selectedSupportAdminId === c.admin_id ? "1px solid #ef4444" : "1px solid transparent", background: selectedSupportAdminId === c.admin_id ? "#fff" : "transparent" }}>
-                        <div style={{ fontWeight: 700 }}>{c.full_name}</div>
-                        <div style={{ fontSize: 12, color: "#6b7280" }}>{c.last_message}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ background: "#fff", padding: 12, borderRadius: 8, border: "1px solid #e5e7eb", display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ fontWeight: 700 }}>Messages</div>
-                  <div style={{ flex: 1, overflowY: "auto", maxHeight: 420, padding: 8, background: "#f8fafc", borderRadius: 8 }}>
-                    {selectedSupportAdminId ? (
-                      supportMessages.length === 0 ? <div style={{ color: "#9ca3af" }}>No messages</div> : supportMessages.map(m => (
-                        <div key={m.id} style={{ marginBottom: 8, alignSelf: m.sender === "super_admin" ? "flex-start" : "flex-end" }}>
-                          <div style={{ background: m.sender === "super_admin" ? "#fff" : "#fee2e2", padding: 8, borderRadius: 8 }}>{m.message}</div>
-                          <div style={{ fontSize: 11, color: "#6b7280" }}>{m.time}</div>
+              <>
+                {/* Stat grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "1rem" }}>
+                  {Object.entries(stats).map(([k, v]) => {
+                    const isRevenue = k.toLowerCase().includes("revenue") || k.toLowerCase().includes("amount");
+                    const isCount   = typeof v === "number";
+                    return (
+                      <div key={k} className="sa-stat">
+                        <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>{k.replace(/_/g, " ")}</div>
+                        <div style={{ fontSize: isRevenue ? 18 : 24, fontWeight: 600, letterSpacing: isRevenue ? "-0.3px" : "-0.5px", color: "#141410" }}>
+                          {isRevenue ? `KES ${Number(v).toLocaleString()}` : String(v ?? "—")}
                         </div>
-                      ))
-                    ) : (
-                      <div style={{ color: "#9ca3af" }}>Select a conversation</div>
-                    )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+            {activeTab === "overview" && loading && <Spinner label="Loading overview…" />}
+
+            {/* ══ USERS ══ */}
+            {activeTab === "users" && (
+              <div className="sa-card">
+                <div className="sa-toolbar">
+                  <div className="sa-search"><IcoSearch /><input placeholder="Search users…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                  <span style={{ fontSize: 12, color: "#9a9a8e", marginLeft: "auto" }}>{filtered.length} user{filtered.length !== 1 ? "s" : ""}</span>
+                </div>
+                {loading ? <Spinner label="Loading users…" /> : (
+                  <>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                      <thead><tr>
+                        {["ID", "Name", "Email", "Store", "Plan", "Status", "Joined"].map(h => <th key={h} style={TH}>{h}</th>)}
+                      </tr></thead>
+                      <tbody>
+                        {paginated.length === 0
+                          ? <tr><td colSpan={7} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No users found.</td></tr>
+                          : paginated.map((r, i) => (
+                            <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }} {...rowHover}>
+                              <td style={{ ...TD, fontFamily: "monospace", fontSize: 11, color: "#9a9a8e" }}>{shortId(r.id)}</td>
+                              <td style={{ ...TD, fontWeight: 500, color: "#141410" }}>{String(r.full_name ?? "—")}</td>
+                              <td style={{ ...TD, color: "#9a9a8e" }}>{String(r.email ?? "—")}</td>
+                              <td style={TD}>{String(r.store_name ?? "—")}</td>
+                              <td style={TD}>
+                                {r.plan ? <Badge label={String(r.plan).charAt(0).toUpperCase() + String(r.plan).slice(1)} type="info" /> : <span style={{ color: "#c8c6bc" }}>—</span>}
+                              </td>
+                              <td style={TD}>{statusBadge(r.status ?? r.subdomain_status)}</td>
+                              <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDate(r.created_at)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                    <Pagination page={page} total={totalPages} onChange={setPage} />
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ══ STAFF ══ */}
+            {activeTab === "staff" && (
+              <div className="sa-card">
+                <div className="sa-toolbar">
+                  <div className="sa-search"><IcoSearch /><input placeholder="Search staff…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                  <span style={{ fontSize: 12, color: "#9a9a8e", marginLeft: "auto" }}>{filtered.length} staff member{filtered.length !== 1 ? "s" : ""}</span>
+                </div>
+                {loading ? <Spinner label="Loading staff…" /> : (
+                  <>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                      <thead><tr>
+                        {["ID", "Name", "Email", "Store", "Role", "Status", "Joined"].map(h => <th key={h} style={TH}>{h}</th>)}
+                      </tr></thead>
+                      <tbody>
+                        {paginated.length === 0
+                          ? <tr><td colSpan={7} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No staff found.</td></tr>
+                          : paginated.map((r, i) => (
+                            <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }} {...rowHover}>
+                              <td style={{ ...TD, fontFamily: "monospace", fontSize: 11, color: "#9a9a8e" }}>{shortId(r.id)}</td>
+                              <td style={{ ...TD, fontWeight: 500, color: "#141410" }}>{String(r.full_name ?? "—")}</td>
+                              <td style={{ ...TD, color: "#9a9a8e" }}>{String(r.email ?? "—")}</td>
+                              <td style={TD}>{String(r.store_name ?? r.admin_id ?? "—")}</td>
+                              <td style={TD}><Badge label={String(r.shift_role ?? r.role ?? "staff")} type="neutral" /></td>
+                              <td style={TD}>{statusBadge(r.status)}</td>
+                              <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDate(r.created_at)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                    <Pagination page={page} total={totalPages} onChange={setPage} />
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ══ ORDERS ══ */}
+            {activeTab === "orders" && (
+              <div className="sa-card">
+                <div className="sa-toolbar">
+                  <div className="sa-search"><IcoSearch /><input placeholder="Search orders…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                  <span style={{ fontSize: 12, color: "#9a9a8e", marginLeft: "auto" }}>{filtered.length} order{filtered.length !== 1 ? "s" : ""}</span>
+                </div>
+                {loading ? <Spinner label="Loading orders…" /> : (
+                  <>
+                    <GenericTable data={paginated} />
+                    <Pagination page={page} total={totalPages} onChange={setPage} />
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ══ LOGS ══ */}
+            {activeTab === "logs" && (
+              <div className="sa-card">
+                <div className="sa-toolbar">
+                  <div className="sa-search"><IcoSearch /><input placeholder="Search logs…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                  <span style={{ fontSize: 12, color: "#9a9a8e", marginLeft: "auto" }}>{filtered.length} log{filtered.length !== 1 ? "s" : ""}</span>
+                </div>
+                {loading ? <Spinner label="Loading logs…" /> : (
+                  <>
+                    <GenericTable data={paginated} />
+                    <Pagination page={page} total={totalPages} onChange={setPage} />
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ══ BILLING ══ */}
+            {activeTab === "billing" && (
+              <div className="sa-card">
+                <div className="sa-toolbar">
+                  <div className="sa-search"><IcoSearch /><input placeholder="Search billing…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                  <span style={{ fontSize: 12, color: "#9a9a8e", marginLeft: "auto" }}>{filtered.length} transaction{filtered.length !== 1 ? "s" : ""}</span>
+                </div>
+                {loading ? <Spinner label="Loading billing…" /> : (
+                  <>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                      <thead><tr>
+                        {["Admin ID", "Store", "Domain", "Plan", "Amount", "Status", "Date"].map(h => <th key={h} style={TH}>{h}</th>)}
+                      </tr></thead>
+                      <tbody>
+                        {paginated.length === 0
+                          ? <tr><td colSpan={7} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No billing records.</td></tr>
+                          : paginated.map((r, i) => (
+                            <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }} {...rowHover}>
+                              <td style={{ ...TD, fontFamily: "monospace", fontSize: 11, color: "#9a9a8e" }}>{shortId(r.admin_id ?? r.id)}</td>
+                              <td style={{ ...TD, fontWeight: 500, color: "#141410" }}>{String(r.store_name ?? "—")}</td>
+                              <td style={{ ...TD, color: "#9a9a8e" }}>{String(r.domain ?? "—")}</td>
+                              <td style={TD}><Badge label={String(r.plan ?? "—")} type="info" /></td>
+                              <td style={{ ...TD, fontWeight: 600, color: "#141410" }}>KES {Number(r.amount || 0).toLocaleString()}</td>
+                              <td style={TD}>{statusBadge(r.status)}</td>
+                              <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDateTime(r.created_at)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                    <Pagination page={page} total={totalPages} onChange={setPage} />
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ══ SETTINGS ══ */}
+            {activeTab === "settings" && (
+              <div className="sa-card" style={{ padding: "1.5rem" }}>
+                {loading ? <Spinner label="Loading settings…" /> : (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                    {data.length === 0
+                      ? <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "2rem", color: "#9a9a8e", fontSize: 13 }}>No settings data.</div>
+                      : data.map((r, i) => (
+                        Object.entries(r).map(([k, v]) => (
+                          <div key={`${i}-${k}`}>
+                            <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{k.replace(/_/g, " ")}</div>
+                            <div style={{ fontSize: 14, fontWeight: 500, color: "#141410" }}>{String(v ?? "—")}</div>
+                          </div>
+                        ))
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ══ SUPPORT ══ */}
+            {activeTab === "support" && (
+              <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: "1rem", height: "calc(100vh - 180px)", minHeight: 500 }}>
+
+                {/* Conversation list */}
+                <div className="sa-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                  <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #e2e0d8", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>Conversations</div>
+                    <span style={{ fontSize: 11, color: "#9a9a8e" }}>{conversations.length} active</span>
+                  </div>
+                  <div style={{ flex: 1, overflowY: "auto" }}>
+                    {supportLoading && !selectedAdminId
+                      ? <Spinner label="Loading…" />
+                      : conversations.length === 0
+                        ? <div style={{ padding: "2rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No conversations yet.</div>
+                        : conversations.map(c => (
+                          <button
+                            key={c.admin_id}
+                            onClick={() => setSelectedAdminId(c.admin_id)}
+                            style={{
+                              display: "block", width: "100%", textAlign: "left",
+                              padding: "0.9rem 1.25rem", borderBottom: "1px solid #e2e0d8",
+                              border: "none",
+                              background: selectedAdminId === c.admin_id ? "#f5f4f0" : "transparent",
+                              cursor: "pointer", transition: "background 0.1s",
+                              borderLeft: selectedAdminId === c.admin_id ? "3px solid #141410" : "3px solid transparent",
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                              <div style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>{c.full_name}</div>
+                              <div style={{ fontSize: 10, color: "#9a9a8e" }}>{c.message_count} msg</div>
+                            </div>
+                            <div style={{ fontSize: 12, color: "#9a9a8e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.last_message}</div>
+                            <div style={{ fontSize: 10, color: "#c8c6bc", marginTop: 3 }}>{c.email}</div>
+                          </button>
+                        ))}
+                  </div>
+                </div>
+
+                {/* Message thread */}
+                <div className="sa-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                  <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #e2e0d8", flexShrink: 0 }}>
+                    {selectedAdminId
+                      ? (() => {
+                          const conv = conversations.find(c => c.admin_id === selectedAdminId);
+                          return (
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#141410", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
+                                {(conv?.full_name || "?").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>{conv?.full_name ?? selectedAdminId}</div>
+                                <div style={{ fontSize: 11, color: "#9a9a8e" }}>{conv?.email}</div>
+                              </div>
+                            </div>
+                          );
+                        })()
+                      : <div style={{ fontSize: 13, color: "#9a9a8e" }}>Select a conversation to view messages</div>}
                   </div>
 
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input value={supportText} onChange={e => setSupportText(e.target.value)} placeholder={selectedSupportAdminId ? "Write a reply..." : "Select a conversation"} disabled={!selectedSupportAdminId} style={{ flex: 1, padding: 8, borderRadius: 8, border: "1px solid #e5e7eb" }} />
-                    <button onClick={async () => {
-                      if (!selectedSupportAdminId || !supportText.trim()) return;
-                      try {
-                        const user = JSON.parse(localStorage.getItem("user") || "null");
-                        const res = await fetch("/api/support", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.id}` }, body: JSON.stringify({ admin_id: selectedSupportAdminId, sender: "super_admin", message: supportText.trim(), title: "Support Reply" }) });
-                        const body = await res.json();
-                        if (body.success) {
-                          setSupportText("");
-                          await loadSupportConversation(selectedSupportAdminId);
-                          await loadSupportConversations();
-                        } else {
-                          alert(body.error || "Send failed");
-                        }
-                      } catch (err) { alert("Send failed"); }
-                    }} disabled={!selectedSupportAdminId || !supportText.trim()} style={{ padding: "8px 12px", borderRadius: 8 }}>Send</button>
+                  {/* Messages */}
+                  <div style={{ flex: 1, overflowY: "auto", padding: "1rem 1.25rem", display: "flex", flexDirection: "column", gap: 10, background: "#fafaf8" }}>
+                    {!selectedAdminId
+                      ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9a9a8e", fontSize: 13 }}>Choose a conversation from the left</div>
+                      : supportLoading
+                        ? <Spinner label="Loading messages…" />
+                        : messages.length === 0
+                          ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9a9a8e", fontSize: 13 }}>No messages yet.</div>
+                          : messages.map(m => (
+                            <div key={m.id} style={{ display: "flex", flexDirection: "column", alignItems: m.sender === "super_admin" ? "flex-end" : "flex-start", gap: 3 }}>
+                              <div style={{
+                                maxWidth: "72%", padding: "10px 14px", borderRadius: 12,
+                                background: m.sender === "super_admin" ? "#141410" : "#fff",
+                                color:      m.sender === "super_admin" ? "#fff"     : "#141410",
+                                border:     m.sender === "super_admin" ? "none"     : "1px solid #e2e0d8",
+                                fontSize: 13, lineHeight: 1.6,
+                                borderBottomRightRadius: m.sender === "super_admin" ? 4 : 12,
+                                borderBottomLeftRadius:  m.sender === "super_admin" ? 12 : 4,
+                              }}>
+                                {m.message}
+                              </div>
+                              <div style={{ fontSize: 10, color: "#c8c6bc" }}>{m.time}</div>
+                            </div>
+                          ))}
+                  </div>
+
+                  {/* Reply box */}
+                  <div style={{ padding: "0.85rem 1.25rem", borderTop: "1px solid #e2e0d8", display: "flex", gap: 8, background: "#fff", flexShrink: 0 }}>
+                    <input
+                      value={supportText}
+                      onChange={e => setSupportText(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
+                      placeholder={selectedAdminId ? "Write a reply… (Enter to send)" : "Select a conversation first"}
+                      disabled={!selectedAdminId}
+                      style={{ flex: 1, border: "1px solid #c8c6bc", background: "#f5f4f0", borderRadius: 8, padding: "9px 12px", fontFamily: "inherit", fontSize: 13, color: "#141410", outline: "none", resize: "none" }}
+                    />
+                    <button
+                      onClick={sendReply}
+                      disabled={!selectedAdminId || !supportText.trim()}
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 16px", background: selectedAdminId && supportText.trim() ? "#141410" : "#9a9a8e", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: selectedAdminId && supportText.trim() ? "pointer" : "not-allowed", fontFamily: "inherit", flexShrink: 0, transition: "background 0.15s" }}
+                    >
+                      <IcoSend /> Send
+                    </button>
                   </div>
                 </div>
               </div>
             )}
 
-          </section>
+          </main>
         </div>
-      </main>
-    </div>
+      </div>
+    </>
   );
 }
