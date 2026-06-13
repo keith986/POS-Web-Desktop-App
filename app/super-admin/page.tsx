@@ -672,6 +672,16 @@ export default function SuperAdminPage() {
                     <div style={{ marginTop: "2rem", padding: "1.5rem", border: "1px solid #e2e0d8", borderRadius: 16, background: "#ffffff" }}>
                       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: "1rem" }}>Change Super Admin Password</div>
                       <div style={{ display: "grid", gap: "1rem", maxWidth: 520 }}>
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
                         <label style={{ display: "grid", gap: 6, fontSize: 12, color: "#7a7a74" }}>
                           Current password
                           <input type="password" value={superCurrentPassword} onChange={e => setSuperCurrentPassword(e.target.value)} style={{ padding: "0.85rem 1rem", borderRadius: 12, border: "1px solid #d9d6ce", outline: "none", width: "100%" }} />

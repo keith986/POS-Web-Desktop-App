@@ -30,6 +30,7 @@ export default function MpesaPaymentModal({
   const [error,         setError]         = useState("");
   const [step,          setStep]          = useState<"form" | "waiting" | "done">("form");
   const [receipt,       setReceipt]       = useState<string | null>(null);
+  const [manualReceipt, setManualReceipt] = useState("");
   const [countdown,     setCountdown]     = useState(60);
   const [adminTill,     setAdminTill]     = useState<string | null>(null);
 
@@ -107,6 +108,12 @@ export default function MpesaPaymentModal({
     } finally {
       setSending(false);
     }
+  };
+
+  const handleMarkPaid = () => {
+    const paidAmount = mode === "cash_and_mpesa" ? Math.max(exactAmount, cashNum + mpesaNum) : exactAmount;
+    const receiptLabel = manualReceipt.trim() || "MPESA";
+    onSuccess(receiptLabel, paidAmount, mode);
   };
 
   // ── Poll for payment confirmation ────────────────────────────────────
@@ -234,6 +241,23 @@ export default function MpesaPaymentModal({
               <button onClick={handleCancel} style={{ width: "100%", padding: "10px", background: "none", border: "1px solid #e2e0d8", borderRadius: 9, fontSize: 13, color: "#4a4a40", cursor: "pointer", fontFamily: "inherit" }}>
                 Cancel & try again
               </button>
+              <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: 12, background: "#f5f4f0", border: "1px solid #d1fae5" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#166534", marginBottom: 8 }}>Already received the M-Pesa payment?</div>
+                <input
+                  style={input}
+                  type="text"
+                  placeholder="Receipt number (optional)"
+                  value={manualReceipt}
+                  onChange={e => setManualReceipt(e.target.value)}
+                />
+                <button
+                  onClick={handleMarkPaid}
+                  disabled={mpesaNum <= 0}
+                  style={{ ...primaryBtn(mpesaNum <= 0), marginTop: 10 }}
+                >
+                  Mark as paid and confirm payout
+                </button>
+              </div>
             </div>
           )}
 
@@ -310,6 +334,24 @@ export default function MpesaPaymentModal({
                   <button onClick={handleSendStk} disabled={sending} style={primaryBtn(sending)}>
                     {sending ? "Sending…" : `Send M-Pesa Request · ${currency} ${exactAmount.toLocaleString()}`}
                   </button>
+
+                  <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: 12, background: "#f5f4f0", border: "1px solid #d1fae5" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#166534", marginBottom: 8 }}>Customer already paid via M-Pesa?</div>
+                    <input
+                      style={input}
+                      type="text"
+                      placeholder="Receipt number (optional)"
+                      value={manualReceipt}
+                      onChange={e => setManualReceipt(e.target.value)}
+                    />
+                    <button
+                      onClick={handleMarkPaid}
+                      disabled={mpesaNum <= 0}
+                      style={{ ...primaryBtn(mpesaNum <= 0), marginTop: 10 }}
+                    >
+                      Mark as paid and confirm payout
+                    </button>
+                  </div>
                 </>
               )}
 
@@ -376,6 +418,26 @@ export default function MpesaPaymentModal({
                       ? `Send M-Pesa · ${currency} ${mpesaNum.toLocaleString()}`
                       : "Confirm Cash Only"}
                   </button>
+
+                  {mpesaNum > 0 && (
+                    <div style={{ marginTop: "1rem", padding: "1rem", borderRadius: 12, background: "#f5f4f0", border: "1px solid #d1fae5" }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "#166534", marginBottom: 8 }}>Customer already paid via M-Pesa?</div>
+                      <input
+                        style={input}
+                        type="text"
+                        placeholder="Receipt number (optional)"
+                        value={manualReceipt}
+                        onChange={e => setManualReceipt(e.target.value)}
+                      />
+                      <button
+                        onClick={handleMarkPaid}
+                        disabled={cashNum + mpesaNum < exactAmount}
+                        style={{ ...primaryBtn(cashNum + mpesaNum < exactAmount), marginTop: 10 }}
+                      >
+                        Mark as paid and confirm payout
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
             </>
