@@ -6,6 +6,35 @@ import { useRouter } from "next/navigation";
 /* ─── Types ── */
 type TabKey = "overview" | "users" | "staff" | "orders" | "logs" | "billing" | "settings" | "support";
 
+interface OverviewStats {
+  userCount: number;
+  staffCount: number;
+  adminCount: number;
+  orderCount: number;
+  activeUsers: number;
+  pendingUsers: number;
+  activeStaff: number;
+  todayOrders: number;
+  weekOrders: number;
+  monthOrders: number;
+  yearOrders: number;
+  todayTransactions: number;
+  weekTransactions: number;
+  monthTransactions: number;
+  yearTransactions: number;
+  todayRevenue: number;
+  weekRevenue: number;
+  monthRevenue: number;
+  yearRevenue: number;
+  totalRevenue: number;
+  totalDomains: number;
+  activeDomains: number;
+  totalVisits: number;
+  totalClicks: number;
+  sneakyBilling?: Array<{ store_name?: string; domain?: string; failed_transactions?: number; last_attempt?: string }>;
+  recentLogs?: Array<{ type?: string; title?: string; message?: string; created_at?: string }>;
+}
+
 interface SupportConversation {
   admin_id:      string;
   full_name:     string;
@@ -129,8 +158,8 @@ function GenericTable({ data }: { data: Record<string, unknown>[] }) {
         <tbody>
           {data.map((row, i) => (
             <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }}
-              onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = "#fafaf8"}
-              onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = ""}>
+              onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = "#fafaf8"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = ""; }}>
               {keys.map(k => (
                 <td key={k} style={{ padding: "0.75rem 1rem", color: "#4a4a40", whiteSpace: "nowrap", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
                   {["status", "payment_status", "subdomain_status"].includes(k)
@@ -186,7 +215,7 @@ export default function SuperAdminPage() {
   const [activeTab,  setActiveTab]  = useState<TabKey>("overview");
   const [loading,    setLoading]    = useState(false);
   const [data,       setData]       = useState<Record<string, unknown>[]>([]);
-  const [stats,      setStats]      = useState<Record<string, unknown> | null>(null);
+  const [stats,      setStats]      = useState<OverviewStats | null>(null);
   const [search,     setSearch]     = useState("");
   const [page,       setPage]       = useState(1);
   const PER_PAGE = 12;
@@ -223,7 +252,7 @@ export default function SuperAdminPage() {
         headers: { Authorization: `Bearer ${user?.id}` },
       });
       const body = await res.json();
-      if (section === "overview") { setStats(body || null); setData([]); }
+      if (section === "overview") { setStats((body as OverviewStats) || null); setData([]); }
       else { setData(extractArray(body) ?? []); setStats(null); }
     } catch {
       setData([]); setStats(null);
@@ -380,7 +409,10 @@ export default function SuperAdminPage() {
   /* ── Shared table header style ── */
   const TH: React.CSSProperties = { textAlign: "left", padding: "0.6rem 1.25rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "#9a9a8e", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", whiteSpace: "nowrap" };
   const TD: React.CSSProperties = { padding: "0.8rem 1.25rem", fontSize: 13, color: "#4a4a40" };
-  const rowHover = { onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) => (e.currentTarget.style.background = "#fafaf8"), onMouseLeave: (e: React.MouseEvent<HTMLTableRowElement>) => (e.currentTarget.style.background = "") };
+  const rowHover: { onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) => void; onMouseLeave: (e: React.MouseEvent<HTMLTableRowElement>) => void } = {
+    onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) => { e.currentTarget.style.background = "#fafaf8"; },
+    onMouseLeave: (e: React.MouseEvent<HTMLTableRowElement>) => { e.currentTarget.style.background = ""; }
+  };
 
   const dater = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date());
 
@@ -593,11 +625,11 @@ export default function SuperAdminPage() {
                         {["Store", "Domain", "Failed Txns", "Last Attempt"].map(h => <th key={h} style={TH}>{h}</th>)}
                       </tr></thead>
                       <tbody>
-                        {(stats.sneakyBilling as Record<string, unknown>[]).slice(0, 5).map((r, i) => (
+                        {(stats.sneakyBilling as Array<Record<string, unknown>>).slice(0, 5).map((r, i) => (
                           <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }} {...rowHover}>
                             <td style={{ ...TD, fontWeight: 500 }}>{String(r.store_name ?? "—")}</td>
                             <td style={{ ...TD, color: "#9a9a8e" }}>{String(r.domain ?? "—")}</td>
-                            <td style={{ ...TD, fontWeight: 600, color: "#dc2626" }}>{r.failed_transactions ?? 0}</td>
+                            <td style={{ ...TD, fontWeight: 600, color: "#dc2626" }}>{Number(r.failed_transactions ?? 0)}</td>
                             <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDateTime(r.last_attempt)}</td>
                           </tr>
                         ))}
@@ -617,12 +649,12 @@ export default function SuperAdminPage() {
                       <button onClick={() => changeTab("logs")} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer", fontSize: 12, fontWeight: 500 }}>View All Logs</button>
                     </div>
                     <div style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                      {(stats.recentLogs as Record<string, unknown>[]).map((log, i) => (
+                      {(stats.recentLogs as Array<Record<string, unknown>>).map((log, i) => (
                         <div key={i} style={{ display: "flex", gap: "0.75rem", padding: "0.75rem", borderRadius: 8, background: "#f5f4f0" }}>
-                          <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.4px", fontWeight: 500, minWidth: 60 }}>{log.type}</div>
+                          <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.4px", fontWeight: 500, minWidth: 60 }}>{String(log.type ?? "—")}</div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>{log.title}</div>
-                            <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 2 }}>{String(log.message).slice(0, 100)}{String(log.message).length > 100 ? "…" : ""}</div>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>{String(log.title ?? "—")}</div>
+                            <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 2 }}>{String(log.message ?? "").slice(0, 100)}{String(log.message ?? "").length > 100 ? "…" : ""}</div>
                           </div>
                           <div style={{ fontSize: 11, color: "#c8c6bc", whiteSpace: "nowrap" }}>{fmtDateTime(log.created_at)}</div>
                         </div>
