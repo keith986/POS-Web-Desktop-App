@@ -103,7 +103,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (isLifetime) {
       status = sub.status === "cancelled" ? "expired" : "active";
     } else if (sub.status === "active") {
-      status = daysLeft > 0 ? "active" : "expired";
+      status = daysLeft != null && daysLeft > 0 ? "active" : "expired";
     } else if (sub.status === "expired" || sub.status === "cancelled") {
       status = "expired";
     } else if (sub.status === "pending") {
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       plan:      sub.plan,
       amount:    Number(sub.amount),
       payments,
-      daysLeft:  isLifetime ? null : Math.max(0, daysLeft),
+      daysLeft:  isLifetime ? null : daysLeft != null ? Math.max(0, daysLeft) : 0,
       subStatus: sub.status,
     });
 
