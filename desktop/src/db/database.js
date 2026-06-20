@@ -97,6 +97,26 @@ const createTables = () => {
       total_price  REAL NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS suppliers (
+      id            TEXT PRIMARY KEY,
+      name          TEXT NOT NULL,
+      category      TEXT,
+      contact_name  TEXT,
+      email         TEXT,
+      phone         TEXT,
+      address       TEXT,
+      city          TEXT,
+      country       TEXT,
+      tax_number    TEXT,
+      payment_terms TEXT,
+      credit_limit  REAL DEFAULT 0,
+      balance_due   REAL DEFAULT 0,
+      status        TEXT DEFAULT 'active',
+      notes         TEXT,
+      created_at    TEXT DEFAULT (datetime('now')),
+      updated_at    TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS store_config (
       key        TEXT PRIMARY KEY,
       value      TEXT NOT NULL,

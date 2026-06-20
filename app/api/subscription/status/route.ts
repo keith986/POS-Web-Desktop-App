@@ -93,15 +93,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     /* ── 4. Subscription row exists — compute days left ── */
     const now             = new Date();
+    const isLifetime      = String(sub.plan).toLowerCase() === "lifetime";
     const nextBillingDate = new Date(sub.next_billing_date as string);
-    const daysLeft          = Math.ceil(
-      (nextBillingDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const daysLeft        = isLifetime
+      ? null
+      : Math.ceil((nextBillingDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
     let status: "active" | "expired" | "due" | "none" = "none";
-    if      (sub.status === "active")                                status = daysLeft > 0 ? "active" : "expired";
-    else if (sub.status === "expired" || sub.status === "cancelled") status = "expired";
-    else if (sub.status === "pending")                               status = "due";
+    if (isLifetime) {
+      status = sub.status === "cancelled" ? "expired" : "active";
+    } else if (sub.status === "active") {
+      status = daysLeft > 0 ? "active" : "expired";
+    } else if (sub.status === "expired" || sub.status === "cancelled") {
+      status = "expired";
+    } else if (sub.status === "pending") {
+      status = "due";
+    }
 
     /* ── 5. Sub row says expired — check mpesa_transactions as fallback ─────
        This handles the case where admin paid via M-Pesa but the webhook
@@ -147,11 +154,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     /* ── 6. Return normal result ── */
     return NextResponse.json({
       status,
-      paidUntil: sub.next_billing_date,
+      paidUntil: isLifetime ? null : sub.next_billing_date,
       plan:      sub.plan,
       amount:    Number(sub.amount),
       payments,
-      daysLeft:  Math.max(0, daysLeft),
+      daysLeft:  isLifetime ? null : Math.max(0, daysLeft),
       subStatus: sub.status,
     });
 

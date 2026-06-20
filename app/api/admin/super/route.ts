@@ -524,6 +524,52 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: true, message: "Transaction marked as refunded" });
     }
 
+    if (action === "renew_billing") {
+      if (!targetId) return NextResponse.json({ error: "Missing user id" }, { status: 400 });
+      const nextBillingDate = String(body?.next_billing_date || "").trim();
+      if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(nextBillingDate)) {
+        return NextResponse.json({ error: "Invalid date format. Use YYYY-MM-DD" }, { status: 400 });
+      }
+
+      const [rows] = await pool.query<RowDataPacket[]>(
+        "SELECT plan, amount FROM subscriptions WHERE user_id = ? LIMIT 1",
+        [targetId]
+      );
+      const existing = rows[0] as { plan?: string; amount?: number } | undefined;
+      const plan = String(body?.plan || existing?.plan || "starter");
+      const amount = Number(body?.amount ?? existing?.amount ?? 0);
+
+      if (rows.length > 0) {
+        await pool.query(
+          `UPDATE subscriptions
+           SET status = 'active', plan = ?, amount = ?, next_billing_date = ?, updated_at = NOW()
+           WHERE user_id = ?`,
+          [plan, amount, nextBillingDate, targetId]
+        );
+      } else {
+        await pool.query(
+          `INSERT INTO subscriptions (user_id, plan, status, amount, next_billing_date, created_at, updated_at)
+           VALUES (?, ?, 'active', ?, ?, NOW(), NOW())`,
+          [targetId, plan, amount, nextBillingDate]
+        );
+      }
+
+      return NextResponse.json({ success: true, message: `Subscription renewed until ${nextBillingDate}` });
+    }
+
+    if (action === "set_lifetime") {
+      if (!targetId) return NextResponse.json({ error: "Missing user id" }, { status: 400 });
+      await pool.query(
+        `INSERT INTO subscriptions (user_id, plan, status, amount, next_billing_date, created_at, updated_at)
+         VALUES (?, 'lifetime', 'active', 0, '9999-12-31', NOW(), NOW())
+         ON DUPLICATE KEY UPDATE
+           plan = 'lifetime', status = 'active', amount = 0,
+           next_billing_date = '9999-12-31', updated_at = NOW()`,
+        [targetId]
+      );
+      return NextResponse.json({ success: true, message: "Lifetime subscription enabled" });
+    }
+
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
 
   } catch (error) {

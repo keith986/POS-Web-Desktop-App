@@ -31,9 +31,10 @@ const PLAN_MONTHS = { monthly: 1, quarterly: 3, yearly: 12 };
 // ─────────────────────────────────────────
 // STATUS BADGE
 // ─────────────────────────────────────────
-function StatusBadge({ status, daysLeft }) {
+function StatusBadge({ status, daysLeft, plan }) {
+  const isLifetime = String(plan).toLowerCase() === "lifetime";
   const cfg = {
-    active:  { bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.25)",  color: "#22c55e", label: daysLeft != null ? `Active · ${daysLeft}d left` : "Active" },
+    active:  { bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.25)",  color: "#22c55e", label: isLifetime ? "Lifetime" : daysLeft != null ? `Active · ${daysLeft}d left` : "Active" },
     expired: { bg: "rgba(239,68,68,0.12)",  border: "rgba(239,68,68,0.25)",  color: "#ef4444", label: "Expired"         },
     due:     { bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.25)", color: "#f97316", label: "Payment Due"     },
     none:    { bg: "var(--surface-muted)", border: "var(--surface-border)", color: "var(--text-2)", label: "No Subscription" },
@@ -389,10 +390,12 @@ useEffect(() => {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
             <StatCard
               label="Status"
-              value={<StatusBadge status={sub?.status ?? "none"} daysLeft={sub?.daysLeft ?? null} />}
-              sub={sub?.paidUntil
-                ? (sub.status === "expired" ? `Expired ${formatDate(sub.paidUntil)}` : `Until ${formatDate(sub.paidUntil)}`)
-                : "No active plan"}
+              value={<StatusBadge status={sub?.status ?? "none"} daysLeft={sub?.daysLeft ?? null} plan={sub?.plan} />}
+              sub={sub?.plan === "lifetime"
+                ? "Lifetime access"
+                : sub?.paidUntil
+                  ? (sub.status === "expired" ? `Expired ${formatDate(sub.paidUntil)}` : `Until ${formatDate(sub.paidUntil)}`)
+                  : "No active plan"}
             />
             <StatCard
               label="Current Plan"
@@ -401,9 +404,11 @@ useEffect(() => {
             />
             <StatCard
               label="Days Remaining"
-              value={<span style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.5px", color: daysColor(sub?.daysLeft ?? null) }}>{sub?.daysLeft ?? 0}</span>}
-              sub={sub?.status === "active" ? "Days until expiry" : "Subscription inactive"}
-              accent={daysColor(sub?.daysLeft ?? null)}
+              value={<span style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.5px", color: sub?.plan === "lifetime" ? "#22c55e" : daysColor(sub?.daysLeft ?? null) }}>
+                {sub?.plan === "lifetime" ? "Lifetime" : sub?.daysLeft ?? 0}
+              </span>}
+              sub={sub?.plan === "lifetime" ? "Unlimited access" : sub?.status === "active" ? "Days until expiry" : "Subscription inactive"}
+              accent={sub?.plan === "lifetime" ? "#22c55e" : daysColor(sub?.daysLeft ?? null)}
             />
           </div>
 
@@ -482,7 +487,7 @@ useEffect(() => {
               )}
 
               {/* Expired / No sub warning */}
-              {(sub?.status === "expired" || sub?.status === "due" || sub?.status === "none") && (
+              {sub?.plan !== "lifetime" && (sub?.status === "expired" || sub?.status === "due" || sub?.status === "none") && (
                 <div style={{ padding: "14px 18px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: 18 }}>
@@ -513,7 +518,7 @@ useEffect(() => {
               )}
 
               {/* Expiring soon */}
-              {sub?.status === "active" && sub.daysLeft != null && sub.daysLeft <= 7 && (
+              {sub?.plan !== "lifetime" && sub?.status === "active" && sub.daysLeft != null && sub.daysLeft <= 7 && (
                 <div style={{ padding: "14px 18px", background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.25)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: 18 }}>

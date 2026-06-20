@@ -386,7 +386,7 @@ export async function initDb(): Promise<void> {
     CREATE TABLE IF NOT EXISTS subscriptions (
   id                 INT AUTO_INCREMENT PRIMARY KEY,
   user_id            CHAR(36) NOT NULL UNIQUE,
-  plan               ENUM('starter','pro','enterprise') NOT NULL DEFAULT 'starter',
+  plan               ENUM('starter','pro','enterprise','lifetime') NOT NULL DEFAULT 'starter',
   status             ENUM('active','expired','cancelled','pending') NOT NULL DEFAULT 'pending',
   amount             DECIMAL(10,2) NOT NULL,
   next_billing_date  DATE NOT NULL,

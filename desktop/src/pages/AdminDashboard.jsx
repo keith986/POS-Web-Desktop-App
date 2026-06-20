@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Routes, Route, NavLink, Navigate } from "react-router-dom";
 import Overview from "./admin/Overview";
 import Products from "./admin/Products";
+import Suppliers from "./admin/Suppliers";
 import Staff from "./admin/Staff";
 import Orders from "./admin/Orders";
 import Reports from "./admin/Reports";
@@ -336,6 +337,7 @@ export default function AdminDashboard({ user, onLogout }) {
   { to: "/admin/overview", label: "Overview", svgIcon: OverviewIcon },
   { to: "/admin/orders", label: "Orders", svgIcon: OrdersIcon },
   { to: "/admin/products", label: "Products", svgIcon: ProductsIcon },
+  { to: "/admin/suppliers", label: "Suppliers", svgIcon: ProductsIcon },
   { to: "/admin/staff", label: "Staff", svgIcon: StaffIcon },
   { to: "/admin/reports", label: "Reports", svgIcon: ReportsIcon },
   { to: "/admin/discounts", label: "Discounts", svgIcon: DiscountsIcon },
@@ -418,6 +420,7 @@ export default function AdminDashboard({ user, onLogout }) {
           <Route path="overview"      element={<Overview />} />
           <Route path="orders"        element={<Orders />} />
           <Route path="products"      element={<Products />} />
+          <Route path="suppliers"     element={<Suppliers />} />
           <Route path="staff"         element={<Staff />} />
           <Route path="reports"       element={<Reports />} />
           <Route path="subscription"  element={<Subscription user={user}/>} />

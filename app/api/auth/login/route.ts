@@ -87,9 +87,10 @@ async function adminHasActivePlan(
   const sub = subRows[0] ?? null;
 
   if (sub) {
+    const isLifetime = String(sub.plan).toLowerCase() === "lifetime";
     const endDate = new Date(sub.next_billing_date);
-    if (sub.status === "active" && endDate >= now) {
-      // Genuinely active — allow through
+    if (isLifetime || (sub.status === "active" && endDate >= now)) {
+      // Lifetime or genuinely active — allow through
       return true;
     }
   }
@@ -199,8 +200,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           [user.id]
         );
         const activeSub = subRows.find(s => {
-          if (s.status !== "active") return false;
-          return new Date(s.next_billing_date) >= new Date();
+          const isLifetime = String(s.plan).toLowerCase() === "lifetime";
+          if (s.status !== "active" && !isLifetime) return false;
+          return isLifetime || new Date(s.next_billing_date) >= new Date();
         });
 
         if (activeSub) {

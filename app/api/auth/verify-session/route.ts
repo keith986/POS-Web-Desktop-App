@@ -108,9 +108,10 @@ async function checkAdminSubscription(
   const sub = subRows[0] ?? null;
 
   if (sub) {
+    const isLifetime = String(sub.plan).toLowerCase() === "lifetime";
     const endDate = new Date(sub.next_billing_date);
-    if (sub.status === "active" && endDate >= now) {
-      // Genuinely active — allow through immediately
+    if (isLifetime || (sub.status === "active" && endDate >= now)) {
+      // Lifetime or genuinely active — allow through immediately
       return true;
     }
   }

@@ -264,6 +264,22 @@ export default function SuperAdminPage() {
     }
   };
 
+  const promptRenewBilling = async (adminId: string) => {
+    const defaultDate = new Date().toISOString().slice(0, 10);
+    const nextBillingDate = window.prompt("Enter next billing date (YYYY-MM-DD):", defaultDate);
+    if (!nextBillingDate) return;
+    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(nextBillingDate)) {
+      flash("Invalid date format. Use YYYY-MM-DD", "error");
+      return;
+    }
+    await runAdminAction("renew_billing", adminId, { next_billing_date: nextBillingDate });
+  };
+
+  const promptSetLifetime = async (adminId: string) => {
+    if (!window.confirm("Set this user to a lifetime subscription? This cannot be undone from the UI.")) return;
+    await runAdminAction("set_lifetime", adminId);
+  };
+
   const messageAdmin = (adminId: string) => {
     setSelectedAdminId(adminId);
     setActiveTab("support");
@@ -628,11 +644,11 @@ export default function SuperAdminPage() {
                   <>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                       <thead><tr>
-                        {["Admin ID", "Store", "Domain", "Plan", "Amount", "Status", "Date"].map(h => <th key={h} style={TH}>{h}</th>)}
+                        {["Admin ID", "Store", "Domain", "Plan", "Amount", "Status", "Date", "Actions"].map(h => <th key={h} style={TH}>{h}</th>)}
                       </tr></thead>
                       <tbody>
                         {paginated.length === 0
-                          ? <tr><td colSpan={7} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No billing records.</td></tr>
+                          ? <tr><td colSpan={8} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No billing records.</td></tr>
                           : paginated.map((r, i) => (
                             <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }} {...rowHover}>
                               <td style={{ ...TD, fontFamily: "monospace", fontSize: 11, color: "#9a9a8e" }}>{shortId(r.admin_id ?? r.id)}</td>
@@ -642,6 +658,10 @@ export default function SuperAdminPage() {
                               <td style={{ ...TD, fontWeight: 600, color: "#141410" }}>KES {Number(r.amount || 0).toLocaleString()}</td>
                               <td style={TD}>{statusBadge(r.status)}</td>
                               <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDateTime(r.created_at)}</td>
+                              <td style={{ ...TD, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                <button onClick={() => promptRenewBilling(String(r.admin_id ?? r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #c8c6cb", background: "#fff", color: "#141410", cursor: "pointer" }}>Renew</button>
+                                <button onClick={() => promptSetLifetime(String(r.admin_id ?? r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #c8c6cb", background: "#f8fafc", color: "#0f172a", cursor: "pointer" }}>Lifetime</button>
+                              </td>
                             </tr>
                           ))}
                       </tbody>

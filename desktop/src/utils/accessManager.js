@@ -110,7 +110,9 @@ const validateAccess = async () => {
       };
     }
 
-    if (subscription.status === "expired" || subscription.daysLeft <= 0) {
+    const isLifetime = subscription.plan === "lifetime";
+
+    if (!isLifetime && (subscription.status === "expired" || subscription.daysLeft <= 0)) {
       return {
         allowed: false,
         reason: "expired_offline",
@@ -119,7 +121,7 @@ const validateAccess = async () => {
       };
     }
 
-    if (subscription.daysLeft <= 7) {
+    if (!isLifetime && subscription.daysLeft != null && subscription.daysLeft <= 7) {
       return {
         allowed: false,
         reason: "expiring_soon_offline",
@@ -145,7 +147,9 @@ const validateAccess = async () => {
     };
   }
 
-  if (subscription.status === "expired" || subscription.daysLeft <= 0) {
+  const isLifetime = subscription.plan === "lifetime";
+
+  if (!isLifetime && (subscription.status === "expired" || subscription.daysLeft <= 0)) {
     return {
       allowed: false,
       reason: "expired_online",
@@ -154,7 +158,7 @@ const validateAccess = async () => {
     };
   }
 
-  const warning = subscription.daysLeft <= 7
+  const warning = !isLifetime && subscription.daysLeft != null && subscription.daysLeft <= 7
     ? `Your subscription expires in ${subscription.daysLeft} day${subscription.daysLeft !== 1 ? "s" : ""}. Please renew online soon.`
     : null;
 
