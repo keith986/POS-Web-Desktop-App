@@ -73,3 +73,12 @@ export const FileIcon = ({ size = 16 }) => (
     <polyline points="13 2 13 9 20 9" />
   </svg>
 );
+
+export const TruckIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="1" y="3" width="15" height="13" rx="2" />
+    <path d="M16 8h4l3 5v3" />
+    <circle cx="7" cy="19" r="2" />
+    <circle cx="18" cy="19" r="2" />
+  </svg>
+);

@@ -86,6 +86,8 @@ const printReceipt = (order, user, taxSettings) => {
     <tr><td>Subtotal</td><td align="right">Ksh ${order.subtotal.toLocaleString()}</td></tr>
     ${order.discount_applied > 0 ? `<tr><td style="color: #d946ef;">Discount</td><td align="right" style="color: #d946ef;">-Ksh ${order.discount_applied.toLocaleString()}</td></tr>` : ''}
     <tr><td>${taxLabel}</td><td align="right">Ksh ${order.tax.toFixed(2)}</td></tr>
+    ${order.mpesa_amount ? `<tr><td>Mpesa Paid</td><td align="right">Ksh ${Number(order.mpesa_amount).toFixed(2)}</td></tr>` : ''}
+    ${order.cash_amount ? `<tr><td>Cash Paid</td><td align="right">Ksh ${Number(order.cash_amount).toFixed(2)}</td></tr>` : ''}
     <tr class="total-row"><td>TOTAL</td><td align="right">Ksh ${order.total.toFixed(2)}</td></tr>
   </table>
   <div class="center" style="margin-top:15px;">
@@ -109,6 +111,8 @@ export default function StaffDashboard({ user, onLogout }) {
   const [category, setCategory] = useState("all");
   const [categories, setCategories] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [mpesaAmount, setMpesaAmount] = useState(0);
+  const [cashAmount, setCashAmount] = useState(0);
   const [orderComplete, setOrderComplete] = useState(false);
   const [lastOrder, setLastOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -220,10 +224,14 @@ export default function StaffDashboard({ user, onLogout }) {
     const orderNumber = `ORD-${Date.now()}`;
 
     // Standardized database key: "discount_applied"
+    // Determine payment breakdown for split
+    const mpesa_amt = paymentMethod === 'split' ? Number(mpesaAmount || 0) : (paymentMethod === 'mpesa' ? finalTotal : 0);
+    const cash_amt = paymentMethod === 'split' ? Number(cashAmount || 0) : (paymentMethod === 'cash' ? finalTotal : 0);
+
     const orderResult = await window.electronAPI.executeDatabase(
-      `INSERT INTO orders (id, order_number, staff_id, staff_name, subtotal, discount_applied, tax, total, payment_method, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')`,
-      [orderId, orderNumber, user.id, user.name, subtotalForReceipt, discountVal, finalTax, finalTotal, paymentMethod]
+      `INSERT INTO orders (id, order_number, staff_id, staff_name, subtotal, discount_applied, tax, total, payment_method, mpesa_amount, cash_amount, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')`,
+      [orderId, orderNumber, user.id, user.name, subtotalForReceipt, discountVal, finalTax, finalTotal, paymentMethod, mpesa_amt, cash_amt]
     );
 
     if (!orderResult.success) return alert("Error saving order. Make sure 'discount_applied' column exists in database schema.");
@@ -240,8 +248,8 @@ export default function StaffDashboard({ user, onLogout }) {
     }
 
     setLastOrder({
-      orderNumber, subtotal: subtotalForReceipt, tax: finalTax, total: finalTotal, 
-      discount_applied: discountVal, paymentMethod, items: cart.map(i => ({ ...i }))
+      orderNumber, subtotal: subtotalForReceipt, tax: finalTax, total: finalTotal,
+      discount_applied: discountVal, paymentMethod, mpesa_amount: mpesa_amt, cash_amount: cash_amt, items: cart.map(i => ({ ...i }))
     });
     setCart([]);
     setSelectedDiscount(null);
@@ -359,10 +367,24 @@ export default function StaffDashboard({ user, onLogout }) {
             <div className="summary-row summary-total"><span>Total</span><span>Ksh {finalTotal.toFixed(2)}</span></div>
 
             <div className="payment-methods">
-              {["cash", "card", "mpesa"].map(m => (
+              {["cash", "card", "mpesa", "split"].map(m => (
                 <button key={m} className={`payment-btn ${paymentMethod === m ? "payment-active" : ""}`} onClick={() => setPaymentMethod(m)}>{m.toUpperCase()}</button>
               ))}
             </div>
+
+            {paymentMethod === 'split' && (
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8}}>
+                <div>
+                  <label style={{fontSize: 12}}>Mpesa Amount</label>
+                  <input type="number" min="0" step="0.01" value={mpesaAmount} onChange={(e) => setMpesaAmount(Number(e.target.value))} className="pos-search" />
+                </div>
+                <div>
+                  <label style={{fontSize: 12}}>Cash Amount</label>
+                  <input type="number" min="0" step="0.01" value={cashAmount} onChange={(e) => setCashAmount(Number(e.target.value))} className="pos-search" />
+                </div>
+              </div>
+            )}
+
             <button className="checkout-btn" onClick={handleCheckout} disabled={cart.length === 0}>Charge Ksh {finalTotal.toFixed(2)}</button>
           </div>
 

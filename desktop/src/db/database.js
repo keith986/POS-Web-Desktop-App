@@ -79,8 +79,12 @@ const createTables = () => {
       subtotal       REAL NOT NULL,
       tax            REAL DEFAULT 0,
       discount       REAL DEFAULT 0,
+      discount_applied REAL DEFAULT 0,
       total          REAL NOT NULL,
       payment_method TEXT DEFAULT 'cash',
+      mpesa_amount   REAL DEFAULT 0,
+      cash_amount    REAL DEFAULT 0,
+      mpesa_receipt  TEXT,
       status         TEXT DEFAULT 'completed',
       notes          TEXT,
       created_at     TEXT DEFAULT (datetime('now')),
@@ -123,6 +127,21 @@ const createTables = () => {
       updated_at TEXT DEFAULT (datetime('now'))
     );
   `);
+  save();
+
+  // Ensure new columns exist in older DBs (safe ALTERs)
+  try {
+    db.run("ALTER TABLE orders ADD COLUMN discount_applied REAL DEFAULT 0;");
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE orders ADD COLUMN mpesa_amount REAL DEFAULT 0;");
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE orders ADD COLUMN cash_amount REAL DEFAULT 0;");
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE orders ADD COLUMN mpesa_receipt TEXT;");
+  } catch (e) {}
   save();
 };
 

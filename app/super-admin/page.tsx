@@ -201,6 +201,11 @@ export default function SuperAdminPage() {
   const [messages,         setMessages]         = useState<SupportMessage[]>([]);
   const [supportText,      setSupportText]      = useState("");
   const [supportLoading,   setSupportLoading]   = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalKind, setModalKind] = useState<"renew" | "lifetime" | "reset_password" | null>(null);
+  const [modalTargetId, setModalTargetId] = useState<string | null>(null);
+  const [modalAction, setModalAction] = useState<string | null>(null);
+  const [modalInput, setModalInput] = useState<string>("");
 
   /* ── Auth guard ── */
   useEffect(() => {
@@ -264,20 +269,12 @@ export default function SuperAdminPage() {
     }
   };
 
-  const promptRenewBilling = async (adminId: string) => {
-    const defaultDate = new Date().toISOString().slice(0, 10);
-    const nextBillingDate = window.prompt("Enter next billing date (YYYY-MM-DD):", defaultDate);
-    if (!nextBillingDate) return;
-    if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(nextBillingDate)) {
-      flash("Invalid date format. Use YYYY-MM-DD", "error");
-      return;
-    }
-    await runAdminAction("renew_billing", adminId, { next_billing_date: nextBillingDate });
+  const openRenewModal = (adminId: string) => {
+    setModalKind("renew"); setModalTargetId(adminId); setModalInput(new Date().toISOString().slice(0,10)); setModalOpen(true);
   };
 
-  const promptSetLifetime = async (adminId: string) => {
-    if (!window.confirm("Set this user to a lifetime subscription? This cannot be undone from the UI.")) return;
-    await runAdminAction("set_lifetime", adminId);
+  const openLifetimeModal = (adminId: string) => {
+    setModalKind("lifetime"); setModalTargetId(adminId); setModalOpen(true);
   };
 
   const messageAdmin = (adminId: string) => {
@@ -285,10 +282,25 @@ export default function SuperAdminPage() {
     setActiveTab("support");
   };
 
-  const resetPassword = async (targetId: string, action: "reset_user_password" | "reset_staff_password") => {
-    const newPassword = window.prompt("Enter a new password:", "");
-    if (!newPassword) return;
-    await runAdminAction(action, targetId, { new_password: newPassword });
+  const openResetModal = (targetId: string, action: string) => {
+    setModalKind("reset_password"); setModalTargetId(targetId); setModalAction(action); setModalInput(""); setModalOpen(true);
+  };
+
+  const handleModalConfirm = async () => {
+    if (!modalKind || !modalTargetId) return setModalOpen(false);
+    if (modalKind === "renew") {
+      if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(modalInput)) {
+        flash("Invalid date format. Use YYYY-MM-DD", "error");
+        return;
+      }
+      await runAdminAction("renew_billing", modalTargetId, { next_billing_date: modalInput });
+    } else if (modalKind === "lifetime") {
+      await runAdminAction("set_lifetime", modalTargetId);
+    } else if (modalKind === "reset_password") {
+      if (!modalInput) { flash("Please enter a new password", "error"); return; }
+      await runAdminAction(modalAction || "reset_user_password", modalTargetId, { new_password: modalInput });
+    }
+    setModalOpen(false); setModalKind(null); setModalTargetId(null); setModalAction(null); setModalInput("");
   };
 
   const toggleAccount = async (targetId: string, wantsActive: boolean, isStaff = false) => {
@@ -543,7 +555,7 @@ export default function SuperAdminPage() {
                               <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDate(r.created_at)}</td>
                               <td style={{ ...TD, display: "flex", gap: 8, flexWrap: "wrap" }}>
                                 <button onClick={() => messageAdmin(String(r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Message</button>
-                                <button onClick={() => resetPassword(String(r.id), "reset_user_password")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Reset</button>
+                                <button onClick={() => openResetModal(String(r.id), "reset_user_password")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Reset</button>
                                 <button onClick={() => toggleAccount(String(r.id), String(r.subdomain_status) !== "active", false)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.subdomain_status) !== "active" ? "#dcfce7" : "#fef2f2", color: String(r.subdomain_status) !== "active" ? "#166534" : "#991b1b", cursor: "pointer" }}>
                                   {String(r.subdomain_status) !== "active" ? "Activate" : "Deactivate"}
                                 </button>
@@ -586,7 +598,7 @@ export default function SuperAdminPage() {
                               <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDate(r.created_at)}</td>
                               <td style={{ ...TD, display: "flex", gap: 8, flexWrap: "wrap" }}>
                                 <button onClick={() => messageAdmin(String(r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Message</button>
-                                <button onClick={() => resetPassword(String(r.id), "reset_staff_password")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Reset</button>
+                                <button onClick={() => openResetModal(String(r.id), "reset_staff_password")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Reset</button>
                                 <button onClick={() => toggleAccount(String(r.id), String(r.status) !== "active", true)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.status) !== "active" ? "#dcfce7" : "#fef2f2", color: String(r.status) !== "active" ? "#166534" : "#991b1b", cursor: "pointer" }}>
                                   {String(r.status) !== "active" ? "Activate" : "Deactivate"}
                                 </button>
@@ -659,8 +671,8 @@ export default function SuperAdminPage() {
                               <td style={TD}>{statusBadge(r.status)}</td>
                               <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDateTime(r.created_at)}</td>
                               <td style={{ ...TD, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                <button onClick={() => promptRenewBilling(String(r.admin_id ?? r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #c8c6cb", background: "#fff", color: "#141410", cursor: "pointer" }}>Renew</button>
-                                <button onClick={() => promptSetLifetime(String(r.admin_id ?? r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #c8c6cb", background: "#f8fafc", color: "#0f172a", cursor: "pointer" }}>Lifetime</button>
+                                <button onClick={() => openRenewModal(String(r.admin_id ?? r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #c8c6cb", background: "#fff", color: "#141410", cursor: "pointer" }}>Renew</button>
+                                <button onClick={() => openLifetimeModal(String(r.admin_id ?? r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #c8c6cb", background: "#f8fafc", color: "#0f172a", cursor: "pointer" }}>Lifetime</button>
                               </td>
                             </tr>
                           ))}
@@ -798,6 +810,38 @@ export default function SuperAdminPage() {
                 {/* Message thread */}
                 <div className="sa-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
                   <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #e2e0d8", flexShrink: 0 }}>
+                    {/* Modal markup */}
+                    {modalOpen && (
+                      <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,15,15,0.45)', zIndex: 9999 }}>
+                        <div style={{ width: 520, background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ fontSize: 15, fontWeight: 600 }}>{modalKind === 'renew' ? 'Renew billing' : modalKind === 'lifetime' ? 'Set lifetime' : 'Reset password'}</div>
+                            <button onClick={() => setModalOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>✕</button>
+                          </div>
+                          <div style={{ marginTop: 12 }}>
+                            {modalKind === 'renew' && (
+                              <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                                Next billing date
+                                <input type="date" value={modalInput} onChange={(e) => setModalInput(e.target.value)} style={{ width: '100%', padding: '8px 10px', marginTop: 8, borderRadius: 8, border: '1px solid #e5e4df' }} />
+                              </label>
+                            )}
+                            {modalKind === 'lifetime' && (
+                              <div style={{ fontSize: 13, color: '#6b6b66', marginTop: 8 }}>Are you sure you want to set this account to a lifetime subscription? This action cannot be undone from the UI.</div>
+                            )}
+                            {modalKind === 'reset_password' && (
+                              <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                                New password
+                                <input type="password" value={modalInput} onChange={(e) => setModalInput(e.target.value)} style={{ width: '100%', padding: '8px 10px', marginTop: 8, borderRadius: 8, border: '1px solid #e5e4df' }} />
+                              </label>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
+                            <button onClick={() => setModalOpen(false)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e0d8', background: '#fff', cursor: 'pointer' }}>Cancel</button>
+                            <button onClick={handleModalConfirm} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#141410', color: '#fff', cursor: 'pointer' }}>Confirm</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {selectedAdminId
                       ? (() => {
                           const conv = conversations.find(c => c.admin_id === selectedAdminId);

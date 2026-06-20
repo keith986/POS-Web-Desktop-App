@@ -8,7 +8,7 @@ import Orders from "./admin/Orders";
 import Reports from "./admin/Reports";
 import Settings from "./admin/Settings";
 import Discounts from "./admin/Discounts";
-import { SettingsIcon } from "../components/Icons";
+import { SettingsIcon, TruckIcon } from "../components/Icons";
 import UpdateBanner from "../components/UpdateBanner";
 import Subscription from "./admin/Subscription";
 
@@ -337,7 +337,7 @@ export default function AdminDashboard({ user, onLogout }) {
   { to: "/admin/overview", label: "Overview", svgIcon: OverviewIcon },
   { to: "/admin/orders", label: "Orders", svgIcon: OrdersIcon },
   { to: "/admin/products", label: "Products", svgIcon: ProductsIcon },
-  { to: "/admin/suppliers", label: "Suppliers", svgIcon: ProductsIcon },
+  { to: "/admin/suppliers", label: "Suppliers", svgIcon: TruckIcon },
   { to: "/admin/staff", label: "Staff", svgIcon: StaffIcon },
   { to: "/admin/reports", label: "Reports", svgIcon: ReportsIcon },
   { to: "/admin/discounts", label: "Discounts", svgIcon: DiscountsIcon },
