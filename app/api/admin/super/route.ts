@@ -157,6 +157,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         "SELECT COUNT(*) as count FROM users WHERE email != 'admin@postore.app'"
       );
       const [[staffCount]]   = await pool.query<CountResult[]>("SELECT COUNT(*) as count FROM staff");
+      const [[adminCount]]   = await pool.query<CountResult[]>(
+        "SELECT COUNT(*) as count FROM users WHERE email != 'admin@postore.app' AND role = 'admin'"
+      );
       const [[orderCount]]   = await pool.query<CountResult[]>("SELECT COUNT(*) as count FROM orders");
       const [[activeUsers]]  = await pool.query<CountResult[]>(
         "SELECT COUNT(*) as count FROM users WHERE subdomain_status = 'active' AND email != 'admin@postore.app'"
@@ -167,18 +170,90 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const [[activeStaff]]  = await pool.query<CountResult[]>(
         "SELECT COUNT(*) as count FROM staff WHERE status = 'active'"
       );
+      
+      /* ── ORDERS BY TIME PERIOD ── */
       const [[todayOrders]]  = await pool.query<CountResult[]>(
         "SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = CURDATE()"
       );
+      const [[weekOrders]]   = await pool.query<CountResult[]>(
+        "SELECT COUNT(*) as count FROM orders WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+      );
+      const [[monthOrders]]  = await pool.query<CountResult[]>(
+        "SELECT COUNT(*) as count FROM orders WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())"
+      );
+      const [[yearOrders]]   = await pool.query<CountResult[]>(
+        "SELECT COUNT(*) as count FROM orders WHERE YEAR(created_at) = YEAR(CURDATE())"
+      );
+      
+      /* ── TRANSACTIONS BY TIME PERIOD ── */
+      const [[todayTransactions]]  = await pool.query<CountResult[]>(
+        "SELECT COUNT(*) as count FROM mpesa_transactions WHERE status = 'completed' AND DATE(created_at) = CURDATE()"
+      );
+      const [[weekTransactions]]   = await pool.query<CountResult[]>(
+        "SELECT COUNT(*) as count FROM mpesa_transactions WHERE status = 'completed' AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+      );
+      const [[monthTransactions]]  = await pool.query<CountResult[]>(
+        "SELECT COUNT(*) as count FROM mpesa_transactions WHERE status = 'completed' AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())"
+      );
+      const [[yearTransactions]]   = await pool.query<CountResult[]>(
+        "SELECT COUNT(*) as count FROM mpesa_transactions WHERE status = 'completed' AND YEAR(created_at) = YEAR(CURDATE())"
+      );
+      
+      /* ── REVENUE BY TIME PERIOD ── */
+      const [[todayRevenue]] = await pool.query<CountResult[]>(
+        "SELECT COALESCE(SUM(total), 0) as count FROM orders WHERE status = 'completed' AND DATE(created_at) = CURDATE()"
+      );
+      const [[weekRevenue]]  = await pool.query<CountResult[]>(
+        "SELECT COALESCE(SUM(total), 0) as count FROM orders WHERE status = 'completed' AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+      );
+      const [[monthRevenue]] = await pool.query<CountResult[]>(
+        "SELECT COALESCE(SUM(total), 0) as count FROM orders WHERE status = 'completed' AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())"
+      );
+      const [[yearRevenue]]  = await pool.query<CountResult[]>(
+        "SELECT COALESCE(SUM(total), 0) as count FROM orders WHERE status = 'completed' AND YEAR(created_at) = YEAR(CURDATE())"
+      );
+      
+      /* ── TOTAL REVENUE ── */
       const [[totalRevenue]] = await pool.query<CountResult[]>(
         "SELECT COALESCE(SUM(total), 0) as count FROM orders WHERE status = 'completed'"
       );
+      
+      /* ── DOMAINS ── */
       const [[totalDomains]] = await pool.query<CountResult[]>(
         "SELECT COUNT(*) as count FROM users WHERE domain IS NOT NULL AND domain != '' AND email != 'admin@postore.app'"
       );
       const [[activeDomains]] = await pool.query<CountResult[]>(
         "SELECT COUNT(*) as count FROM users WHERE subdomain_status = 'active' AND domain IS NOT NULL AND email != 'admin@postore.app'"
       );
+      
+      /* ── SNEAKY BILLING - accounts with suspicious patterns ── */
+      const [sneakyBilling] = await pool.query<BillingRow[]>(`
+        SELECT
+          u.id AS admin_id,
+          u.store_name,
+          u.domain,
+          COUNT(mt.id) as failed_count,
+          SUM(CASE WHEN mt.status = 'failed' THEN 1 ELSE 0 END) as failed_transactions,
+          MAX(mt.created_at) as last_attempt
+        FROM users u
+        LEFT JOIN mpesa_transactions mt ON u.id = mt.user_id
+        WHERE u.email != 'admin@postore.app'
+          AND (mt.status = 'failed' OR mt.status = 'pending')
+        GROUP BY u.id
+        HAVING failed_transactions >= 3
+        ORDER BY failed_transactions DESC
+        LIMIT 10
+      `);
+      
+      /* ── RECENT LOGS ── */
+      const [recentLogs] = await pool.query<LogRow[]>(`
+        SELECT n.id, n.admin_id, n.type, n.title, n.message, n.created_at,
+               u.domain, u.store_name
+        FROM notifications n
+        LEFT JOIN users u ON n.admin_id = u.id
+        ORDER BY n.created_at DESC
+        LIMIT 5
+      `);
 
       let totalVisits = 0;
       let totalClicks = 0;
@@ -190,12 +265,31 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       } catch { /* site_analytics not yet created */ }
 
       return NextResponse.json({
-        userCount: userCount.count, staffCount: staffCount.count,
+        /* Basic counts */
+        userCount: userCount.count, staffCount: staffCount.count, adminCount: adminCount.count,
         orderCount: orderCount.count, activeUsers: activeUsers.count,
         pendingUsers: pendingUsers.count, activeStaff: activeStaff.count,
-        todayOrders: todayOrders.count, totalRevenue: totalRevenue.count,
+        totalRevenue: totalRevenue.count,
         totalDomains: totalDomains.count, activeDomains: activeDomains.count,
         totalVisits, totalClicks,
+        /* Orders by period */
+        todayOrders: todayOrders.count,
+        weekOrders: weekOrders.count,
+        monthOrders: monthOrders.count,
+        yearOrders: yearOrders.count,
+        /* Transactions by period */
+        todayTransactions: todayTransactions.count,
+        weekTransactions: weekTransactions.count,
+        monthTransactions: monthTransactions.count,
+        yearTransactions: yearTransactions.count,
+        /* Revenue by period */
+        todayRevenue: todayRevenue.count,
+        weekRevenue: weekRevenue.count,
+        monthRevenue: monthRevenue.count,
+        yearRevenue: yearRevenue.count,
+        /* Special data */
+        sneakyBilling,
+        recentLogs,
       });
     }
 
@@ -251,6 +345,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           mt.mpesa_receipt,
           s.status AS subscription_status,
           s.next_billing_date,
+          s.created_at AS renewal_date,
+          s.next_billing_date AS expiry_date,
+          s.updated_at,
           COALESCE(mt.created_at, s.updated_at, s.created_at) AS created_at,
           u.store_name,
           u.domain,

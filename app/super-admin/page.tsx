@@ -507,20 +507,129 @@ export default function SuperAdminPage() {
             {/* ══ OVERVIEW ══ */}
             {activeTab === "overview" && !loading && stats && (
               <>
-                {/* Stat grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "1rem" }}>
-                  {Object.entries(stats).map(([k, v]) => {
-                    const isRevenue = k.toLowerCase().includes("revenue") || k.toLowerCase().includes("amount");
-                    return (
-                      <div key={k} className="sa-stat">
-                        <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>{k.replace(/_/g, " ")}</div>
-                        <div style={{ fontSize: isRevenue ? 18 : 24, fontWeight: 600, letterSpacing: isRevenue ? "-0.3px" : "-0.5px", color: "#141410" }}>
-                          {isRevenue ? `KES ${Number(v).toLocaleString()}` : String(v ?? "—")}
-                        </div>
-                      </div>
-                    );
-                  })}
+                {/* Quick Stats */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "0.8rem" }}>
+                  <div className="sa-stat">
+                    <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Users</div>
+                    <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.5px", color: "#141410" }}>{stats.userCount ?? "—"}</div>
+                    <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>{stats.activeUsers ?? 0} active</div>
+                  </div>
+                  <div className="sa-stat">
+                    <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Staff</div>
+                    <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.5px", color: "#141410" }}>{stats.staffCount ?? "—"}</div>
+                    <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>{stats.activeStaff ?? 0} active</div>
+                  </div>
+                  <div className="sa-stat">
+                    <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Admins</div>
+                    <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.5px", color: "#141410" }}>{stats.adminCount ?? "—"}</div>
+                    <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>{stats.activeUsers ?? 0} active</div>
+                  </div>
+                  <div className="sa-stat">
+                    <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Domains</div>
+                    <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.5px", color: "#141410" }}>{stats.totalDomains ?? "—"}</div>
+                    <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>{stats.activeDomains ?? 0} active</div>
+                  </div>
                 </div>
+
+                {/* TRANSACTIONS SECTION */}
+                <div className="sa-card" style={{ padding: "1.25rem" }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: "1rem", color: "#141410" }}>Transactions</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
+                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
+                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Today</div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.todayTransactions ?? 0}</div>
+                      <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>KES {Number(stats.todayRevenue || 0).toLocaleString()}</div>
+                    </div>
+                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
+                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>This Week</div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.weekTransactions ?? 0}</div>
+                      <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>KES {Number(stats.weekRevenue || 0).toLocaleString()}</div>
+                    </div>
+                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
+                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>This Month</div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.monthTransactions ?? 0}</div>
+                      <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>KES {Number(stats.monthRevenue || 0).toLocaleString()}</div>
+                    </div>
+                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
+                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>This Year</div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.yearTransactions ?? 0}</div>
+                      <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>KES {Number(stats.yearRevenue || 0).toLocaleString()}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ORDERS SECTION */}
+                <div className="sa-card" style={{ padding: "1.25rem" }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: "1rem", color: "#141410" }}>Orders</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
+                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
+                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Today</div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.todayOrders ?? 0}</div>
+                    </div>
+                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
+                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>This Week</div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.weekOrders ?? 0}</div>
+                    </div>
+                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
+                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>This Month</div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.monthOrders ?? 0}</div>
+                    </div>
+                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
+                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Overall</div>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.orderCount ?? 0}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SNEAKY BILLING SECTION */}
+                {Array.isArray(stats.sneakyBilling) && stats.sneakyBilling.length > 0 && (
+                  <div className="sa-card">
+                    <div style={{ padding: "1.25rem", borderBottom: "1px solid #e2e0d8" }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#dc2626" }}>⚠️ Sneaky Billing Alert</div>
+                      <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 4 }}>Accounts with suspicious payment patterns</div>
+                    </div>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                      <thead><tr>
+                        {["Store", "Domain", "Failed Txns", "Last Attempt"].map(h => <th key={h} style={TH}>{h}</th>)}
+                      </tr></thead>
+                      <tbody>
+                        {(stats.sneakyBilling as Record<string, unknown>[]).slice(0, 5).map((r, i) => (
+                          <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }} {...rowHover}>
+                            <td style={{ ...TD, fontWeight: 500 }}>{String(r.store_name ?? "—")}</td>
+                            <td style={{ ...TD, color: "#9a9a8e" }}>{String(r.domain ?? "—")}</td>
+                            <td style={{ ...TD, fontWeight: 600, color: "#dc2626" }}>{r.failed_transactions ?? 0}</td>
+                            <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDateTime(r.last_attempt)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* RECENT LOGS SECTION */}
+                {Array.isArray(stats.recentLogs) && stats.recentLogs.length > 0 && (
+                  <div className="sa-card">
+                    <div style={{ padding: "1.25rem", borderBottom: "1px solid #e2e0d8", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: "#141410" }}>Recent Activity</div>
+                        <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 4 }}>Last 5 log entries</div>
+                      </div>
+                      <button onClick={() => changeTab("logs")} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer", fontSize: 12, fontWeight: 500 }}>View All Logs</button>
+                    </div>
+                    <div style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                      {(stats.recentLogs as Record<string, unknown>[]).map((log, i) => (
+                        <div key={i} style={{ display: "flex", gap: "0.75rem", padding: "0.75rem", borderRadius: 8, background: "#f5f4f0" }}>
+                          <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.4px", fontWeight: 500, minWidth: 60 }}>{log.type}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>{log.title}</div>
+                            <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 2 }}>{String(log.message).slice(0, 100)}{String(log.message).length > 100 ? "…" : ""}</div>
+                          </div>
+                          <div style={{ fontSize: 11, color: "#c8c6bc", whiteSpace: "nowrap" }}>{fmtDateTime(log.created_at)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
             {activeTab === "overview" && loading && <Spinner label="Loading overview…" />}
@@ -656,11 +765,11 @@ export default function SuperAdminPage() {
                   <>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                       <thead><tr>
-                        {["Admin ID", "Store", "Domain", "Plan", "Amount", "Status", "Date", "Actions"].map(h => <th key={h} style={TH}>{h}</th>)}
+                        {["Admin ID", "Store", "Domain", "Plan", "Amount", "Status", "Renewed", "Expires", "Updated", "Actions"].map(h => <th key={h} style={TH}>{h}</th>)}
                       </tr></thead>
                       <tbody>
                         {paginated.length === 0
-                          ? <tr><td colSpan={8} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No billing records.</td></tr>
+                          ? <tr><td colSpan={10} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No billing records.</td></tr>
                           : paginated.map((r, i) => (
                             <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }} {...rowHover}>
                               <td style={{ ...TD, fontFamily: "monospace", fontSize: 11, color: "#9a9a8e" }}>{shortId(r.admin_id ?? r.id)}</td>
@@ -669,10 +778,12 @@ export default function SuperAdminPage() {
                               <td style={TD}><Badge label={String(r.plan ?? "—")} type="info" /></td>
                               <td style={{ ...TD, fontWeight: 600, color: "#141410" }}>KES {Number(r.amount || 0).toLocaleString()}</td>
                               <td style={TD}>{statusBadge(r.status)}</td>
-                              <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDateTime(r.created_at)}</td>
+                              <td style={{ ...TD, color: "#9a9a8e", fontSize: 12 }}>{fmtDate(r.renewal_date)}</td>
+                              <td style={{ ...TD, color: "#9a9a8e", fontSize: 12 }}>{fmtDate(r.expiry_date)}</td>
+                              <td style={{ ...TD, color: "#9a9a8e", fontSize: 12 }}>{fmtDateTime(r.updated_at)}</td>
                               <td style={{ ...TD, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                <button onClick={() => openRenewModal(String(r.admin_id ?? r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #c8c6cb", background: "#fff", color: "#141410", cursor: "pointer" }}>Renew</button>
-                                <button onClick={() => openLifetimeModal(String(r.admin_id ?? r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #c8c6cb", background: "#f8fafc", color: "#0f172a", cursor: "pointer" }}>Lifetime</button>
+                                <button onClick={() => openRenewModal(String(r.admin_id ?? r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #c8c6cb", background: "#fff", color: "#141410", cursor: "pointer", fontSize: 11 }}>Renew</button>
+                                <button onClick={() => openLifetimeModal(String(r.admin_id ?? r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #c8c6cb", background: "#f8fafc", color: "#0f172a", cursor: "pointer", fontSize: 11 }}>Lifetime</button>
                               </td>
                             </tr>
                           ))}
@@ -810,38 +921,6 @@ export default function SuperAdminPage() {
                 {/* Message thread */}
                 <div className="sa-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
                   <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #e2e0d8", flexShrink: 0 }}>
-                    {/* Modal markup */}
-                    {modalOpen && (
-                      <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,15,15,0.45)', zIndex: 9999 }}>
-                        <div style={{ width: 520, background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ fontSize: 15, fontWeight: 600 }}>{modalKind === 'renew' ? 'Renew billing' : modalKind === 'lifetime' ? 'Set lifetime' : 'Reset password'}</div>
-                            <button onClick={() => setModalOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>✕</button>
-                          </div>
-                          <div style={{ marginTop: 12 }}>
-                            {modalKind === 'renew' && (
-                              <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
-                                Next billing date
-                                <input type="date" value={modalInput} onChange={(e) => setModalInput(e.target.value)} style={{ width: '100%', padding: '8px 10px', marginTop: 8, borderRadius: 8, border: '1px solid #e5e4df' }} />
-                              </label>
-                            )}
-                            {modalKind === 'lifetime' && (
-                              <div style={{ fontSize: 13, color: '#6b6b66', marginTop: 8 }}>Are you sure you want to set this account to a lifetime subscription? This action cannot be undone from the UI.</div>
-                            )}
-                            {modalKind === 'reset_password' && (
-                              <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
-                                New password
-                                <input type="password" value={modalInput} onChange={(e) => setModalInput(e.target.value)} style={{ width: '100%', padding: '8px 10px', marginTop: 8, borderRadius: 8, border: '1px solid #e5e4df' }} />
-                              </label>
-                            )}
-                          </div>
-                          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
-                            <button onClick={() => setModalOpen(false)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e0d8', background: '#fff', cursor: 'pointer' }}>Cancel</button>
-                            <button onClick={handleModalConfirm} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#141410', color: '#fff', cursor: 'pointer' }}>Confirm</button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                     {selectedAdminId
                       ? (() => {
                           const conv = conversations.find(c => c.admin_id === selectedAdminId);
@@ -912,6 +991,39 @@ export default function SuperAdminPage() {
             )}
 
           </main>
+
+          {/* ── GLOBAL MODAL (accessible from all tabs) ── */}
+          {modalOpen && (
+            <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,15,15,0.45)', zIndex: 9999 }}>
+              <div style={{ width: 520, background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>{modalKind === 'renew' ? 'Renew billing' : modalKind === 'lifetime' ? 'Set lifetime' : 'Reset password'}</div>
+                  <button onClick={() => setModalOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>✕</button>
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  {modalKind === 'renew' && (
+                    <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                      Next billing date
+                      <input type="date" value={modalInput} onChange={(e) => setModalInput(e.target.value)} style={{ width: '100%', padding: '8px 10px', marginTop: 8, borderRadius: 8, border: '1px solid #e5e4df' }} />
+                    </label>
+                  )}
+                  {modalKind === 'lifetime' && (
+                    <div style={{ fontSize: 13, color: '#6b6b66', marginTop: 8 }}>Are you sure you want to set this account to a lifetime subscription? This action cannot be undone from the UI.</div>
+                  )}
+                  {modalKind === 'reset_password' && (
+                    <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                      New password
+                      <input type="password" value={modalInput} onChange={(e) => setModalInput(e.target.value)} style={{ width: '100%', padding: '8px 10px', marginTop: 8, borderRadius: 8, border: '1px solid #e5e4df' }} />
+                    </label>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
+                  <button onClick={() => setModalOpen(false)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e0d8', background: '#fff', cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={handleModalConfirm} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#141410', color: '#fff', cursor: 'pointer' }}>Confirm</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
