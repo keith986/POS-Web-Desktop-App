@@ -542,11 +542,6 @@ export default function SuperAdminPage() {
                 {/* Quick Stats */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "0.8rem" }}>
                   <div className="sa-stat">
-                    <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Users</div>
-                    <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.5px", color: "#141410" }}>{stats.userCount ?? "—"}</div>
-                    <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>{stats.activeUsers ?? 0} active</div>
-                  </div>
-                  <div className="sa-stat">
                     <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Staff</div>
                     <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.5px", color: "#141410" }}>{stats.staffCount ?? "—"}</div>
                     <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>{stats.activeStaff ?? 0} active</div>
@@ -569,23 +564,19 @@ export default function SuperAdminPage() {
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
                     <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
                       <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Today</div>
-                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.todayTransactions ?? 0}</div>
-                      <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>KES {Number(stats.todayRevenue || 0).toLocaleString()}</div>
+                      <div style={{ fontSize: 18, color: "#141410", marginTop: 6 }}>KES {Number(stats.todayRevenue || 0).toLocaleString()}</div>
                     </div>
                     <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
                       <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>This Week</div>
-                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.weekTransactions ?? 0}</div>
-                      <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>KES {Number(stats.weekRevenue || 0).toLocaleString()}</div>
+                      <div style={{ fontSize: 18, color: "#141410", marginTop: 6 }}>KES {Number(stats.weekRevenue || 0).toLocaleString()}</div>
                     </div>
                     <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
                       <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>This Month</div>
-                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.monthTransactions ?? 0}</div>
-                      <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>KES {Number(stats.monthRevenue || 0).toLocaleString()}</div>
+                      <div style={{ fontSize: 18, color: "#141410", marginTop: 6 }}>KES {Number(stats.monthRevenue || 0).toLocaleString()}</div>
                     </div>
                     <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
                       <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>This Year</div>
-                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.yearTransactions ?? 0}</div>
-                      <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>KES {Number(stats.yearRevenue || 0).toLocaleString()}</div>
+                      <div style={{ fontSize: 18, color: "#141410", marginTop: 6 }}>KES {Number(stats.yearRevenue || 0).toLocaleString()}</div>
                     </div>
                   </div>
                 </div>
@@ -617,12 +608,12 @@ export default function SuperAdminPage() {
                 {Array.isArray(stats.sneakyBilling) && stats.sneakyBilling.length > 0 && (
                   <div className="sa-card">
                     <div style={{ padding: "1.25rem", borderBottom: "1px solid #e2e0d8" }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "#dc2626" }}>⚠️ Sneaky Billing Alert</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#dc2626" }}>Billing Alert</div>
                       <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 4 }}>Accounts with suspicious payment patterns</div>
                     </div>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                       <thead><tr>
-                        {["Store", "Domain", "Failed Txns", "Last Attempt"].map(h => <th key={h} style={TH}>{h}</th>)}
+                        {["Store", "Domain", "Failed Transactions", "Last Attempt"].map(h => <th key={h} style={TH}>{h}</th>)}
                       </tr></thead>
                       <tbody>
                         {(stats.sneakyBilling as Array<Record<string, unknown>>).slice(0, 5).map((r, i) => (
