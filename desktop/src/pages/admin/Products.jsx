@@ -149,14 +149,6 @@ export default function Products() {
     setShowForm(true);
   };
 
-  const handleToggle = async (product) => {
-    await window.electronAPI.executeDatabase(
-      "UPDATE products SET is_active = ? WHERE id = ?",
-      [product.is_active ? 0 : 1, product.id]
-    );
-    loadProducts();
-  };
-
   const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -328,9 +320,6 @@ export default function Products() {
               </td>
               <td>
                 <button className="action-btn" onClick={() => handleEdit(product)}>Edit</button>
-                <button className="action-btn" onClick={() => handleToggle(product)}>
-                  {product.is_active ? "Disable" : "Enable"}
-                </button>
               </td>
             </tr>
           ))}
