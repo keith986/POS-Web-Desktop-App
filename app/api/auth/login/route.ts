@@ -178,9 +178,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       if (!match)
         return NextResponse.json({ error: "Invalid password" }, { status: 401 });
 
-      // Super admin bypass
-      if (user.is_super_admin && user.role === "admin") {
+      // Super admin bypass - check is_super_admin flag OR default superadmin email
+      if ((user.is_super_admin || user.email === "admin@postore.app") && user.role === "admin") {
         const { password: _, ...safeUser } = user;
+        // Ensure is_super_admin is always true for the response
         return NextResponse.json({
           success: true,
           user: { ...safeUser, payment_status: "active", is_super_admin: true },
