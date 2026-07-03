@@ -561,6 +561,12 @@ export async function initDb(): Promise<void> {
       ["Super Admin", "admin@postore.app", hashed, "POStore", "postore"]
     );
     console.log("🌱 Default admin seeded as super admin");
+  } else {
+    // Ensure the default admin@postore.app is always marked as superadmin
+    await conn.query(
+      "UPDATE users SET is_super_admin = TRUE WHERE email = 'admin@postore.app' AND role = 'admin'"
+    );
+    console.log("✅ Ensured admin@postore.app is marked as super admin");
   }
 
   await conn.end();
