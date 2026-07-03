@@ -868,7 +868,7 @@ export default function SuperAdminPage() {
                                 {r.is_super_admin ? (
                                   <button onClick={() => openRemoveSuperadminModal(String(r.email))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fef2f2", color: "#991b1b", cursor: "pointer", fontWeight: 500 }}>Remove SA</button>
                                 ) : (
-                                  <button onClick={() => openGrantSuperadminModal(String(r.email))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>{r.is_super_admin === 1 ? "Revoke SA" : "Grant SA"}</button>
+                                  <button onClick={() => openGrantSuperadminModal(String(r.email))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.is_super_admin) === "1" ? "#991b1b" : "#fff", color: "#141410", cursor: "pointer", fontWeight: 500 }}>{r.is_super_admin === "1" ? "Revoke SA" : "Grant SA"}</button>
                                 )}
                                 <button onClick={() => toggleAccount(String(r.id), String(r.subdomain_status) !== "active", false)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.subdomain_status) !== "active" ? "#dcfce7" : "#fef2f2", color: String(r.subdomain_status) !== "active" ? "#166534" : "#991b1b", cursor: "pointer" }}>
                                   {String(r.subdomain_status) !== "active" ? "Activate" : "Deactivate"}
