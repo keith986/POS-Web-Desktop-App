@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 
 /* ─── Types ── */
 type TabKey = "overview" | "users" | "staff" | "orders" | "logs" | "billing" | "settings" | "support";
@@ -50,6 +51,29 @@ interface SupportMessage {
   sender: "admin" | "super_admin";
   message: string;
   time:   string;
+}
+
+type TagProps = {
+  children: ReactNode;
+};
+
+type StatProps = {
+  label: string;
+  value?: string | number | null;
+};
+
+type AdminProps = {
+  id: string | number;
+  full_name?: string;
+  email?: string;
+  store_name?: string;
+  pos_type?: string;
+  plan?: string;
+  domain?: string;
+  created_at?: string;
+  is_super_admin?: number | string;
+  account_status?: string;
+  subdomain_status?: string;
 }
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
@@ -221,7 +245,7 @@ function initials(name = "") {
   return name.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) || "—";
 }
  
-function Tag({ children }) {
+function Tag({ children }: TagProps) {
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", padding: "4px 10px",
@@ -233,7 +257,7 @@ function Tag({ children }) {
   );
 }
  
-function Stat({ label, value }) {
+function Stat({ label, value }: StatProps) {
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ fontSize: 10, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>{label}</div>
@@ -242,7 +266,7 @@ function Stat({ label, value }) {
   );
 }
 
-export function AdminDetailPanel({ admin, onClose, onMessage, onReset, onToggle, onGrant, onRevoke }) {
+export function AdminDetailPanel({ admin, onClose, onMessage, onReset, onToggle, onGrant, onRevoke } : AdminProps) {
   const open = Boolean(admin);
   const isSuper = admin ? Number(admin.is_super_admin) === 1 : false;
   const isActive = admin ? String(admin.account_status ?? admin.subdomain_status) !== "inactive"
