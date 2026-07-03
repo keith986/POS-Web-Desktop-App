@@ -26,6 +26,7 @@ export async function initDb(): Promise<void> {
       email            VARCHAR(150) NOT NULL UNIQUE,
       password         VARCHAR(255) NOT NULL,
       role             ENUM('admin','staff','client') DEFAULT 'client',
+      is_super_admin   BOOLEAN      DEFAULT FALSE,
       store_name       VARCHAR(100) NULL,
       domain           VARCHAR(100) NULL UNIQUE,
       pos_type         ENUM('retail','restaurant','salon','wholesale','pharmacy') NULL DEFAULT NULL,
@@ -484,6 +485,11 @@ export async function initDb(): Promise<void> {
   const migrations: { table: string; column: string; sql: string }[] = [
     {
       table:  "users",
+      column: "is_super_admin",
+      sql:    "ALTER TABLE users ADD COLUMN is_super_admin BOOLEAN DEFAULT FALSE AFTER role",
+    },
+    {
+      table:  "users",
       column: "pos_type",
       sql:    "ALTER TABLE users ADD COLUMN pos_type ENUM('retail','restaurant','salon','wholesale','pharmacy') NULL DEFAULT NULL AFTER domain",
     },
@@ -550,11 +556,11 @@ export async function initDb(): Promise<void> {
   if ((rows as { id: string }[]).length === 0) {
     const hashed = await bcrypt.hash("admin123", 10);
     await conn.query(
-      `INSERT INTO users (full_name, email, password, role, store_name, domain)
-       VALUES (?, ?, ?, 'admin', ?, ?)`,
+      `INSERT INTO users (full_name, email, password, role, is_super_admin, store_name, domain)
+       VALUES (?, ?, ?, 'admin', TRUE, ?, ?)`,
       ["Super Admin", "admin@postore.app", hashed, "POStore", "postore"]
     );
-    console.log("🌱 Default admin seeded");
+    console.log("🌱 Default admin seeded as super admin");
   }
 
   await conn.end();

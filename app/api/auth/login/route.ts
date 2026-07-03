@@ -9,6 +9,7 @@ interface UserRow extends RowDataPacket {
   email:            string;
   password:         string;
   role:             "admin" | "staff" | "client";
+  is_super_admin:   boolean;
   store_name:       string | null;
   domain:           string | null;
   pos_type:         string | null;
@@ -178,7 +179,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ error: "Invalid password" }, { status: 401 });
 
       // Super admin bypass
-      if (user.email === "admin@postore.app" && user.role === "admin") {
+      if (user.is_super_admin && user.role === "admin") {
         const { password: _, ...safeUser } = user;
         return NextResponse.json({
           success: true,

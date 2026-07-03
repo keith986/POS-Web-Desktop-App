@@ -573,13 +573,25 @@ export default function StaffDashboard() {
                     ? <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Loading products…</div>
                     : (
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px,1fr))", gap: "0.75rem", padding: "1rem" }}>
-                        {filtered.filter(p => p.stock > 0).map(p => (
-                          <button key={p.id} onClick={() => addToCart(p)} style={{ background: cart.find(i => i.id === p.id) ? "var(--accent-bg)" : "var(--bg)", border: cart.find(i => i.id === p.id) ? "1.5px solid var(--accent)" : "1px solid var(--border)", borderRadius: 10, padding: "0.75rem", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, transition: "all 0.15s", fontFamily: "'DM Sans', sans-serif" }}>
-                            <CategoryIcon category={p.category} size={22} />
-                            <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)", textAlign: "center" }}>{p.name}</span>
-                            <span style={{ fontSize: 12, color: "var(--accent)", fontWeight: 500 }}>{formatCurrency(p.price, settings.currency)}</span>
-                          </button>
-                        ))}
+                        {filtered.filter(p => p.stock > 0).map(p => {
+                          const cartItem = cart.find(i => i.id === p.id);
+                          const quantity = cartItem?.qty || 0;
+                          return (
+                            <div key={p.id} style={{ position: "relative" }}>
+                              <button onClick={() => addToCart(p)} style={{ background: quantity > 0 ? "var(--accent-bg)" : "var(--bg)", border: quantity > 0 ? "1.5px solid var(--accent)" : "1px solid var(--border)", borderRadius: 10, padding: "0.75rem", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, transition: "all 0.15s", fontFamily: "'DM Sans', sans-serif", width: "100%" }}>
+                                <CategoryIcon category={p.category} size={22} />
+                                <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)", textAlign: "center" }}>{p.name}</span>
+                                <span style={{ fontSize: 12, color: "var(--accent)", fontWeight: 500 }}>{formatCurrency(p.price, settings.currency)}</span>
+                              </button>
+                              {quantity > 0 && (
+                                <div style={{ position: "absolute", top: 2, right: 2, display: "flex", alignItems: "center", gap: 2 }}>
+                                  <span style={{ background: "var(--accent)", color: "white", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: "bold" }}>{quantity}</span>
+                                  <button onClick={(e) => { e.stopPropagation(); updateQty(p.id, -1); }} style={{ background: "var(--accent)", color: "white", border: "none", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14, fontWeight: "bold", padding: 0, transition: "all 0.1s" }} title="Remove one">−</button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                         {filtered.filter(p => p.stock > 0).length === 0 && (
                           <div style={{ gridColumn: "1/-1", padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No products found.</div>
                         )}

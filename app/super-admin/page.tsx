@@ -239,7 +239,7 @@ export default function SuperAdminPage() {
   /* ── Auth guard ── */
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "null");
-    if (!user || user.email !== "admin@postore.app") router.push("/login");
+    if (!user || !user.is_super_admin) router.push("/login");
   }, [router]);
 
   /* ── Fetch section ── */

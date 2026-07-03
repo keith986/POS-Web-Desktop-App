@@ -4,6 +4,7 @@ import { RowDataPacket } from "mysql2";
 import bcrypt from "bcryptjs";
 import { execSync } from "child_process";
 import fs from "fs";
+import { randomUUID } from "crypto";
 
 /* ── Row types matching your exact schema ── */
 interface CountResult extends RowDataPacket { count: number }
@@ -665,6 +666,147 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         [targetId]
       );
       return NextResponse.json({ success: true, message: "Lifetime subscription enabled" });
+    }
+
+    if (action === "add_super_admin") {
+      const email = body?.email;
+      if (!email) return NextResponse.json({ error: "Missing email" }, { status: 400 });
+      
+      const [rows] = await pool.query<UserRow[]>(
+        "SELECT id, role FROM users WHERE email = ? LIMIT 1",
+        [email]
+      );
+      if (rows.length === 0) return NextResponse.json({ error: "User not found" }, { status: 404 });
+      if (rows[0].role !== "admin") return NextResponse.json({ error: "Only admin accounts can be super admins" }, { status: 400 });
+      
+      await pool.query("UPDATE users SET is_super_admin = TRUE WHERE email = ?", [email]);
+      return NextResponse.json({ success: true, message: `${email} is now a super admin` });
+    }
+
+    if (action === "remove_super_admin") {
+      const email = body?.email;
+      if (!email) return NextResponse.json({ error: "Missing email" }, { status: 400 });
+      if (email === "admin@postore.app") return NextResponse.json({ error: "Cannot remove super admin status from the default super admin" }, { status: 400 });
+      
+      const [rows] = await pool.query<UserRow[]>(
+        "SELECT id FROM users WHERE email = ? LIMIT 1",
+        [email]
+      );
+      if (rows.length === 0) return NextResponse.json({ error: "User not found" }, { status: 404 });
+      
+      await pool.query("UPDATE users SET is_super_admin = FALSE WHERE email = ?", [email]);
+      return NextResponse.json({ success: true, message: `${email} is no longer a super admin` });
+    }
+
+    if (action === "create_admin") {
+      const full_name = body?.full_name;
+      const email = body?.email;
+      const password = body?.password;
+      const store_name = body?.store_name;
+      const domain = body?.domain;
+      const pos_type = body?.pos_type;
+
+      if (!full_name || !email || !password || !store_name || !domain) {
+        return NextResponse.json({ error: "Missing required fields: full_name, email, password, store_name, domain" }, { status: 400 });
+      }
+
+      if (password.length < 6) {
+        return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+      }
+
+      if (!/^[a-z0-9-]{2,50}$/.test(domain)) {
+        return NextResponse.json({ error: "Invalid domain — only lowercase letters, numbers and hyphens" }, { status: 400 });
+      }
+
+      // Check email uniqueness
+      const [emailRows] = await pool.query<UserRow[]>(
+        "SELECT id FROM users WHERE email = ? LIMIT 1",
+        [email.toLowerCase().trim()]
+      );
+      if (emailRows.length > 0) {
+        return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
+      }
+
+      // Check domain uniqueness
+      const [domainRows] = await pool.query<UserRow[]>(
+        "SELECT id FROM users WHERE domain = ? LIMIT 1",
+        [domain]
+      );
+      if (domainRows.length > 0) {
+        return NextResponse.json({ error: "That store domain is already taken" }, { status: 409 });
+      }
+
+      // Create new admin
+      const id = randomUUID();
+      const hashed = await bcrypt.hash(password, 10);
+
+      await pool.query(
+        `INSERT INTO users (id, full_name, email, password, role, is_super_admin, store_name, domain, pos_type, subdomain_status)
+         VALUES (?, ?, ?, ?, 'admin', FALSE, ?, ?, ?, 'active')`,
+        [id, full_name, email.toLowerCase().trim(), hashed, store_name, domain, pos_type || null]
+      );
+
+      // Create subscription with lifetime access for newly created admins
+      await pool.query(
+        `INSERT INTO subscriptions (user_id, plan, status, amount, next_billing_date)
+         VALUES (?, 'starter', 'active', 0, '9999-12-31')`,
+        [id]
+      );
+
+      return NextResponse.json({ 
+        success: true, 
+        message: `Admin "${full_name}" created with email ${email}`,
+        admin_id: id
+      });
+    }
+
+    if (action === "create_staff") {
+      const full_name = body?.full_name;
+      const email = body?.email;
+      const password = body?.password;
+      const admin_id = body?.admin_id;
+
+      if (!full_name || !email || !password || !admin_id) {
+        return NextResponse.json({ error: "Missing required fields: full_name, email, password, admin_id" }, { status: 400 });
+      }
+
+      if (password.length < 6) {
+        return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+      }
+
+      // Verify admin exists
+      const [adminRows] = await pool.query<UserRow[]>(
+        "SELECT id FROM users WHERE id = ? AND role = 'admin' LIMIT 1",
+        [admin_id]
+      );
+      if (adminRows.length === 0) {
+        return NextResponse.json({ error: "Admin not found" }, { status: 404 });
+      }
+
+      // Check email uniqueness in staff table
+      const [staffEmailRows] = await pool.query(
+        "SELECT id FROM staff WHERE email = ? LIMIT 1",
+        [email.toLowerCase().trim()]
+      );
+      if ((staffEmailRows as unknown[]).length > 0) {
+        return NextResponse.json({ error: "A staff member with this email already exists" }, { status: 409 });
+      }
+
+      // Create new staff member
+      const staffId = randomUUID();
+      const hashed = await bcrypt.hash(password, 10);
+
+      await pool.query(
+        `INSERT INTO staff (id, full_name, email, password, admin_id, shift_role, status)
+         VALUES (?, ?, ?, ?, ?, 'staff', 'active')`,
+        [staffId, full_name, email.toLowerCase().trim(), hashed, admin_id]
+      );
+
+      return NextResponse.json({ 
+        success: true, 
+        message: `Staff member "${full_name}" created for admin ${admin_id}`,
+        staff_id: staffId
+      });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
