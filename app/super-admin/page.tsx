@@ -231,10 +231,11 @@ export default function SuperAdminPage() {
   const [supportText,      setSupportText]      = useState("");
   const [supportLoading,   setSupportLoading]   = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalKind, setModalKind] = useState<"renew" | "lifetime" | "reset_password" | null>(null);
+  const [modalKind, setModalKind] = useState<"renew" | "lifetime" | "reset_password" | "create_admin" | "create_staff" | "grant_superadmin" | null>(null);
   const [modalTargetId, setModalTargetId] = useState<string | null>(null);
   const [modalAction, setModalAction] = useState<string | null>(null);
   const [modalInput, setModalInput] = useState<string>("");
+  const [formData, setFormData] = useState<Record<string, string>>({});
 
   /* ── Auth guard ── */
   useEffect(() => {
@@ -334,6 +335,99 @@ export default function SuperAdminPage() {
 
   const toggleAccount = async (targetId: string, wantsActive: boolean, isStaff = false) => {
     await runAdminAction(wantsActive ? (isStaff ? "activate_staff" : "activate_user") : (isStaff ? "deactivate_staff" : "deactivate_user"), targetId);
+  };
+
+  const openCreateAdminModal = () => {
+    setModalKind("create_admin");
+    setFormData({ full_name: "", email: "", password: "", store_name: "", domain: "", pos_type: "retail" });
+    setModalOpen(true);
+  };
+
+  const openCreateStaffModal = () => {
+    setModalKind("create_staff");
+    setFormData({ full_name: "", email: "", password: "", admin_id: "" });
+    setModalOpen(true);
+  };
+
+  const openGrantSuperadminModal = (email: string) => {
+    setModalKind("grant_superadmin");
+    setFormData({ email });
+    setModalOpen(true);
+  };
+
+  const handleFormChange = (key: string, value: string) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleCreateAdmin = async () => {
+    const { full_name, email, password, store_name, domain, pos_type } = formData;
+    if (!full_name || !email || !password || !store_name || !domain) {
+      flash("All fields are required", "error");
+      return;
+    }
+    if (password.length < 6) {
+      flash("Password must be at least 6 characters", "error");
+      return;
+    }
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    const res = await fetch("/api/admin/super", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.id}` },
+      body: JSON.stringify({
+        action: "create_admin",
+        full_name, email, password, store_name, domain, pos_type: pos_type || "retail"
+      }),
+    });
+    const result = await res.json();
+    if (result.success) {
+      flash(result.message ?? "Admin created successfully", "success");
+      fetchSection("users");
+      setModalOpen(false);
+      setFormData({});
+    } else {
+      flash(result.error ?? "Failed to create admin", "error");
+    }
+  };
+
+  const handleCreateStaff = async () => {
+    const { full_name, email, password, admin_id } = formData;
+    if (!full_name || !email || !password || !admin_id) {
+      flash("All fields are required", "error");
+      return;
+    }
+    if (password.length < 6) {
+      flash("Password must be at least 6 characters", "error");
+      return;
+    }
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    const res = await fetch("/api/admin/super", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.id}` },
+      body: JSON.stringify({
+        action: "create_staff",
+        full_name, email, password, admin_id
+      }),
+    });
+    const result = await res.json();
+    if (result.success) {
+      flash(result.message ?? "Staff member created successfully", "success");
+      fetchSection("staff");
+      setModalOpen(false);
+      setFormData({});
+    } else {
+      flash(result.error ?? "Failed to create staff", "error");
+    }
+  };
+
+  const handleGrantSuperadmin = async () => {
+    const { email } = formData;
+    if (!email) {
+      flash("Email is required", "error");
+      return;
+    }
+    await runAdminAction("add_super_admin", undefined, { email });
+    setModalOpen(false);
+    setFormData({});
   };
 
   /* ── Support loaders ── */
@@ -662,6 +756,7 @@ export default function SuperAdminPage() {
               <div className="sa-card">
                 <div className="sa-toolbar">
                   <div className="sa-search"><IcoSearch /><input placeholder="Search users…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                  <button onClick={openCreateAdminModal} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#141410", color: "#fff", cursor: "pointer", fontWeight: 500, fontSize: 12 }}>+ New Admin</button>
                   <span style={{ fontSize: 12, color: "#9a9a8e", marginLeft: "auto" }}>{filtered.length} user{filtered.length !== 1 ? "s" : ""}</span>
                 </div>
                 {loading ? <Spinner label="Loading users…" /> : (
@@ -688,6 +783,7 @@ export default function SuperAdminPage() {
                               <td style={{ ...TD, display: "flex", gap: 8, flexWrap: "wrap" }}>
                                 <button onClick={() => messageAdmin(String(r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Message</button>
                                 <button onClick={() => openResetModal(String(r.id), "reset_user_password")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Reset</button>
+                                <button onClick={() => openGrantSuperadminModal(String(r.email))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Grant SA</button>
                                 <button onClick={() => toggleAccount(String(r.id), String(r.subdomain_status) !== "active", false)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.subdomain_status) !== "active" ? "#dcfce7" : "#fef2f2", color: String(r.subdomain_status) !== "active" ? "#166534" : "#991b1b", cursor: "pointer" }}>
                                   {String(r.subdomain_status) !== "active" ? "Activate" : "Deactivate"}
                                 </button>
@@ -707,6 +803,7 @@ export default function SuperAdminPage() {
               <div className="sa-card">
                 <div className="sa-toolbar">
                   <div className="sa-search"><IcoSearch /><input placeholder="Search staff…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                  <button onClick={openCreateStaffModal} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#141410", color: "#fff", cursor: "pointer", fontWeight: 500, fontSize: 12 }}>+ New Staff</button>
                   <span style={{ fontSize: 12, color: "#9a9a8e", marginLeft: "auto" }}>{filtered.length} staff member{filtered.length !== 1 ? "s" : ""}</span>
                 </div>
                 {loading ? <Spinner label="Loading staff…" /> : (
@@ -1018,9 +1115,16 @@ export default function SuperAdminPage() {
           {/* ── GLOBAL MODAL (accessible from all tabs) ── */}
           {modalOpen && (
             <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,15,15,0.45)', zIndex: 9999 }}>
-              <div style={{ width: 520, background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+              <div style={{ width: 520, maxHeight: '90vh', overflow: 'auto', background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: 15, fontWeight: 600 }}>{modalKind === 'renew' ? 'Renew billing' : modalKind === 'lifetime' ? 'Set lifetime' : 'Reset password'}</div>
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>
+                    {modalKind === 'renew' && 'Renew billing'}
+                    {modalKind === 'lifetime' && 'Set lifetime'}
+                    {modalKind === 'reset_password' && 'Reset password'}
+                    {modalKind === 'create_admin' && 'Create New Admin'}
+                    {modalKind === 'create_staff' && 'Create New Staff'}
+                    {modalKind === 'grant_superadmin' && 'Grant Superadmin'}
+                  </div>
                   <button onClick={() => setModalOpen(false)} style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}>✕</button>
                 </div>
                 <div style={{ marginTop: 12 }}>
@@ -1039,10 +1143,78 @@ export default function SuperAdminPage() {
                       <input type="password" value={modalInput} onChange={(e) => setModalInput(e.target.value)} style={{ width: '100%', padding: '8px 10px', marginTop: 8, borderRadius: 8, border: '1px solid #e5e4df' }} />
                     </label>
                   )}
+                  {modalKind === 'create_admin' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                        Full Name
+                        <input type="text" value={formData.full_name || ''} onChange={(e) => handleFormChange('full_name', e.target.value)} placeholder="John Doe" style={{ width: '100%', padding: '8px 10px', marginTop: 4, borderRadius: 8, border: '1px solid #e5e4df' }} />
+                      </label>
+                      <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                        Email
+                        <input type="email" value={formData.email || ''} onChange={(e) => handleFormChange('email', e.target.value)} placeholder="admin@store.com" style={{ width: '100%', padding: '8px 10px', marginTop: 4, borderRadius: 8, border: '1px solid #e5e4df' }} />
+                      </label>
+                      <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                        Password
+                        <input type="password" value={formData.password || ''} onChange={(e) => handleFormChange('password', e.target.value)} placeholder="min 6 characters" style={{ width: '100%', padding: '8px 10px', marginTop: 4, borderRadius: 8, border: '1px solid #e5e4df' }} />
+                      </label>
+                      <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                        Store Name
+                        <input type="text" value={formData.store_name || ''} onChange={(e) => handleFormChange('store_name', e.target.value)} placeholder="John's Store" style={{ width: '100%', padding: '8px 10px', marginTop: 4, borderRadius: 8, border: '1px solid #e5e4df' }} />
+                      </label>
+                      <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                        Store Domain
+                        <input type="text" value={formData.domain || ''} onChange={(e) => handleFormChange('domain', e.target.value.toLowerCase())} placeholder="johns-store" style={{ width: '100%', padding: '8px 10px', marginTop: 4, borderRadius: 8, border: '1px solid #e5e4df' }} />
+                      </label>
+                      <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                        POS Type
+                        <select value={formData.pos_type || 'retail'} onChange={(e) => handleFormChange('pos_type', e.target.value)} style={{ width: '100%', padding: '8px 10px', marginTop: 4, borderRadius: 8, border: '1px solid #e5e4df' }}>
+                          <option value="retail">Retail</option>
+                          <option value="restaurant">Restaurant</option>
+                          <option value="salon">Salon</option>
+                          <option value="wholesale">Wholesale</option>
+                          <option value="pharmacy">Pharmacy</option>
+                        </select>
+                      </label>
+                    </div>
+                  )}
+                  {modalKind === 'create_staff' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                        Full Name
+                        <input type="text" value={formData.full_name || ''} onChange={(e) => handleFormChange('full_name', e.target.value)} placeholder="Jane Doe" style={{ width: '100%', padding: '8px 10px', marginTop: 4, borderRadius: 8, border: '1px solid #e5e4df' }} />
+                      </label>
+                      <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                        Email
+                        <input type="email" value={formData.email || ''} onChange={(e) => handleFormChange('email', e.target.value)} placeholder="staff@store.com" style={{ width: '100%', padding: '8px 10px', marginTop: 4, borderRadius: 8, border: '1px solid #e5e4df' }} />
+                      </label>
+                      <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                        Password
+                        <input type="password" value={formData.password || ''} onChange={(e) => handleFormChange('password', e.target.value)} placeholder="min 6 characters" style={{ width: '100%', padding: '8px 10px', marginTop: 4, borderRadius: 8, border: '1px solid #e5e4df' }} />
+                      </label>
+                      <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
+                        Admin ID
+                        <input type="text" value={formData.admin_id || ''} onChange={(e) => handleFormChange('admin_id', e.target.value)} placeholder="Paste admin ID here" style={{ width: '100%', padding: '8px 10px', marginTop: 4, borderRadius: 8, border: '1px solid #e5e4df', fontFamily: 'monospace', fontSize: 11 }} />
+                      </label>
+                    </div>
+                  )}
+                  {modalKind === 'grant_superadmin' && (
+                    <div style={{ fontSize: 13, color: '#6b6b66', marginTop: 8 }}>
+                      <p>Grant superadmin privileges to:</p>
+                      <div style={{ background: '#f5f4f0', padding: 8, borderRadius: 6, marginTop: 8, fontFamily: 'monospace', fontSize: 12 }}>{formData.email}</div>
+                      <p style={{ marginTop: 8 }}>They will be able to manage all other admins and staff.</p>
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
                   <button onClick={() => setModalOpen(false)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e0d8', background: '#fff', cursor: 'pointer' }}>Cancel</button>
-                  <button onClick={handleModalConfirm} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#141410', color: '#fff', cursor: 'pointer' }}>Confirm</button>
+                  <button onClick={
+                    modalKind === 'create_admin' ? handleCreateAdmin :
+                    modalKind === 'create_staff' ? handleCreateStaff :
+                    modalKind === 'grant_superadmin' ? handleGrantSuperadmin :
+                    handleModalConfirm
+                  } style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#141410', color: '#fff', cursor: 'pointer' }}>
+                    {modalKind === 'create_admin' || modalKind === 'create_staff' ? 'Create' : 'Confirm'}
+                  </button>
                 </div>
               </div>
             </div>
