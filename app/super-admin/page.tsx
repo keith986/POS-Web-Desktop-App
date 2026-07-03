@@ -230,8 +230,9 @@ export default function SuperAdminPage() {
   const [messages,         setMessages]         = useState<SupportMessage[]>([]);
   const [supportText,      setSupportText]      = useState("");
   const [supportLoading,   setSupportLoading]   = useState(false);
+  const [admins,           setAdmins]           = useState<Record<string, unknown>[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalKind, setModalKind] = useState<"renew" | "lifetime" | "reset_password" | "create_admin" | "create_staff" | "grant_superadmin" | null>(null);
+  const [modalKind, setModalKind] = useState<"renew" | "lifetime" | "reset_password" | "create_admin" | "create_staff" | "grant_superadmin" | "remove_superadmin" | "create_superadmin" | null>(null);
   const [modalTargetId, setModalTargetId] = useState<string | null>(null);
   const [modalAction, setModalAction] = useState<string | null>(null);
   const [modalInput, setModalInput] = useState<string>("");
@@ -343,15 +344,42 @@ export default function SuperAdminPage() {
     setModalOpen(true);
   };
 
-  const openCreateStaffModal = () => {
+  const openCreateStaffModal = async () => {
     setModalKind("create_staff");
     setFormData({ full_name: "", email: "", password: "", admin_id: "" });
+    // Fetch admins list if not already loaded
+    if (admins.length === 0) {
+      try {
+        const user = JSON.parse(localStorage.getItem("user") || "null");
+        const res = await fetch("/api/admin/super?section=users", {
+          headers: { Authorization: `Bearer ${user?.id}` },
+        });
+        const result = await res.json();
+        if (result.success) {
+          setAdmins(result.data || []);
+        }
+      } catch {
+        console.error("Failed to load admins");
+      }
+    }
     setModalOpen(true);
   };
 
   const openGrantSuperadminModal = (email: string) => {
     setModalKind("grant_superadmin");
     setFormData({ email });
+    setModalOpen(true);
+  };
+
+  const openRemoveSuperadminModal = (email: string) => {
+    setModalKind("remove_superadmin");
+    setFormData({ email });
+    setModalOpen(true);
+  };
+
+  const openCreateSuperadminModal = () => {
+    setModalKind("create_superadmin");
+    setFormData({ full_name: "", email: "", password: "", store_name: "", domain: "", pos_type: "retail", is_super_admin: "true" });
     setModalOpen(true);
   };
 
@@ -428,6 +456,59 @@ export default function SuperAdminPage() {
     await runAdminAction("add_super_admin", undefined, { email });
     setModalOpen(false);
     setFormData({});
+  };
+
+  const handleRemoveSuperadmin = async () => {
+    const { email } = formData;
+    if (!email) {
+      flash("Email is required", "error");
+      return;
+    }
+    await runAdminAction("remove_super_admin", undefined, { email });
+    setModalOpen(false);
+    setFormData({});
+  };
+
+  const handleCreateSuperadmin = async () => {
+    const { full_name, email, password, store_name, domain, pos_type } = formData;
+    if (!full_name || !email || !password || !store_name || !domain) {
+      flash("All fields are required", "error");
+      return;
+    }
+    if (password.length < 6) {
+      flash("Password must be at least 6 characters", "error");
+      return;
+    }
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    const res = await fetch("/api/admin/super", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.id}` },
+      body: JSON.stringify({
+        action: "create_admin",
+        full_name, email, password, store_name, domain, pos_type: pos_type || "retail"
+      }),
+    });
+    const result = await res.json();
+    if (result.success) {
+      // Now grant superadmin privileges
+      const grantRes = await fetch("/api/admin/super", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.id}` },
+        body: JSON.stringify({
+          action: "add_super_admin",
+          email
+        }),
+      });
+      const grantResult = await grantRes.json();
+      if (grantResult.success) {
+        flash("Superadmin created successfully", "success");
+        fetchSection("users");
+        setModalOpen(false);
+        setFormData({});
+      }
+    } else {
+      flash(result.error ?? "Failed to create superadmin", "error");
+    }
   };
 
   /* ── Support loaders ── */
@@ -757,6 +838,7 @@ export default function SuperAdminPage() {
                 <div className="sa-toolbar">
                   <div className="sa-search"><IcoSearch /><input placeholder="Search users…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
                   <button onClick={openCreateAdminModal} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#141410", color: "#fff", cursor: "pointer", fontWeight: 500, fontSize: 12 }}>+ New Admin</button>
+                  <button onClick={openCreateSuperadminModal} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#991b1b", color: "#fff", cursor: "pointer", fontWeight: 500, fontSize: 12 }}>+ New Superadmin</button>
                   <span style={{ fontSize: 12, color: "#9a9a8e", marginLeft: "auto" }}>{filtered.length} user{filtered.length !== 1 ? "s" : ""}</span>
                 </div>
                 {loading ? <Spinner label="Loading users…" /> : (
@@ -783,7 +865,11 @@ export default function SuperAdminPage() {
                               <td style={{ ...TD, display: "flex", gap: 8, flexWrap: "wrap" }}>
                                 <button onClick={() => messageAdmin(String(r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Message</button>
                                 <button onClick={() => openResetModal(String(r.id), "reset_user_password")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Reset</button>
-                                <button onClick={() => openGrantSuperadminModal(String(r.email))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Grant SA</button>
+                                {r.is_super_admin ? (
+                                  <button onClick={() => openRemoveSuperadminModal(String(r.email))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fef2f2", color: "#991b1b", cursor: "pointer", fontWeight: 500 }}>Remove SA</button>
+                                ) : (
+                                  <button onClick={() => openGrantSuperadminModal(String(r.email))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Grant SA</button>
+                                )}
                                 <button onClick={() => toggleAccount(String(r.id), String(r.subdomain_status) !== "active", false)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.subdomain_status) !== "active" ? "#dcfce7" : "#fef2f2", color: String(r.subdomain_status) !== "active" ? "#166534" : "#991b1b", cursor: "pointer" }}>
                                   {String(r.subdomain_status) !== "active" ? "Activate" : "Deactivate"}
                                 </button>
@@ -1192,8 +1278,13 @@ export default function SuperAdminPage() {
                         <input type="password" value={formData.password || ''} onChange={(e) => handleFormChange('password', e.target.value)} placeholder="min 6 characters" style={{ width: '100%', padding: '8px 10px', marginTop: 4, borderRadius: 8, border: '1px solid #e5e4df' }} />
                       </label>
                       <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
-                        Admin ID
-                        <input type="text" value={formData.admin_id || ''} onChange={(e) => handleFormChange('admin_id', e.target.value)} placeholder="Paste admin ID here" style={{ width: '100%', padding: '8px 10px', marginTop: 4, borderRadius: 8, border: '1px solid #e5e4df', fontFamily: 'monospace', fontSize: 11 }} />
+                        Select Admin
+                        <select value={formData.admin_id || ''} onChange={(e) => handleFormChange('admin_id', e.target.value)} style={{ width: '100%', padding: '8px 10px', marginTop: 4, borderRadius: 8, border: '1px solid #e5e4df', fontSize: 13 }}>
+                          <option value="">Choose an admin...</option>
+                          {admins.map((admin) => (
+                            <option key={String(admin.id)} value={String(admin.id)}>{String(admin.full_name || admin.email)} - {String(admin.store_name || 'N/A')}</option>
+                          ))}
+                        </select>
                       </label>
                     </div>
                   )}
@@ -1204,6 +1295,48 @@ export default function SuperAdminPage() {
                       <p style={{ marginTop: 8 }}>They will be able to manage all other admins and staff.</p>
                     </div>
                   )}
+                  {modalKind === 'remove_superadmin' && (
+                    <div style={{ fontSize: 13, color: '#6b6b66', marginTop: 8 }}>
+                      <p>Remove superadmin privileges from:</p>
+                      <div style={{ background: '#fef2f2', padding: 8, borderRadius: 6, marginTop: 8, fontFamily: 'monospace', fontSize: 12 }}>{formData.email}</div>
+                      <p style={{ marginTop: 8, color: '#991b1b', fontWeight: 500 }}>This user will lose all administrative capabilities.</p>
+                    </div>
+                  )}
+                  {modalKind === 'create_superadmin' && (
+                    <div style={{ fontSize: 13, color: '#6b6b66', marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 500, color: '#141410', display: 'block', marginBottom: 3 }}>Full Name *</label>
+                        <input type="text" placeholder="Full name" value={formData.full_name || ''} onChange={e => handleFormChange('full_name', e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #e2e0d8', fontSize: 12, boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 500, color: '#141410', display: 'block', marginBottom: 3 }}>Email *</label>
+                        <input type="email" placeholder="Email" value={formData.email || ''} onChange={e => handleFormChange('email', e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #e2e0d8', fontSize: 12, boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 500, color: '#141410', display: 'block', marginBottom: 3 }}>Password *</label>
+                        <input type="password" placeholder="Password" value={formData.password || ''} onChange={e => handleFormChange('password', e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #e2e0d8', fontSize: 12, boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 500, color: '#141410', display: 'block', marginBottom: 3 }}>Store Name *</label>
+                        <input type="text" placeholder="Store name" value={formData.store_name || ''} onChange={e => handleFormChange('store_name', e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #e2e0d8', fontSize: 12, boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 500, color: '#141410', display: 'block', marginBottom: 3 }}>Domain *</label>
+                        <input type="text" placeholder="Domain" value={formData.domain || ''} onChange={e => handleFormChange('domain', e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #e2e0d8', fontSize: 12, boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 500, color: '#141410', display: 'block', marginBottom: 3 }}>POS Type</label>
+                        <select value={formData.pos_type || 'retail'} onChange={e => handleFormChange('pos_type', e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #e2e0d8', fontSize: 12, boxSizing: 'border-box' }}>
+                          <option value="retail">Retail</option>
+                          <option value="restaurant">Restaurant</option>
+                          <option value="pharmacy">Pharmacy</option>
+                          <option value="salon">Salon</option>
+                          <option value="clinic">Clinic</option>
+                        </select>
+                      </div>
+                      <p style={{ marginTop: 8, fontSize: 11, color: '#9a9a8e', fontStyle: 'italic' }}>This admin will be created with superadmin privileges.</p>
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
                   <button onClick={() => setModalOpen(false)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e0d8', background: '#fff', cursor: 'pointer' }}>Cancel</button>
@@ -1211,9 +1344,11 @@ export default function SuperAdminPage() {
                     modalKind === 'create_admin' ? handleCreateAdmin :
                     modalKind === 'create_staff' ? handleCreateStaff :
                     modalKind === 'grant_superadmin' ? handleGrantSuperadmin :
+                    modalKind === 'remove_superadmin' ? handleRemoveSuperadmin :
+                    modalKind === 'create_superadmin' ? handleCreateSuperadmin :
                     handleModalConfirm
-                  } style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: '#141410', color: '#fff', cursor: 'pointer' }}>
-                    {modalKind === 'create_admin' || modalKind === 'create_staff' ? 'Create' : 'Confirm'}
+                  } style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: modalKind === 'remove_superadmin' ? '#991b1b' : '#141410', color: '#fff', cursor: 'pointer' }}>
+                    {modalKind === 'create_admin' || modalKind === 'create_staff' || modalKind === 'create_superadmin' ? 'Create' : modalKind === 'remove_superadmin' ? 'Remove' : 'Confirm'}
                   </button>
                 </div>
               </div>
