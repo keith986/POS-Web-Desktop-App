@@ -298,7 +298,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (section === "users") {
       const [users] = await pool.query<UserRow[]>(`
         SELECT id, full_name, email, role, store_name, domain,
-               subdomain_url, subdomain_status, pos_type, created_at
+               subdomain_url, subdomain_status, pos_type, is_super_admin, created_at
         FROM users
         WHERE email != 'admin@postore.app'
         ORDER BY created_at DESC
