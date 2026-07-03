@@ -866,7 +866,7 @@ const openCreateStaffModal = async () => {
                               <td style={{ ...TD, display: "flex", gap: 8, flexWrap: "wrap" }}>
                                 <button onClick={() => messageAdmin(String(r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Message</button>
                                 <button onClick={() => openResetModal(String(r.id), "reset_user_password")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Reset</button>
-                                <h1>Super admin : {r.is_super_admin}</h1>
+                                <h1>Super admin : {Number(r.is_super_admin)}</h1>
                                 {Number(r.is_super_admin) == 1 ? (
                                 <button
                                  onClick={() => openRemoveSuperadminModal(String(r.email))}
