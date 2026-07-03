@@ -62,6 +62,20 @@ type StatProps = {
   value?: string | number | null;
 };
 
+interface Admin {
+  id: string | number;
+  full_name?: string;
+  email?: string;
+  store_name?: string;
+  pos_type?: string;
+  plan?: string;
+  domain?: string;
+  created_at?: string;
+  is_super_admin?: number | string;
+  account_status?: string;
+  subdomain_status?: string;
+}
+
 interface AdminDetailPanelProps {
   admin: Admin | null;
 
