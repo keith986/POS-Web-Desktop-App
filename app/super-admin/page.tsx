@@ -866,24 +866,25 @@ const openCreateStaffModal = async () => {
                               <td style={{ ...TD, display: "flex", gap: 8, flexWrap: "wrap" }}>
                                 <button onClick={() => messageAdmin(String(r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Message</button>
                                 <button onClick={() => openResetModal(String(r.id), "reset_user_password")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Reset</button>
-                                {Number(r.is_super_admin) === 1 ? (
+                                <h1>Super admin : {r.is_super_admin}</h1>
+                                {Number(r.is_super_admin) == 1 ? (
                                 <button
                                  onClick={() => openRemoveSuperadminModal(String(r.email))}
                                  style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", cursor: "pointer", fontWeight: 500 }}
                                 >
                                  Revoke SA
-                    </button>
-                  ) : (
-                 <button
-                  onClick={() => openGrantSuperadminModal(String(r.email))}
-                  style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#16a34a", cursor: "pointer", fontWeight: 500 }}
-                   >
-                   Grant SA
-                 </button>
-                )}
-                                <button onClick={() => toggleAccount(String(r.id), String(r.subdomain_status) !== "active", false)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.subdomain_status) !== "active" ? "#dcfce7" : "#fef2f2", color: String(r.subdomain_status) !== "active" ? "#166534" : "#991b1b", cursor: "pointer" }}>
-                                  {String(r.subdomain_status) !== "active" ? "Activate" : "Deactivate"}
                                 </button>
+                                ) : (
+                               <button
+                              onClick={() => openGrantSuperadminModal(String(r.email))}
+                              style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#16a34a", cursor: "pointer", fontWeight: 500 }}
+                              >
+                              Grant SA
+                              </button>
+                              )}
+                              <button onClick={() => toggleAccount(String(r.id), String(r.subdomain_status) !== "active", false)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.subdomain_status) !== "active" ? "#dcfce7" : "#fef2f2", color: String(r.subdomain_status) !== "active" ? "#166534" : "#991b1b", cursor: "pointer" }}>
+                                  {String(r.subdomain_status) !== "active" ? "Activate" : "Deactivate"}
+                              </button>
                               </td>
                             </tr>
                           ))}
