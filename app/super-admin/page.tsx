@@ -1073,8 +1073,8 @@ const openCreateStaffModal = async () => {
                               Grant SA
                               </button>
                               )}
-                              <button onClick={() => setPanelAdmin(r)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fef2f2", color:  "#166534" , cursor: "pointer" }}>
-                                  view
+                              <button onClick={() => setPanelAdmin(r)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>
+                                  View
                               </button>
                               </td>
                             </tr>
@@ -1119,6 +1119,9 @@ const openCreateStaffModal = async () => {
                                 <button onClick={() => openResetModal(String(r.id), "reset_staff_password")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Reset</button>
                                 <button onClick={() => toggleAccount(String(r.id), String(r.status) !== "active", true)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.status) !== "active" ? "#dcfce7" : "#fef2f2", color: String(r.status) !== "active" ? "#166534" : "#991b1b", cursor: "pointer" }}>
                                   {String(r.status) !== "active" ? "Activate" : "Deactivate"}
+                                </button>
+                                <button onClick={() => setPanelAdmin(r)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>
+                                  View
                                 </button>
                               </td>
                             </tr>
@@ -1224,15 +1227,6 @@ const openCreateStaffModal = async () => {
                     <div style={{ marginTop: "2rem", padding: "1.5rem", border: "1px solid #e2e0d8", borderRadius: 16, background: "#ffffff" }}>
                       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: "1rem" }}>Change Super Admin Password</div>
                       <div style={{ display: "grid", gap: "1rem", maxWidth: 520 }}>
- 
- 
- 
- 
- 
- 
- 
- 
- 
  
                         <label style={{ display: "grid", gap: 6, fontSize: 12, color: "#7a7a74" }}>
                           Current password
