@@ -62,18 +62,27 @@ type StatProps = {
   value?: string | number | null;
 };
 
-type AdminProps = {
-  id: string | number;
-  full_name?: string;
-  email?: string;
-  store_name?: string;
-  pos_type?: string;
-  plan?: string;
-  domain?: string;
-  created_at?: string;
-  is_super_admin?: number | string;
-  account_status?: string;
-  subdomain_status?: string;
+interface AdminDetailPanelProps {
+  admin: Admin | null;
+
+  onClose: () => void;
+
+  onMessage?: (id: string) => void;
+
+  onReset?: (
+    id: string,
+    action: string
+  ) => void;
+
+  onToggle?: (
+    id: string,
+    active: boolean,
+    force: boolean
+  ) => void;
+
+  onGrant?: (email: string) => void;
+
+  onRevoke?: (email: string) => void;
 }
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
@@ -266,7 +275,7 @@ function Stat({ label, value }: StatProps) {
   );
 }
 
-export function AdminDetailPanel({ admin, onClose, onMessage, onReset, onToggle, onGrant, onRevoke } : AdminProps) {
+export function AdminDetailPanel({ admin, onClose, onMessage, onReset, onToggle, onGrant, onRevoke } : AdminDetailPanelProps) {
   const open = Boolean(admin);
   const isSuper = admin ? Number(admin.is_super_admin) === 1 : false;
   const isActive = admin ? String(admin.account_status ?? admin.subdomain_status) !== "inactive"
