@@ -533,6 +533,11 @@ export async function initDb(): Promise<void> {
       column: "discount_code",
       sql:    "ALTER TABLE orders ADD COLUMN discount_code VARCHAR(50) NULL AFTER discount_amount",
     },
+    {
+      table:  "users",
+      column: "account_status",
+      sql:    "ALTER TABLE users ADD COLUMN account_status ENUM('active','inactive') NOT NULL DEFAULT 'active' AFTER subdomain_status",
+    },
   ];
 
   for (const m of migrations) {

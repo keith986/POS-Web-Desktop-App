@@ -207,6 +207,184 @@ function Pagination({ page, total, onChange }: { page: number; total: number; on
   );
 }
 
+
+/*_________ sidebar view _________*/
+function gradientFor(seed = "") {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  const h1 = hash % 360;
+  const h2 = (h1 + 46 + (hash % 40)) % 360;
+  return `linear-gradient(135deg, hsl(${h1} 70% 52%), hsl(${h2} 70% 42%))`;
+}
+ 
+function initials(name = "") {
+  return name.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) || "—";
+}
+ 
+function Tag({ children }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", padding: "4px 10px",
+      borderRadius: 100, fontSize: 11, fontWeight: 500,
+      background: "#f5f4f0", color: "#4a4a40", border: "1px solid #e2e0d8",
+    }}>
+      {children}
+    </span>
+  );
+}
+ 
+function Stat({ label, value }) {
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ fontSize: 10, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 15, fontWeight: 600, color: "#141410", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value ?? "—"}</div>
+    </div>
+  );
+}
+
+export function AdminDetailPanel({ admin, onClose, onMessage, onReset, onToggle, onGrant, onRevoke }) {
+  const open = Boolean(admin);
+  const isSuper = admin ? Number(admin.is_super_admin) === 1 : false;
+  const isActive = admin ? String(admin.account_status ?? admin.subdomain_status) !== "inactive"
+                          && String(admin.account_status ?? admin.subdomain_status) !== "failed" : true;
+ 
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed", inset: 0, background: "rgba(15,15,15,0.35)",
+          zIndex: 998, opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none",
+          transition: "opacity 0.25s ease",
+        }}
+      />
+ 
+      {/* Panel */}
+      <aside style={{
+        position: "fixed", top: 0, right: 0, height: "100vh", width: 400, maxWidth: "92vw",
+        background: "#f5f4f0", borderLeft: "1px solid #e2e0d8", zIndex: 999,
+        transform: open ? "translateX(0)" : "translateX(100%)",
+        transition: "transform 0.28s cubic-bezier(.4,0,.2,1)",
+        display: "flex", flexDirection: "column", boxShadow: "-8px 0 24px rgba(0,0,0,0.06)",
+      }}>
+        {admin && (
+          <>
+            {/* Close */}
+            <button onClick={onClose} aria-label="Close panel" style={{
+              position: "absolute", top: 14, right: 14, width: 30, height: 30, borderRadius: 8,
+              border: "1px solid #e2e0d8", background: "#fff", color: "#4a4a40", cursor: "pointer",
+              fontSize: 14, zIndex: 2,
+            }}>✕</button>
+ 
+            <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1 }}>
+              {/* ── Card ── */}
+              <div style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 16, overflow: "hidden" }}>
+                {/* Gradient banner + avatar */}
+                <div style={{ height: 92, background: gradientFor(String(admin.id ?? admin.email ?? "")), position: "relative" }} />
+                <div style={{ padding: "0 1.25rem 1.25rem", marginTop: -40 }}>
+                  <div style={{
+                    width: 76, height: 76, borderRadius: "50%", background: "#141410",
+                    border: "4px solid #fff", display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#fff", fontSize: 22, fontWeight: 600,
+                  }}>
+                    {initials(String(admin.full_name ?? admin.email ?? "?"))}
+                  </div>
+ 
+                  <div style={{ marginTop: 12, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 17, fontWeight: 600, color: "#141410" }}>{admin.full_name ?? "—"}</div>
+                      <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 2 }}>{admin.email ?? "—"}</div>
+                    </div>
+                    {isSuper && (
+                      <span style={{
+                        flexShrink: 0, fontSize: 10, fontWeight: 600, color: "#dc2626",
+                        background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 100, padding: "3px 9px",
+                      }}>SUPER ADMIN</span>
+                    )}
+                  </div>
+ 
+                  {/* Tags */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
+                    <Tag>{admin.store_name ?? "No store"}</Tag>
+                    {admin.pos_type && <Tag>{String(admin.pos_type)}</Tag>}
+                    {admin.plan && <Tag>{String(admin.plan)} plan</Tag>}
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 100,
+                      fontSize: 11, fontWeight: 500,
+                      background: isActive ? "#f0fdf4" : "#fef2f2",
+                      color: isActive ? "#16a34a" : "#dc2626",
+                      border: `1px solid ${isActive ? "#bbf7d0" : "#fecaca"}`,
+                    }}>
+                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: isActive ? "#16a34a" : "#dc2626" }} />
+                      {isActive ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+ 
+                  {/* Stats row */}
+                  <div style={{ display: "flex", gap: 12, marginTop: 18, paddingTop: 16, borderTop: "1px solid #e2e0d8" }}>
+                    <Stat label="Domain" value={admin.domain} />
+                    <Stat label="Joined" value={admin.created_at ? new Date(admin.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"} />
+                    <Stat label="ID" value={String(admin.id ?? "").slice(0, 8) + "…"} />
+                  </div>
+ 
+                  {/* Primary action */}
+                  <button
+                    onClick={() => onMessage?.(String(admin.id))}
+                    style={{
+                      width: "100%", marginTop: 18, padding: "12px", borderRadius: 12, border: "none",
+                      background: "#141410", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer",
+                    }}
+                  >
+                    Message admin
+                  </button>
+                </div>
+              </div>
+ 
+              {/* ── Secondary actions ── */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
+                <button onClick={() => onReset?.(String(admin.id), "reset_user_password")} style={secondaryBtn}>
+                  Reset password
+                </button>
+ 
+                {isSuper ? (
+                  <button onClick={() => onRevoke?.(String(admin.email))} style={{ ...secondaryBtn, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}>
+                    Revoke superadmin
+                  </button>
+                ) : (
+                  <button onClick={() => onGrant?.(String(admin.email))} style={{ ...secondaryBtn, borderColor: "#bbf7d0", background: "#f0fdf4", color: "#16a34a" }}>
+                    Grant superadmin
+                  </button>
+                )}
+ 
+                <button
+                  onClick={() => onToggle?.(String(admin.id), !isActive, false)}
+                  style={{
+                    ...secondaryBtn,
+                    borderColor: isActive ? "#fecaca" : "#bbf7d0",
+                    background: isActive ? "#fef2f2" : "#f0fdf4",
+                    color: isActive ? "#991b1b" : "#166534",
+                  }}
+                >
+                  {isActive ? "Deactivate account" : "Activate account"}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </aside>
+    </>
+  );
+}
+
+const secondaryBtn = {
+  width: "100%", padding: "11px", borderRadius: 12, cursor: "pointer",
+  border: "1px solid #e2e0d8", background: "#fff", color: "#141410",
+  fontSize: 13, fontWeight: 500, textAlign: "left",
+};
+ 
+
+
 /* ─────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────── */
@@ -237,6 +415,7 @@ export default function SuperAdminPage() {
   const [modalAction, setModalAction] = useState<string | null>(null);
   const [modalInput, setModalInput] = useState<string>("");
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [panelAdmin, setPanelAdmin] = useState<Record<string, unknown> | null>(null);
 
   /* ── Auth guard ── */
   useEffect(() => {
@@ -311,6 +490,7 @@ export default function SuperAdminPage() {
   const messageAdmin = (adminId: string) => {
     setSelectedAdminId(adminId);
     setActiveTab("support");
+    setPanelAdmin(null);
   };
 
   const openResetModal = (targetId: string, action: string) => {
@@ -335,7 +515,13 @@ export default function SuperAdminPage() {
   };
 
   const toggleAccount = async (targetId: string, wantsActive: boolean, isStaff = false) => {
-    await runAdminAction(wantsActive ? (isStaff ? "activate_staff" : "activate_user") : (isStaff ? "deactivate_staff" : "deactivate_user"), targetId);
+    const ok = await runAdminAction(wantsActive ? (isStaff ? "activate_staff" : "activate_user") : (isStaff ? "deactivate_staff" : "deactivate_user"), targetId);
+    if (ok) {
+      const nextStatus = wantsActive ? "active" : "inactive";
+      setPanelAdmin(prev => (prev && String(prev.id) === targetId)
+        ? { ...prev, account_status: nextStatus, subdomain_status: nextStatus, status: nextStatus }
+        : prev);
+    }
   };
 
   const openCreateAdminModal = () => {
@@ -454,7 +640,10 @@ const openCreateStaffModal = async () => {
       flash("Email is required", "error");
       return;
     }
-    await runAdminAction("add_super_admin", undefined, { email });
+    const ok = await runAdminAction("add_super_admin", undefined, { email });
+    if (ok) {
+      setPanelAdmin(prev => (prev && String(prev.email) === email) ? { ...prev, is_super_admin: 1 } : prev);
+    }
     setModalOpen(false);
     setFormData({});
   };
@@ -465,7 +654,10 @@ const openCreateStaffModal = async () => {
       flash("Email is required", "error");
       return;
     }
-    await runAdminAction("remove_super_admin", undefined, { email });
+    const ok = await runAdminAction("remove_super_admin", undefined, { email });
+    if (ok) {
+      setPanelAdmin(prev => (prev && String(prev.email) === email) ? { ...prev, is_super_admin: 0 } : prev);
+    }
     setModalOpen(false);
     setFormData({});
   };
@@ -881,8 +1073,8 @@ const openCreateStaffModal = async () => {
                               Grant SA
                               </button>
                               )}
-                              <button onClick={() => toggleAccount(String(r.id), String(r.subdomain_status) !== "active", false)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.subdomain_status) !== "active" ? "#dcfce7" : "#fef2f2", color: String(r.subdomain_status) !== "active" ? "#166534" : "#991b1b", cursor: "pointer" }}>
-                                  {String(r.subdomain_status) !== "active" ? "Activate" : "Deactivate"}
+                              <button onClick={() => setPanelAdmin(r)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fef2f2", color:  "#166534" , cursor: "pointer" }}>
+                                  view
                               </button>
                               </td>
                             </tr>
@@ -1365,6 +1557,9 @@ const openCreateStaffModal = async () => {
               </div>
             </div>
           )}
+
+          <AdminDetailPanel admin={panelAdmin} onClose={() => setPanelAdmin(null)} onMessage={messageAdmin} onReset={openResetModal} onToggle={toggleAccount} onGrant={openGrantSuperadminModal} onRevoke={openRemoveSuperadminModal} />
+
         </div>
       </div>
     </>
