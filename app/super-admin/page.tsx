@@ -1068,24 +1068,24 @@ const openCreateStaffModal = async () => {
       <style>{`
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'DM Sans', sans-serif; }
-        .sa-shell { background: var(--bg); }
+        .sa-shell { display: flex; min-height: 100vh; background: var(--bg); }
         .sa-sidebar { background: var(--sidebar); border-right: 1px solid var(--border); }
         .sa-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
         .sa-header { background: #fff; border-bottom: 1px solid #e2e0d8; padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: sticky; top: 0; z-index: 10; }
         .sa-main { flex: 1; padding: 1.75rem 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
-        .sa-nav-btn { color: var(--ink); }
+        .sa-nav-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 14px; border: none; background: transparent; border-radius: 8px; font-family: inherit; font-size: 13px; cursor: pointer; color: var(--ink); transition: all 0.15s; text-align: left; }
         .sa-nav-btn:hover { background: var(--nav-hover); color: var(--ink); }
         .sa-nav-btn.active { background: var(--accent); color: var(--accent-text); }
-        .sa-nav-btn.active svg { color: #fff; }
-        .sa-card, .sa-stat { background: var(--card); border: 1px solid var(--border); }
-        .sa-stat { background: #fff; border: 1px solid #e2e0d8; border-radius: 12px; padding: 1.1rem 1.25rem; }
+        .sa-nav-btn.active svg { color: var(--accent-text); }
+        .sa-card, .sa-stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+        .sa-stat { padding: 1.1rem 1.25rem; }
+        .sa-card { overflow: hidden; }
         .sa-toolbar { padding: 1rem 1.25rem; border-bottom: 1px solid #e2e0d8; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .sa-search { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 8px; background: #f5f4f0; border: 1px solid #c8c6bc; border-radius: 8px; padding: 0 10px; }
         .sa-search input { flex: 1; border: none; background: transparent; font-family: inherit; font-size: 13px; color: #141410; outline: none; padding: 7px 0; }
         .sa-refresh-btn { display: flex; align-items: center; gap: 6px; padding: 7px 14px; background: #fff; color: #141410; border: 1px solid #c8c6bc; border-radius: 7px; font-family: inherit; font-size: 13px; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
         .sa-refresh-btn:hover { background: #f5f4f0; }
         @keyframes sa-spin { to { transform: rotate(360deg); } }
-        .sa-shell { background: var(--bg); }
       `}</style>
 
       <div className="sa-shell">
