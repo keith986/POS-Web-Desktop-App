@@ -251,25 +251,6 @@ function ActionsMenu({ items }: { items: { label: string; onClick: () => void; d
   );
 }
 
-/* ─── Donut ring ── */
-function Donut({ pct, color, size = 78, thickness = 10, label }: { pct: number; color: string; size?: number; thickness?: number; label?: string }) {
-  const clamped = Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0));
-  const deg = clamped * 3.6;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-      <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-        <div style={{ width: size, height: size, borderRadius: "50%", background: `conic-gradient(${color} 0deg ${deg}deg, var(--subtle) ${deg}deg 360deg)` }} />
-        <div style={{
-          position: "absolute", inset: thickness, borderRadius: "50%", background: "var(--card)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          <span style={{ fontSize: size * 0.21, fontWeight: 700, color: "var(--ink)" }}>{Math.round(clamped)}%</span>
-        </div>
-      </div>
-      {label && <div style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 500, textAlign: "center" }}>{label}</div>}
-    </div>
-  );
-}
 
 /* ─── Smooth area/line path builder (used by overview trend chart) ── */
 function smoothLinePath(points: { x: number; y: number }[]): string {
@@ -288,6 +269,43 @@ function smoothAreaPath(points: { x: number; y: number }[], baseline: number): s
   const last = points[points.length - 1];
   const first = points[0];
   return `${line} L${last.x},${baseline} L${first.x},${baseline} Z`;
+}
+
+/* ─── Toggle switch ── */
+function Switch({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      role="switch"
+      aria-checked={on}
+      style={{
+        width: 40, height: 23, borderRadius: 100, border: "none", cursor: "pointer", flexShrink: 0,
+        background: on ? "var(--accent)" : "var(--border)", position: "relative", transition: "background 0.15s", padding: 0,
+      }}
+    >
+      <span style={{
+        position: "absolute", top: 2.5, left: on ? 19 : 2.5, width: 18, height: 18, borderRadius: "50%",
+        background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.25)", transition: "left 0.15s",
+      }} />
+    </button>
+  );
+}
+
+/* ─── Settings row: label + value(s) with an optional Edit button ── */
+function SettingsRow({ label, children, onEdit }: { label: string; children: ReactNode; onEdit?: () => void }) {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, padding: "1.15rem 0", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>{label}</div>
+        <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6 }}>{children}</div>
+      </div>
+      {onEdit && (
+        <button onClick={onEdit} style={{ flexShrink: 0, padding: "7px 14px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
+          Edit
+        </button>
+      )}
+    </div>
+  );
 }
 
 /* ─── Status badge ── */
@@ -826,6 +844,13 @@ export default function SuperAdminPage() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
 
+  /* ── Settings page state ── */
+  const [settingsTab, setSettingsTab] = useState<"general" | "notifications" | "security" | "appearance">("general");
+  const [profileExtra, setProfileExtra] = useState({ phone: "", linkedin: "", dribbble: "", language: "English", currency: "USD" });
+  const [notifPrefs, setNotifPrefs] = useState({ newAdminSignup: true, billingAlerts: true, weeklySummary: false, securityAlerts: true });
+  const [editingField, setEditingField] = useState<null | "name" | "contacts" | "social" | "language">(null);
+  const [editDraft, setEditDraft] = useState<Record<string, string>>({});
+
   /* ── Auth guard ── */
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "null");
@@ -835,6 +860,10 @@ export default function SuperAdminPage() {
       try {
         const savedPic = localStorage.getItem("sa_profile_picture");
         if (savedPic) setProfilePicture(savedPic);
+        const savedExtra = localStorage.getItem("sa_profile_extra");
+        if (savedExtra) setProfileExtra(prev => ({ ...prev, ...JSON.parse(savedExtra) }));
+        const savedNotif = localStorage.getItem("sa_notif_prefs");
+        if (savedNotif) setNotifPrefs(prev => ({ ...prev, ...JSON.parse(savedNotif) }));
       } catch { /* storage unavailable */ }
     }
   }, [router]);
@@ -861,6 +890,67 @@ export default function SuperAdminPage() {
     reader.onerror = () => flash("Could not read that image", "error");
     reader.readAsDataURL(file);
     e.target.value = "";
+  };
+
+  const handleRemoveProfilePicture = () => {
+    setProfilePicture(null);
+    try { localStorage.removeItem("sa_profile_picture"); } catch { /* storage unavailable */ }
+    flash("Profile picture removed", "success");
+  };
+
+  /* ── Settings: name / contact / social / language editing ── */
+  const openFieldEditor = (field: "name" | "contacts" | "social" | "language") => {
+    setEditingField(field);
+    if (field === "name") setEditDraft({ full_name: currentUser?.full_name || "" });
+    else if (field === "contacts") setEditDraft({ phone: profileExtra.phone, email: currentUser?.email || "" });
+    else if (field === "social") setEditDraft({ linkedin: profileExtra.linkedin, dribbble: profileExtra.dribbble });
+    else setEditDraft({ language: profileExtra.language, currency: profileExtra.currency });
+  };
+
+  const saveFieldEditor = () => {
+    if (editingField === "name") {
+      const user = JSON.parse(localStorage.getItem("user") || "null") || {};
+      const updated = { ...user, full_name: editDraft.full_name };
+      try { localStorage.setItem("user", JSON.stringify(updated)); } catch { /* storage unavailable */ }
+      setCurrentUser(updated);
+    } else if (editingField === "contacts") {
+      const updated = { ...profileExtra, phone: editDraft.phone };
+      setProfileExtra(updated);
+      try { localStorage.setItem("sa_profile_extra", JSON.stringify(updated)); } catch { /* storage unavailable */ }
+    } else if (editingField === "social") {
+      const updated = { ...profileExtra, linkedin: editDraft.linkedin, dribbble: editDraft.dribbble };
+      setProfileExtra(updated);
+      try { localStorage.setItem("sa_profile_extra", JSON.stringify(updated)); } catch { /* storage unavailable */ }
+    } else if (editingField === "language") {
+      const updated = { ...profileExtra, language: editDraft.language, currency: editDraft.currency };
+      setProfileExtra(updated);
+      try { localStorage.setItem("sa_profile_extra", JSON.stringify(updated)); } catch { /* storage unavailable */ }
+    }
+    flash("Settings saved", "success");
+    setEditingField(null);
+  };
+
+  const toggleNotifPref = (key: keyof typeof notifPrefs) => {
+    const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
+    setNotifPrefs(updated);
+    try { localStorage.setItem("sa_notif_prefs", JSON.stringify(updated)); } catch { /* storage unavailable */ }
+  };
+
+  /* ── Extra feature: export account + dashboard settings as JSON ── */
+  const exportAccountData = () => {
+    const payload = {
+      exported_at: new Date().toISOString(),
+      profile: { name: currentUser?.full_name || "", email: currentUser?.email || "", ...profileExtra },
+      notifications: notifPrefs,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "account-settings.json";
+    a.click();
+    URL.revokeObjectURL(url);
+    flash("Settings exported", "success");
   };
 
   /* ── Fetch section ── */
@@ -1781,55 +1871,228 @@ const openCreateStaffModal = async () => {
 
             {/* ══ SETTINGS ══ */}
             {activeTab === "settings" && (
-              <div className="sa-card" style={{ padding: "1.5rem" }}>
-                {loading ? <Spinner label="Loading settings…" /> : (
-                  <>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-                      {data.length === 0
-                        ? <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "2rem", color: "#9a9a8e", fontSize: 13 }}>No settings data.</div>
-                        : data.map((r, i) => (
-                          Object.entries(r).map(([k, v]) => (
-                            <div key={`${i}-${k}`}>
-                              <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 4 }}>{k.replace(/_/g, " ")}</div>
-                              <div style={{ fontSize: 14, fontWeight: 500, color: "#141410" }}>{String(v ?? "—")}</div>
+              <div className="sa-card" style={{ display: "grid", gridTemplateColumns: "200px 1fr", minHeight: 560, overflow: "visible" }}>
+
+                {/* Sub-nav */}
+                <div style={{ borderRight: "1px solid var(--border)", padding: "1.25rem 0.85rem" }}>
+                  {([
+                    { key: "general", label: "General" },
+                    { key: "notifications", label: "Notifications" },
+                    { key: "security", label: "Security" },
+                    { key: "appearance", label: "Appearance" },
+                  ] as const).map(t => (
+                    <button
+                      key={t.key}
+                      onClick={() => { setSettingsTab(t.key); setEditingField(null); }}
+                      style={{
+                        display: "block", width: "100%", textAlign: "left", padding: "10px 14px", marginBottom: 2,
+                        borderRadius: 9, border: "none", fontFamily: "inherit", fontSize: 13.5, cursor: "pointer",
+                        background: settingsTab === t.key ? "var(--subtle)" : "transparent",
+                        color: settingsTab === t.key ? "var(--ink)" : "var(--muted)",
+                        fontWeight: settingsTab === t.key ? 700 : 500,
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Content */}
+                <div style={{ padding: "1.5rem 1.75rem 2rem" }}>
+                  {loading ? <Spinner label="Loading settings…" /> : (
+                    <>
+                      {/* ── GENERAL ── */}
+                      {settingsTab === "general" && (
+                        <div>
+                          {/* Avatar row */}
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: "1.4rem", borderBottom: "1px solid var(--border)", marginBottom: "0.2rem" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                              <input ref={profilePicInputRef} type="file" accept="image/*" onChange={handleProfilePictureChange} style={{ display: "none" }} />
+                              {profilePicture ? (
+                                <img src={profilePicture} alt="Profile" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover" }} />
+                              ) : (
+                                <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--subtle)", color: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 700 }}>
+                                  {initials(String(currentUser?.full_name || currentUser?.email || "SA"))}
+                                </div>
+                              )}
                             </div>
-                          ))
-                        ))}
-                    </div>
-                    <div style={{ marginTop: "2rem", padding: "1.5rem", border: "1px solid #e2e0d8", borderRadius: 16, background: "#ffffff" }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: "1rem" }}>Change Super Admin Password</div>
-                      <div style={{ display: "grid", gap: "1rem", maxWidth: 520 }}>
- 
-                        <label style={{ display: "grid", gap: 6, fontSize: 12, color: "#7a7a74" }}>
-                          Current password
-                          <input type="password" value={superCurrentPassword} onChange={e => setSuperCurrentPassword(e.target.value)} style={{ padding: "0.85rem 1rem", borderRadius: 12, border: "1px solid #d9d6ce", outline: "none", width: "100%" }} />
-                        </label>
-                        <label style={{ display: "grid", gap: 6, fontSize: 12, color: "#7a7a74" }}>
-                          New password
-                          <input type="password" value={superNewPassword} onChange={e => setSuperNewPassword(e.target.value)} style={{ padding: "0.85rem 1rem", borderRadius: 12, border: "1px solid #d9d6ce", outline: "none", width: "100%" }} />
-                        </label>
-                        <label style={{ display: "grid", gap: 6, fontSize: 12, color: "#7a7a74" }}>
-                          Confirm new password
-                          <input type="password" value={superConfirmPassword} onChange={e => setSuperConfirmPassword(e.target.value)} style={{ padding: "0.85rem 1rem", borderRadius: 12, border: "1px solid #d9d6ce", outline: "none", width: "100%" }} />
-                        </label>
-                        <button onClick={async () => {
-                          if (!superCurrentPassword || !superNewPassword || !superConfirmPassword) {
-                            flash("Please fill all password fields", "error");
-                            return;
-                          }
-                          if (superNewPassword !== superConfirmPassword) {
-                            flash("New passwords do not match", "error");
-                            return;
-                          }
-                          await runAdminAction("change_super_password", undefined, {
-                            current_password: superCurrentPassword,
-                            new_password: superNewPassword,
-                          });
-                        }} style={{ width: "fit-content", padding: "0.85rem 1.25rem", borderRadius: 12, border: "none", background: "#141410", color: "#fff", cursor: "pointer" }}>Update password</button>
-                      </div>
-                    </div>
-                  </>
-                )}
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button onClick={handleRemoveProfilePicture} title="Remove photo" style={{ width: 38, height: 38, borderRadius: 10, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                              </button>
+                              <button onClick={() => profilePicInputRef.current?.click()} style={{ display: "flex", alignItems: "center", gap: 7, padding: "0 16px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                Upload
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Name */}
+                          <SettingsRow label="Name" onEdit={() => openFieldEditor("name")}>
+                            {currentUser?.full_name || "—"}
+                          </SettingsRow>
+                          {editingField === "name" && (
+                            <div style={{ display: "flex", gap: 8, padding: "0.9rem 0", borderBottom: "1px solid var(--border)" }}>
+                              <input autoFocus value={editDraft.full_name || ""} onChange={e => setEditDraft(d => ({ ...d, full_name: e.target.value }))} placeholder="Full name" style={{ flex: 1, padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border)", fontFamily: "inherit", fontSize: 13 }} />
+                              <button onClick={saveFieldEditor} style={{ padding: "0 16px", borderRadius: 9, border: "none", background: "var(--accent)", color: "var(--accent-text)", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Save</button>
+                              <button onClick={() => setEditingField(null)} style={{ padding: "0 14px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--muted)", fontFamily: "inherit", fontSize: 12.5, cursor: "pointer" }}>Cancel</button>
+                            </div>
+                          )}
+
+                          {/* Contacts */}
+                          <SettingsRow label="Contacts" onEdit={() => openFieldEditor("contacts")}>
+                            <div>Email: {currentUser?.email || "—"}</div>
+                            <div>Phone: {profileExtra.phone || "Not set"}</div>
+                          </SettingsRow>
+                          {editingField === "contacts" && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0.9rem 0", borderBottom: "1px solid var(--border)" }}>
+                              <input value={editDraft.email || ""} disabled title="Login email can't be changed here" style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border)", fontFamily: "inherit", fontSize: 13, background: "var(--subtle)", color: "var(--muted)" }} />
+                              <input autoFocus value={editDraft.phone || ""} onChange={e => setEditDraft(d => ({ ...d, phone: e.target.value }))} placeholder="Phone number" style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border)", fontFamily: "inherit", fontSize: 13 }} />
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <button onClick={saveFieldEditor} style={{ padding: "8px 16px", borderRadius: 9, border: "none", background: "var(--accent)", color: "var(--accent-text)", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Save</button>
+                                <button onClick={() => setEditingField(null)} style={{ padding: "8px 14px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--muted)", fontFamily: "inherit", fontSize: 12.5, cursor: "pointer" }}>Cancel</button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Social media */}
+                          <SettingsRow label="Social media" onEdit={() => openFieldEditor("social")}>
+                            <div>{profileExtra.linkedin || "No LinkedIn linked"}</div>
+                            <div>{profileExtra.dribbble || "No Dribbble linked"}</div>
+                          </SettingsRow>
+                          {editingField === "social" && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0.9rem 0", borderBottom: "1px solid var(--border)" }}>
+                              <input autoFocus value={editDraft.linkedin || ""} onChange={e => setEditDraft(d => ({ ...d, linkedin: e.target.value }))} placeholder="linkedin.com/company/…" style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border)", fontFamily: "inherit", fontSize: 13 }} />
+                              <input value={editDraft.dribbble || ""} onChange={e => setEditDraft(d => ({ ...d, dribbble: e.target.value }))} placeholder="dribbble.com/…" style={{ padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border)", fontFamily: "inherit", fontSize: 13 }} />
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <button onClick={saveFieldEditor} style={{ padding: "8px 16px", borderRadius: 9, border: "none", background: "var(--accent)", color: "var(--accent-text)", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Save</button>
+                                <button onClick={() => setEditingField(null)} style={{ padding: "8px 14px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--muted)", fontFamily: "inherit", fontSize: 12.5, cursor: "pointer" }}>Cancel</button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Language & currency */}
+                          <SettingsRow label="Language & currency" onEdit={() => openFieldEditor("language")}>
+                            {profileExtra.language}, {profileExtra.currency}
+                          </SettingsRow>
+                          {editingField === "language" && (
+                            <div style={{ display: "flex", gap: 8, padding: "0.9rem 0", borderBottom: "1px solid var(--border)" }}>
+                              <select autoFocus value={editDraft.language || "English"} onChange={e => setEditDraft(d => ({ ...d, language: e.target.value }))} style={{ flex: 1, padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border)", fontFamily: "inherit", fontSize: 13 }}>
+                                <option>English</option><option>French</option><option>Swahili</option><option>Spanish</option><option>Arabic</option>
+                              </select>
+                              <select value={editDraft.currency || "USD"} onChange={e => setEditDraft(d => ({ ...d, currency: e.target.value }))} style={{ flex: 1, padding: "9px 12px", borderRadius: 9, border: "1px solid var(--border)", fontFamily: "inherit", fontSize: 13 }}>
+                                <option>USD</option><option>KES</option><option>EUR</option><option>GBP</option>
+                              </select>
+                              <button onClick={saveFieldEditor} style={{ padding: "0 16px", borderRadius: 9, border: "none", background: "var(--accent)", color: "var(--accent-text)", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Save</button>
+                              <button onClick={() => setEditingField(null)} style={{ padding: "0 14px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--muted)", fontFamily: "inherit", fontSize: 12.5, cursor: "pointer" }}>Cancel</button>
+                            </div>
+                          )}
+
+                          {/* Appearance shortcut */}
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "1.15rem 0", borderBottom: "1px solid var(--border)" }}>
+                            <div>
+                              <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>Theme</div>
+                              <div style={{ fontSize: 13, color: "var(--muted)" }}>Appearance</div>
+                            </div>
+                            <ThemeSwitcher />
+                          </div>
+
+                          {/* Extra feature: export settings */}
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.15rem 0" }}>
+                            <div>
+                              <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>Export account settings</div>
+                              <div style={{ fontSize: 13, color: "var(--muted)" }}>Download your profile & preferences as a JSON file</div>
+                            </div>
+                            <button onClick={exportAccountData} style={{ display: "flex", alignItems: "center", gap: 7, padding: "0 16px", height: 36, borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                              Export
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── NOTIFICATIONS ── */}
+                      {settingsTab === "notifications" && (
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>Notification preferences</div>
+                          <div style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: "0.5rem" }}>Choose what you get notified about. Saved automatically.</div>
+                          {[
+                            { key: "newAdminSignup" as const, label: "New admin sign-ups", desc: "Get notified whenever a new store admin registers" },
+                            { key: "billingAlerts" as const, label: "Billing alerts", desc: "Suspicious or failed billing activity across stores" },
+                            { key: "weeklySummary" as const, label: "Weekly summary report", desc: "A digest of orders, revenue and growth every Monday" },
+                            { key: "securityAlerts" as const, label: "Security alerts", desc: "Password changes and unusual sign-in activity" },
+                          ].map(n => (
+                            <div key={n.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "1.05rem 0", borderBottom: "1px solid var(--border)" }}>
+                              <div>
+                                <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>{n.label}</div>
+                                <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>{n.desc}</div>
+                              </div>
+                              <Switch on={notifPrefs[n.key]} onToggle={() => toggleNotifPref(n.key)} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* ── SECURITY ── */}
+                      {settingsTab === "security" && (
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", marginBottom: "1.1rem" }}>Change Super Admin Password</div>
+                          <div style={{ display: "grid", gap: "1rem", maxWidth: 420 }}>
+                            <label style={{ display: "grid", gap: 6, fontSize: 12, color: "var(--muted)" }}>
+                              Current password
+                              <input type="password" value={superCurrentPassword} onChange={e => setSuperCurrentPassword(e.target.value)} style={{ padding: "0.75rem 1rem", borderRadius: 10, border: "1px solid var(--border)", outline: "none", width: "100%", fontFamily: "inherit" }} />
+                            </label>
+                            <label style={{ display: "grid", gap: 6, fontSize: 12, color: "var(--muted)" }}>
+                              New password
+                              <input type="password" value={superNewPassword} onChange={e => setSuperNewPassword(e.target.value)} style={{ padding: "0.75rem 1rem", borderRadius: 10, border: "1px solid var(--border)", outline: "none", width: "100%", fontFamily: "inherit" }} />
+                            </label>
+                            <label style={{ display: "grid", gap: 6, fontSize: 12, color: "var(--muted)" }}>
+                              Confirm new password
+                              <input type="password" value={superConfirmPassword} onChange={e => setSuperConfirmPassword(e.target.value)} style={{ padding: "0.75rem 1rem", borderRadius: 10, border: "1px solid var(--border)", outline: "none", width: "100%", fontFamily: "inherit" }} />
+                            </label>
+                            <button onClick={async () => {
+                              if (!superCurrentPassword || !superNewPassword || !superConfirmPassword) {
+                                flash("Please fill all password fields", "error");
+                                return;
+                              }
+                              if (superNewPassword !== superConfirmPassword) {
+                                flash("New passwords do not match", "error");
+                                return;
+                              }
+                              await runAdminAction("change_super_password", undefined, {
+                                current_password: superCurrentPassword,
+                                new_password: superNewPassword,
+                              });
+                            }} style={{ width: "fit-content", padding: "0.75rem 1.25rem", borderRadius: 10, border: "none", background: "var(--accent)", color: "var(--accent-text)", cursor: "pointer", fontFamily: "inherit", fontWeight: 600, fontSize: 13 }}>Update password</button>
+                          </div>
+
+                          <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <div>
+                              <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>Sign out</div>
+                              <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>End your current super admin session on this device</div>
+                            </div>
+                            <button onClick={() => { localStorage.removeItem("user"); router.push("/login"); }} style={{ padding: "9px 16px", borderRadius: 9, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Sign out</button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── APPEARANCE ── */}
+                      {settingsTab === "appearance" && (
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>Appearance</div>
+                          <div style={{ fontSize: 12.5, color: "var(--muted)", marginBottom: "1.3rem" }}>Pick a color theme for the whole dashboard.</div>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.1rem 0", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
+                            <div>
+                              <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>Theme</div>
+                              <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>Applies instantly across the dashboard</div>
+                            </div>
+                            <ThemeSwitcher />
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             )}
 
