@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState, createContext, useContext } from "react";
+import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from "react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -804,13 +804,45 @@ export default function SuperAdminPage() {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [panelAdmin, setPanelAdmin] = useState<Admin | null>(null);
   const [currentUser, setCurrentUser] = useState<{ full_name?: string; email?: string } | null>(null);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const profilePicInputRef = useRef<HTMLInputElement>(null);
 
   /* ── Auth guard ── */
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "null");
     if (!user || !user.is_super_admin) router.push("/login");
-    else setCurrentUser(user);
+    else {
+      setCurrentUser(user);
+      try {
+        const savedPic = localStorage.getItem("sa_profile_picture");
+        if (savedPic) setProfilePicture(savedPic);
+      } catch { /* storage unavailable */ }
+    }
   }, [router]);
+
+  /* ── Profile picture upload ── */
+  const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      flash("Please choose an image file", "error");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      flash("Image must be under 3MB", "error");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setProfilePicture(result);
+      try { localStorage.setItem("sa_profile_picture", result); } catch { /* storage unavailable */ }
+      flash("Profile picture updated", "success");
+    };
+    reader.onerror = () => flash("Could not read that image", "error");
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
 
   /* ── Fetch section ── */
   const fetchSection = useCallback(async (section: string) => {
@@ -1191,14 +1223,31 @@ const openCreateStaffModal = async () => {
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; }
         .sa-shell { display: flex; min-height: 100vh; background: var(--bg); }
-        .sa-sidebar { background: var(--sidebar); border-right: 1px solid var(--border); width: 250px; flex-shrink: 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+        .sa-sidebar { background: #16213e; border-right: none; width: 260px; flex-shrink: 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
         .sa-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
         .sa-header { background: var(--card); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: sticky; top: 0; z-index: 10; }
         .sa-main { flex: 1; padding: 1.75rem 2rem 2.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
-        .sa-nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border: none; background: transparent; border-radius: 10px; font-family: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; color: var(--muted); transition: all 0.15s; text-align: left; position: relative; }
-        .sa-nav-btn:hover { background: var(--nav-hover); color: var(--ink); }
-        .sa-nav-btn.active { background: var(--accent); color: var(--accent-text); box-shadow: 0 6px 16px -6px var(--accent); }
-        .sa-nav-btn.active svg { color: var(--accent-text); }
+
+        /* Profile header */
+        .sa-profile-header { padding: 2.1rem 1.25rem 1.5rem; display: flex; flex-direction: column; align-items: center; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .sa-avatar-wrap { position: relative; width: 84px; height: 84px; border-radius: 50%; cursor: pointer; margin-bottom: 0.9rem; flex-shrink: 0; }
+        .sa-avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,0.15); display: block; }
+        .sa-avatar-fallback { width: 100%; height: 100%; border-radius: 50%; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 26px; font-weight: 700; border: 3px solid rgba(255,255,255,0.15); box-sizing: border-box; }
+        .sa-avatar-edit { position: absolute; bottom: 0; right: 0; width: 27px; height: 27px; border-radius: 50%; background: #f59e0b; display: flex; align-items: center; justify-content: center; border: 2px solid #16213e; }
+        .sa-profile-name { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: 0.2px; }
+        .sa-profile-email { font-size: 11.5px; color: rgba(255,255,255,0.55); margin-top: 3px; word-break: break-all; }
+
+        /* Nav */
+        .sa-nav { padding: 1rem 0.85rem; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+        .sa-nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 14px; border: none; background: transparent; border-radius: 10px; font-family: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; color: rgba(255,255,255,0.62); transition: all 0.15s; text-align: left; position: relative; }
+        .sa-nav-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+        .sa-nav-btn.active { background: rgba(255,255,255,0.13); color: #fff; box-shadow: inset 3px 0 0 #f59e0b; }
+        .sa-nav-badge { margin-left: auto; font-size: 10px; font-weight: 700; background: #f59e0b; color: #16213e; border-radius: 100px; padding: 1px 7px; }
+
+        /* Sidebar footer */
+        .sa-sidebar-footer { padding: 0.9rem 1rem 1.35rem; border-top: 1px solid rgba(255,255,255,0.08); }
+        .sa-signout-btn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 10px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; background: transparent; color: rgba(255,255,255,0.6); font-family: inherit; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+        .sa-signout-btn:hover { color: #fca5a5; border-color: rgba(252,165,165,0.4); background: rgba(252,165,165,0.08); }
         .sa-card, .sa-stat { background: var(--card); border: 1px solid var(--border); border-radius: 16px; }
         .sa-card { box-shadow: 0 2px 10px rgba(20,20,16,0.03); }
         .sa-stat { padding: 1.15rem 1.3rem; box-shadow: 0 2px 10px rgba(20,20,16,0.03); transition: transform 0.15s, box-shadow 0.15s; }
@@ -1219,49 +1268,61 @@ const openCreateStaffModal = async () => {
 
         {/* ── SIDEBAR ── */}
         <aside className="sa-sidebar">
-          {/* Logo area */}
-          <div style={{ padding: "1.4rem 1.25rem 1.2rem", borderBottom: "1px solid var(--border)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-              <div style={{ width: 38, height: 38, background: "var(--accent)", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 6px 14px -4px var(--accent)" }}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--accent-text)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              </div>
-              <div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>Super Admin</div>
-                <div style={{ fontSize: 11, color: "var(--muted)" }}>POStore Control</div>
+          {/* Profile header */}
+          <div className="sa-profile-header">
+            <input
+              ref={profilePicInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleProfilePictureChange}
+              style={{ display: "none" }}
+            />
+            <div
+              className="sa-avatar-wrap"
+              onClick={() => profilePicInputRef.current?.click()}
+              title="Click to change profile picture"
+            >
+              {profilePicture ? (
+                <img src={profilePicture} alt="Profile" className="sa-avatar-img" />
+              ) : (
+                <div className="sa-avatar-fallback">
+                  {initials(String(currentUser?.full_name || currentUser?.email || "SA"))}
+                </div>
+              )}
+              <div className="sa-avatar-edit">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
               </div>
             </div>
+            <div className="sa-profile-name">{currentUser?.full_name || "Super Admin"}</div>
+            <div className="sa-profile-email">{currentUser?.email || "—"}</div>
           </div>
 
           {/* Nav items */}
-          <nav style={{ padding: "1rem 0.85rem", flex: 1, overflowY: "auto" }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.6px", textTransform: "uppercase", color: "var(--muted)", padding: "0 8px", marginBottom: 8 }}>Navigation</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {TABS.map(t => (
-                <button key={t.key} className={`sa-nav-btn ${activeTab === t.key ? "active" : ""}`} onClick={() => changeTab(t.key)}>
-                  {t.icon}
-                  {t.label}
-                  {t.key === "support" && conversations.length > 0 ? (() => {
-                    const totalUnread = conversations.reduce((s, c) => s + (Number(c.unread_count || 0)), 0);
-                    return (
-                      <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, background: activeTab === "support" ? "rgba(255,255,255,0.25)" : "#dc2626", color: "#fff", borderRadius: 100, padding: "1px 7px" }}>
-                        {totalUnread > 0 ? totalUnread : conversations.length}
-                      </span>
-                    );
-                  })() : activeTab === t.key && (
-                    <span style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: "50%", background: "var(--accent-text)", opacity: 0.85 }} />
-                  )}
-                </button>
-              ))}
-            </div>
+          <nav className="sa-nav">
+            {TABS.map(t => (
+              <button key={t.key} className={`sa-nav-btn ${activeTab === t.key ? "active" : ""}`} onClick={() => changeTab(t.key)}>
+                {t.icon}
+                {t.label}
+                {t.key === "support" && conversations.length > 0 ? (() => {
+                  const totalUnread = conversations.reduce((s, c) => s + (Number(c.unread_count || 0)), 0);
+                  return (
+                    <span className="sa-nav-badge">
+                      {totalUnread > 0 ? totalUnread : conversations.length}
+                    </span>
+                  );
+                })() : null}
+              </button>
+            ))}
           </nav>
 
           {/* Footer */}
-          <div style={{ padding: "0.75rem 1rem", borderTop: "1px solid #e2e0d8" }}>
+          <div className="sa-sidebar-footer">
             <button
               onClick={() => { localStorage.removeItem("user"); router.push("/login"); }}
-              style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 10px", border: "1px solid #e2e0d8", borderRadius: 8, background: "#fff", color: "#9a9a8e", fontFamily: "inherit", fontSize: 12, cursor: "pointer", transition: "all 0.15s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "#dc2626"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#fecaca"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "#9a9a8e"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#e2e0d8"; }}
+              className="sa-signout-btn"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
               Sign out
@@ -1758,7 +1819,7 @@ const openCreateStaffModal = async () => {
                                 <div style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>{conv?.full_name ?? selectedAdminId}</div>
                                 <div style={{ fontSize: 11, color: "#9a9a8e" }}>{conv?.role ? conv.role.toUpperCase() : "ADMIN"} · {conv?.email}</div>
                               </div>
-                            </div>
+                              </div>
                           );
                         })()
                       : <div style={{ fontSize: 13, color: "#9a9a8e" }}>Select a conversation to view messages</div>}
