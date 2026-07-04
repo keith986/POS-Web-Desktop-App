@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
 /* ─── Types ── */
-type TabKey = "overview" | "users" | "staff" | "orders" | "logs" | "billing" | "settings" | "support";
+type TabKey = "overview" | "users" | "staff" | "orders" | "logs" | "billing" | "notifications" | "settings" | "support";
 
 interface OverviewStats {
   userCount: number;
@@ -134,6 +134,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "orders",    label: "Orders",    icon: <IcoOrders />   },
   { key: "logs",      label: "Logs",      icon: <IcoLogs />     },
   { key: "billing",   label: "Billing",   icon: <IcoBilling />  },
+  { key: "notifications", label: "Notifications", icon: <IcoBell /> },
   { key: "settings",  label: "Settings",  icon: <IcoSettings /> },
   { key: "support",   label: "Support",   icon: <IcoSupport />  },
 ];
@@ -212,10 +213,45 @@ function Avatar({ name, size = 32 }: { name: string; size?: number }) {
 /* ─── Row actions dropdown ── */
 function ActionsMenu({ items }: { items: { label: string; onClick: () => void; danger?: boolean; accent?: boolean }[] }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0, openUp: false });
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  const computePos = useCallback(() => {
+    const btn = btnRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const menuWidth = 180;
+    const menuHeight = items.length * 36 + 10;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < menuHeight + 12 && rect.top > menuHeight;
+    let left = rect.right - menuWidth;
+    if (left < 8) left = 8;
+    if (left + menuWidth > window.innerWidth - 8) left = window.innerWidth - menuWidth - 8;
+    const top = openUp ? rect.top - menuHeight - 4 : rect.bottom + 4;
+    setPos({ top, left, openUp });
+  }, [items.length]);
+
+  const toggle = () => {
+    if (!open) computePos();
+    setOpen(o => !o);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onScrollOrResize = () => computePos();
+    window.addEventListener("scroll", onScrollOrResize, true);
+    window.addEventListener("resize", onScrollOrResize);
+    return () => {
+      window.removeEventListener("scroll", onScrollOrResize, true);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [open, computePos]);
+
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={btnRef}
+        onClick={toggle}
         className="sa-icon-btn"
         style={{ width: 32, height: 32, borderRadius: 8 }}
         aria-label="Row actions"
@@ -226,7 +262,7 @@ function ActionsMenu({ items }: { items: { label: string; onClick: () => void; d
         <>
           <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 5000 }} />
           <div style={{
-            position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 5001, minWidth: 170,
+            position: "fixed", top: pos.top, left: pos.left, zIndex: 5001, width: 180,
             background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10,
             boxShadow: "0 10px 28px rgba(0,0,0,0.14)", padding: 5, display: "flex", flexDirection: "column", gap: 2,
           }}>
@@ -353,47 +389,7 @@ function statusBadge(val: unknown) {
   return <Badge label={String(val)} type="neutral" />;
 }
 
-/* ─── Generic table (logs/orders fallback) ── */
-// Technical/duplicate columns that shouldn't be shown to admins in the table view.
-const GENERIC_TABLE_HIDDEN_KEYS = ["id", "admin_id", "user_id", "staff_id", "store_id", "updated_at", "password", "token"];
-
-function GenericTable({ data, excludeKeys = [], maxColumns = 6 }: { data: Record<string, unknown>[]; excludeKeys?: string[]; maxColumns?: number }) {
-  if (!data.length) return (
-    <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No records found.</div>
-  );
-  const hidden = new Set([...GENERIC_TABLE_HIDDEN_KEYS, ...excludeKeys]);
-  const keys = Object.keys(data[0]).filter(k => !hidden.has(k)).slice(0, maxColumns);
-  return (
-    <div style={{ width: "100%", overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
-        <thead>
-          <tr>
-            {keys.map(k => (
-              <th key={k} style={{ textAlign: "left", padding: "0.75rem 1rem", fontSize: 11, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)", background: "var(--subtle)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {k.replace(/_/g, " ")}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, i) => (
-            <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = "var(--subtle)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = ""; }}>
-              {keys.map(k => (
-                <td key={k} style={{ padding: "0.85rem 1rem", color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {["status", "payment_status", "subdomain_status"].includes(k)
-                    ? statusBadge(row[k])
-                    : String(row[k] ?? "—")}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+/* ─── (GenericTable removed — Orders and Logs now use dedicated schema-aware tables below) ── */
 
 /* ─── Spinner ── */
 function Spinner({ label = "Loading…" }: { label?: string }) {
@@ -873,6 +869,11 @@ export default function SuperAdminPage() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
 
+  /* ── Notification bell popover ── */
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifPos, setNotifPos] = useState({ top: 0, left: 0 });
+  const notifBtnRef = useRef<HTMLButtonElement>(null);
+
   /* ── Settings page state ── */
   const [settingsTab, setSettingsTab] = useState<"general" | "notifications" | "security" | "appearance">("general");
   const [profileExtra, setProfileExtra] = useState({ phone: "", linkedin: "", dribbble: "", language: "English", currency: "USD" });
@@ -984,7 +985,7 @@ export default function SuperAdminPage() {
 
   /* ── Fetch section ── */
   const fetchSection = useCallback(async (section: string) => {
-    if (section === "support") return;
+    if (section === "support" || section === "notifications") return;
     setLoading(true);
     try {
       const user = JSON.parse(localStorage.getItem("user") || "null");
@@ -1299,6 +1300,9 @@ const openCreateStaffModal = async () => {
     finally  { setSupportLoading(false); }
   }, []);
 
+  // Load once on mount so unread-message counts (sidebar badge, header bell) are accurate
+  // without the user ever having to open the Support tab.
+  useEffect(() => { loadConversations(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (activeTab === "support") loadConversations(); }, [activeTab, loadConversations]);
   useEffect(() => { if (selectedAdminId) loadMessages(selectedAdminId); }, [selectedAdminId, loadMessages]);
 
@@ -1308,6 +1312,37 @@ const openCreateStaffModal = async () => {
   const paginated  = filtered.slice((page - 1) * perPage, page * perPage);
 
   const changeTab = (t: TabKey) => { setActiveTab(t); setSearch(""); setPage(1); };
+
+  /* ── Notification bell: unread messages + recent activity, combined ── */
+  const unreadConversations = conversations.filter(c => Number(c.unread_count || 0) > 0);
+  const totalUnreadMessages = unreadConversations.reduce((s, c) => s + Number(c.unread_count || 0), 0);
+  const recentLogItems = Array.isArray(stats?.recentLogs) ? stats!.recentLogs! : [];
+
+  const computeNotifPos = () => {
+    const btn = notifBtnRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const width = 340;
+    let left = rect.right - width;
+    if (left < 8) left = 8;
+    if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
+    setNotifPos({ top: rect.bottom + 8, left });
+  };
+
+  const toggleNotif = () => {
+    if (!notifOpen) computeNotifPos();
+    setNotifOpen(o => !o);
+  };
+
+  const replyToConversation = (adminId: string) => {
+    setNotifOpen(false);
+    messageAdmin(adminId);
+  };
+
+  const goToNotification = () => {
+    setNotifOpen(false);
+    changeTab("notifications");
+  };
 
   /* ── Send support reply ── */
   const sendReply = async () => {
@@ -1361,7 +1396,7 @@ const openCreateStaffModal = async () => {
      <ThemeProvider>
       <style>{`
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+        body { margin: 0; font-family: 'Book Antiqua', 'Palatino Linotype', Tahoma, serif; -webkit-font-smoothing: antialiased; }
         .sa-shell { display: flex; min-height: 100vh; background: var(--bg); }
         .sa-sidebar { background: #16213e; border-right: none; width: 260px; flex-shrink: 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
         .sa-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
@@ -1446,13 +1481,9 @@ const openCreateStaffModal = async () => {
               <button key={t.key} className={`sa-nav-btn ${activeTab === t.key ? "active" : ""}`} onClick={() => changeTab(t.key)}>
                 {t.icon}
                 {t.label}
-                {t.key === "support" && conversations.length > 0 ? (() => {
+                {(t.key === "support" || t.key === "notifications") ? (() => {
                   const totalUnread = conversations.reduce((s, c) => s + (Number(c.unread_count || 0)), 0);
-                  return (
-                    <span className="sa-nav-badge">
-                      {totalUnread > 0 ? totalUnread : conversations.length}
-                    </span>
-                  );
+                  return <span className="sa-nav-badge">{totalUnread}</span>;
                 })() : null}
               </button>
             ))}
@@ -1485,12 +1516,6 @@ const openCreateStaffModal = async () => {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {/* Super admin badge */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 100, padding: "5px 12px" }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#dc2626" }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", letterSpacing: "0.3px" }}>SUPER ADMIN</span>
-              </div>
-
               <button
                 onClick={() => activeTab === "support" ? loadConversations() : fetchSection(activeTab)}
                 className="sa-icon-btn"
@@ -1499,12 +1524,96 @@ const openCreateStaffModal = async () => {
                 <IcoRefresh />
               </button>
 
-              <button className="sa-icon-btn" title="Notifications">
+              <button ref={notifBtnRef} onClick={toggleNotif} className="sa-icon-btn" title="Notifications">
                 <IcoBell />
-                {Array.isArray(stats?.recentLogs) && stats!.recentLogs!.length > 0 && (
+                {totalUnreadMessages > 0 ? (
+                  <span style={{
+                    position: "absolute", top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 100,
+                    background: "#dc2626", border: "2px solid var(--card)", color: "#fff", fontSize: 9.5, fontWeight: 700,
+                    display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px",
+                  }}>
+                    {totalUnreadMessages > 9 ? "9+" : totalUnreadMessages}
+                  </span>
+                ) : recentLogItems.length > 0 && (
                   <span style={{ position: "absolute", top: 6, right: 7, width: 7, height: 7, borderRadius: "50%", background: "#dc2626", border: "2px solid var(--card)" }} />
                 )}
               </button>
+
+              {notifOpen && (
+                <>
+                  <div onClick={() => setNotifOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 5000 }} />
+                  <div style={{
+                    position: "fixed", top: notifPos.top, left: notifPos.left, zIndex: 5001, width: 340, maxHeight: "70vh",
+                    background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14,
+                    boxShadow: "0 16px 40px rgba(0,0,0,0.16)", display: "flex", flexDirection: "column", overflow: "hidden",
+                  }}>
+                    <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)", fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+                      Notifications
+                    </div>
+                    <div style={{ overflowY: "auto", flex: 1 }}>
+                      {unreadConversations.length === 0 && recentLogItems.length === 0 && (
+                        <div style={{ padding: "2rem 1rem", textAlign: "center", color: "var(--muted)", fontSize: 12.5 }}>
+                          You're all caught up.
+                        </div>
+                      )}
+
+                      {unreadConversations.length > 0 && (
+                        <div>
+                          <div style={{ padding: "8px 14px 4px", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--muted)" }}>Unread messages</div>
+                          {unreadConversations.slice(0, 5).map((c, i) => (
+                            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", borderBottom: "1px solid var(--border)" }}>
+                              <Avatar name={c.full_name || c.email || "?"} size={30} />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>{c.full_name || c.email}</div>
+                                <div style={{ fontSize: 11.5, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.last_message || "New message"}</div>
+                              </div>
+                              <button
+                                onClick={() => replyToConversation(c.admin_id)}
+                                style={{ flexShrink: 0, padding: "6px 10px", borderRadius: 8, border: "none", background: "#141410", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+                              >
+                                Reply
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {recentLogItems.length > 0 && (
+                        <div>
+                          <div style={{ padding: "8px 14px 4px", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--muted)" }}>Recent activity</div>
+                          {recentLogItems.slice(0, 5).map((log, i) => (
+                            <button
+                              key={i}
+                              onClick={goToNotification}
+                              style={{
+                                display: "flex", alignItems: "flex-start", gap: 10, width: "100%", textAlign: "left",
+                                padding: "9px 14px", borderBottom: "1px solid var(--border)", border: "none",
+                                background: "transparent", cursor: "pointer", fontFamily: "inherit",
+                              }}
+                              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--subtle)"; }}
+                              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+                            >
+                              <div style={{ width: 26, height: 26, borderRadius: 8, background: "var(--subtle)", color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                                <IcoLogs />
+                              </div>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>{log.title || "Notification"}</div>
+                                <div style={{ fontSize: 11.5, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{log.message}</div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={goToNotification}
+                      style={{ padding: "10px", textAlign: "center", border: "none", borderTop: "1px solid var(--border)", background: "var(--subtle)", color: "var(--ink)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+                    >
+                      View all notifications
+                    </button>
+                  </div>
+                </>
+              )}
 
               <ThemeSwitcher />
 
@@ -1715,17 +1824,23 @@ const openCreateStaffModal = async () => {
                 {loading ? <Spinner label="Loading users…" /> : (
                   <>
                     <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
                       <thead><tr>
-                        {["User", "Store", "Plan", "Status", "Joined"].map(h => <th key={h} style={TH}>{h}</th>)}
-                        <th style={{ ...TH, textAlign: "right" }}>Actions</th>
+                        <th style={{ ...TH, width: "5%" }}>#</th>
+                        <th style={{ ...TH, width: "27%" }}>User</th>
+                        <th style={{ ...TH, width: "18%" }}>Store</th>
+                        <th style={{ ...TH, width: "12%" }}>Plan</th>
+                        <th style={{ ...TH, width: "12%" }}>Status</th>
+                        <th style={{ ...TH, width: "13%" }}>Joined</th>
+                        <th style={{ ...TH, width: "13%", textAlign: "right" }}>Actions</th>
                       </tr></thead>
                       <tbody>
                         {paginated.length === 0
-                          ? <tr><td colSpan={6} style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No users found.</td></tr>
+                          ? <tr><td colSpan={7} style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No users found.</td></tr>
                           : paginated.map((r, i) => (
                             <tr key={i} style={{ borderBottom: "1px solid var(--border)" }} {...rowHover}>
-                              <td style={TD}>
+                              <td style={{ ...TD, color: "var(--muted)" }}>{(page - 1) * perPage + i + 1}</td>
+                              <td style={{ ...TD, overflow: "hidden" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                   <Avatar name={String(r.full_name ?? r.email ?? "?")} />
                                   <div style={{ minWidth: 0 }}>
@@ -1733,11 +1848,11 @@ const openCreateStaffModal = async () => {
                                       <span style={{ fontWeight: 600, color: "var(--ink)" }}>{String(r.full_name ?? "—")}</span>
                                       {Number(r.is_super_admin) === 1 && <span style={{ fontSize: 9.5, fontWeight: 700, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 100, padding: "1px 6px" }}>SA</span>}
                                     </div>
-                                    <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{String(r.email ?? "—")}</div>
+                                    <div style={{ fontSize: 11.5, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.email ?? "—")}</div>
                                   </div>
                                 </div>
                               </td>
-                              <td style={TD}>{String(r.store_name ?? "—")}</td>
+                              <td style={{ ...TD, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.store_name ?? "—")}</td>
                               <td style={TD}>
                                 {r.plan ? <Badge label={String(r.plan).charAt(0).toUpperCase() + String(r.plan).slice(1)} type="info" /> : <span style={{ color: "var(--muted)" }}>—</span>}
                               </td>
@@ -1778,26 +1893,32 @@ const openCreateStaffModal = async () => {
                 {loading ? <Spinner label="Loading staff…" /> : (
                   <>
                     <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
                       <thead><tr>
-                        {["User", "Store", "Role", "Status", "Joined"].map(h => <th key={h} style={TH}>{h}</th>)}
-                        <th style={{ ...TH, textAlign: "right" }}>Actions</th>
+                        <th style={{ ...TH, width: "5%" }}>#</th>
+                        <th style={{ ...TH, width: "27%" }}>User</th>
+                        <th style={{ ...TH, width: "18%" }}>Store</th>
+                        <th style={{ ...TH, width: "12%" }}>Role</th>
+                        <th style={{ ...TH, width: "12%" }}>Status</th>
+                        <th style={{ ...TH, width: "13%" }}>Joined</th>
+                        <th style={{ ...TH, width: "13%", textAlign: "right" }}>Actions</th>
                       </tr></thead>
                       <tbody>
                         {paginated.length === 0
-                          ? <tr><td colSpan={6} style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No staff found.</td></tr>
+                          ? <tr><td colSpan={7} style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No staff found.</td></tr>
                           : paginated.map((r, i) => (
                             <tr key={i} style={{ borderBottom: "1px solid var(--border)" }} {...rowHover}>
-                              <td style={TD}>
+                              <td style={{ ...TD, color: "var(--muted)" }}>{(page - 1) * perPage + i + 1}</td>
+                              <td style={{ ...TD, overflow: "hidden" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                   <Avatar name={String(r.full_name ?? r.email ?? "?")} />
                                   <div style={{ minWidth: 0 }}>
                                     <div style={{ fontWeight: 600, color: "var(--ink)" }}>{String(r.full_name ?? "—")}</div>
-                                    <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{String(r.email ?? "—")}</div>
+                                    <div style={{ fontSize: 11.5, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.email ?? "—")}</div>
                                   </div>
                                 </div>
                               </td>
-                              <td style={TD}>{String(r.store_name ?? r.admin_id ?? "—")}</td>
+                              <td style={{ ...TD, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.store_name ?? r.admin_id ?? "—")}</td>
                               <td style={TD}><Badge label={String(r.shift_role ?? r.role ?? "staff")} type="neutral" /></td>
                               <td style={TD}>{statusBadge(r.status)}</td>
                               <td style={{ ...TD, color: "var(--muted)" }}>{fmtDate(r.created_at)}</td>
@@ -1834,7 +1955,39 @@ const openCreateStaffModal = async () => {
                 </div>
                 {loading ? <Spinner label="Loading orders…" /> : (
                   <>
-                    <GenericTable data={paginated} />
+                    <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
+                      <thead><tr>
+                        <th style={{ ...TH, width: "5%" }}>#</th>
+                        <th style={{ ...TH, width: "14%" }}>Order</th>
+                        <th style={{ ...TH, width: "20%" }}>Customer</th>
+                        <th style={{ ...TH, width: "11%" }}>Total</th>
+                        <th style={{ ...TH, width: "12%" }}>Payment</th>
+                        <th style={{ ...TH, width: "13%" }}>Status</th>
+                        <th style={{ ...TH, width: "13%" }}>Staff</th>
+                        <th style={{ ...TH, width: "12%" }}>Date</th>
+                      </tr></thead>
+                      <tbody>
+                        {paginated.length === 0
+                          ? <tr><td colSpan={8} style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No orders found.</td></tr>
+                          : paginated.map((r, i) => (
+                            <tr key={i} style={{ borderBottom: "1px solid var(--border)" }} {...rowHover}>
+                              <td style={{ ...TD, color: "var(--muted)" }}>{(page - 1) * perPage + i + 1}</td>
+                              <td style={{ ...TD, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.order_number ?? shortId(r.id))}</td>
+                              <td style={{ ...TD, overflow: "hidden" }}>
+                                <div style={{ fontWeight: 500, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.customer_name ?? "—")}</div>
+                                <div style={{ fontSize: 11.5, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.customer_email ?? "—")}</div>
+                              </td>
+                              <td style={{ ...TD, fontWeight: 600, color: "var(--ink)" }}>KES {Number(r.total || 0).toLocaleString()}</td>
+                              <td style={{ ...TD, textTransform: "capitalize", color: "var(--muted)" }}>{String(r.payment_method ?? "—")}</td>
+                              <td style={TD}>{statusBadge(r.status)}</td>
+                              <td style={{ ...TD, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.staff_name ?? "—")}</td>
+                              <td style={{ ...TD, color: "var(--muted)", fontSize: 12 }}>{fmtDate(r.created_at)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                    </div>
                     <Pagination page={page} total={totalPages} onChange={setPage} perPage={perPage} onPerPageChange={n => { setPerPage(n); setPage(1); }} totalItems={filtered.length} />
                   </>
                 )}
@@ -1850,7 +2003,30 @@ const openCreateStaffModal = async () => {
                 </div>
                 {loading ? <Spinner label="Loading logs…" /> : (
                   <>
-                    <GenericTable data={paginated} />
+                    <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
+                      <thead><tr>
+                        <th style={{ ...TH, width: "6%" }}>#</th>
+                        <th style={{ ...TH, width: "12%" }}>Type</th>
+                        <th style={{ ...TH, width: "20%" }}>Title</th>
+                        <th style={{ ...TH, width: "42%" }}>Message</th>
+                        <th style={{ ...TH, width: "20%" }}>Date</th>
+                      </tr></thead>
+                      <tbody>
+                        {paginated.length === 0
+                          ? <tr><td colSpan={5} style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No logs found.</td></tr>
+                          : paginated.map((r, i) => (
+                            <tr key={i} style={{ borderBottom: "1px solid var(--border)" }} {...rowHover}>
+                              <td style={{ ...TD, color: "var(--muted)" }}>{(page - 1) * perPage + i + 1}</td>
+                              <td style={TD}><Badge label={String(r.type ?? "log")} type={r.type === "refund" ? "err" : r.type === "order" ? "ok" : "neutral"} /></td>
+                              <td style={{ ...TD, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.title ?? "—")}</td>
+                              <td style={{ ...TD, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.message ?? "—")}</td>
+                              <td style={{ ...TD, color: "var(--muted)", fontSize: 12 }}>{fmtDateTime(r.created_at)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                    </div>
                     <Pagination page={page} total={totalPages} onChange={setPage} perPage={perPage} onPerPageChange={n => { setPerPage(n); setPage(1); }} totalItems={filtered.length} />
                   </>
                 )}
@@ -1868,13 +2044,15 @@ const openCreateStaffModal = async () => {
                   <>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                       <thead><tr>
+                        <th style={TH}>#</th>
                         {["Admin ID", "Store", "Domain", "Plan", "Amount", "Status", "Renewed", "Expires", "Updated", "Actions"].map(h => <th key={h} style={TH}>{h}</th>)}
                       </tr></thead>
                       <tbody>
                         {paginated.length === 0
-                          ? <tr><td colSpan={10} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No billing records.</td></tr>
+                          ? <tr><td colSpan={11} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No billing records.</td></tr>
                           : paginated.map((r, i) => (
                             <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }} {...rowHover}>
+                              <td style={{ ...TD, color: "#9a9a8e" }}>{(page - 1) * perPage + i + 1}</td>
                               <td style={{ ...TD, fontFamily: "monospace", fontSize: 11, color: "#9a9a8e" }}>{shortId(r.admin_id ?? r.id)}</td>
                               <td style={{ ...TD, fontWeight: 500, color: "#141410" }}>{String(r.store_name ?? "—")}</td>
                               <td style={{ ...TD, color: "#9a9a8e" }}>{String(r.domain ?? "—")}</td>
@@ -1894,6 +2072,81 @@ const openCreateStaffModal = async () => {
                     </table>
                     <Pagination page={page} total={totalPages} onChange={setPage} perPage={perPage} onPerPageChange={n => { setPerPage(n); setPage(1); }} totalItems={filtered.length} />
                   </>
+                )}
+              </div>
+            )}
+
+            {/* ══ NOTIFICATIONS ══ */}
+            {activeTab === "notifications" && (
+              <div className="sa-card">
+                <div className="sa-toolbar">
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>Notifications</div>
+                  <span style={{ fontSize: 12, color: "var(--muted)", marginLeft: "auto" }}>
+                    {totalUnreadMessages} unread message{totalUnreadMessages !== 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                {unreadConversations.length === 0 && recentLogItems.length === 0 ? (
+                  <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
+                    You&apos;re all caught up — no new notifications.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {unreadConversations.length > 0 && (
+                      <>
+                        <div style={{ padding: "12px 20px 4px", fontSize: 11, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--muted)" }}>
+                          Unread messages
+                        </div>
+                        {unreadConversations.map((c, i) => (
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: "1px solid var(--border)" }}>
+                            <span style={{ width: 24, textAlign: "center", color: "var(--muted)", fontSize: 12.5 }}>{i + 1}</span>
+                            <Avatar name={c.full_name || c.email || "?"} size={36} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{c.full_name || c.email}</span>
+                                <span style={{ background: "#ef4444", color: "#fff", borderRadius: 100, fontSize: 10.5, fontWeight: 700, padding: "1px 7px" }}>{c.unread_count}</span>
+                              </div>
+                              <div style={{ fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.last_message || "New message"}</div>
+                            </div>
+                            <span style={{ fontSize: 11.5, color: "var(--muted)", flexShrink: 0 }}>{c.time}</span>
+                            <button
+                              onClick={() => replyToConversation(c.admin_id)}
+                              style={{ flexShrink: 0, padding: "8px 14px", borderRadius: 9, border: "none", background: "#141410", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                            >
+                              Reply
+                            </button>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {recentLogItems.length > 0 && (
+                      <>
+                        <div style={{ padding: "12px 20px 4px", fontSize: 11, fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--muted)" }}>
+                          Recent activity
+                        </div>
+                        {recentLogItems.map((log, i) => (
+                          <div
+                            key={i}
+                            onClick={() => changeTab("logs")}
+                            style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 20px", borderBottom: "1px solid var(--border)", cursor: "pointer" }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "var(--subtle)"; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = ""; }}
+                          >
+                            <span style={{ width: 24, textAlign: "center", color: "var(--muted)", fontSize: 12.5 }}>{i + 1}</span>
+                            <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--subtle)", color: "var(--muted)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                              <IcoLogs />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{log.title || "Notification"}</div>
+                              <div style={{ fontSize: 12, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{log.message}</div>
+                            </div>
+                            <span style={{ fontSize: 11.5, color: "var(--muted)", flexShrink: 0 }}>{fmtDateTime(log.created_at)}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -2164,7 +2417,7 @@ const openCreateStaffModal = async () => {
                         </button>
                       ))
                     ) : selectedAdminId ? (
-                      <button 
+                      <button
                         style={{
                           display: "block", width: "100%", textAlign: "left",
                           padding: "0.9rem 1.25rem", borderBottom: "1px solid #e2e0d8",
@@ -2323,8 +2576,7 @@ const openCreateStaffModal = async () => {
                         </select>
                       </label>
                     </div>
-                  )} 
-
+                  )}
                   {modalKind === 'create_staff' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
