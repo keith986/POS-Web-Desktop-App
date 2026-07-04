@@ -271,6 +271,25 @@ function Donut({ pct, color, size = 78, thickness = 10, label }: { pct: number; 
   );
 }
 
+/* ─── Smooth area/line path builder (used by overview trend chart) ── */
+function smoothLinePath(points: { x: number; y: number }[]): string {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M${points[0].x},${points[0].y}`;
+  let d = `M${points[0].x},${points[0].y}`;
+  for (let i = 1; i < points.length; i++) {
+    const midX = (points[i - 1].x + points[i].x) / 2;
+    d += ` C${midX},${points[i - 1].y} ${midX},${points[i].y} ${points[i].x},${points[i].y}`;
+  }
+  return d;
+}
+function smoothAreaPath(points: { x: number; y: number }[], baseline: number): string {
+  if (points.length === 0) return "";
+  const line = smoothLinePath(points);
+  const last = points[points.length - 1];
+  const first = points[0];
+  return `${line} L${last.x},${baseline} L${first.x},${baseline} Z`;
+}
+
 /* ─── Status badge ── */
 function Badge({ label, type = "neutral" }: { label: string; type?: "ok" | "warn" | "err" | "neutral" | "info" }) {
   const cfg = {
@@ -1204,17 +1223,19 @@ const openCreateStaffModal = async () => {
   };
 
   const dater = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date());
-  const revBars: [string, number][] = [
-    ["Today", Number(stats?.todayRevenue || 0)],
-    ["Week", Number(stats?.weekRevenue || 0)],
-    ["Month", Number(stats?.monthRevenue || 0)],
-    ["Year", Number(stats?.yearRevenue || 0)],
-  ];
-  const revMax = Math.max(1, ...revBars.map(([, v]) => v));
-  const pct = (n?: number, d?: number) => (d && d > 0 ? (Number(n || 0) / d) * 100 : 0);
-  const staffActivePct  = pct(stats?.activeStaff,  stats?.staffCount);
-  const adminActivePct  = pct(stats?.activeUsers,  stats?.adminCount);
-  const domainActivePct = pct(stats?.activeDomains, stats?.totalDomains);
+
+  /* ── Overview trend chart data (Today → Week → Month → Year) ── */
+  const trendPeriods = ["Today", "This Week", "This Month", "This Year"];
+  const trendOrders  = [Number(stats?.todayOrders || 0), Number(stats?.weekOrders || 0), Number(stats?.monthOrders || 0), Number(stats?.yearOrders || 0)];
+  const trendRevenue = [Number(stats?.todayRevenue || 0), Number(stats?.weekRevenue || 0), Number(stats?.monthRevenue || 0), Number(stats?.yearRevenue || 0)];
+  const CHART_W = 600, CHART_H = 190, CHART_PAD_X = 26, CHART_PAD_TOP = 16, CHART_PAD_BOTTOM = 28;
+  const chartBaseline = CHART_H - CHART_PAD_BOTTOM;
+  const plotH = chartBaseline - CHART_PAD_TOP;
+  const xStep = (CHART_W - CHART_PAD_X * 2) / (trendPeriods.length - 1);
+  const ordersMax  = Math.max(1, ...trendOrders);
+  const revenueMax = Math.max(1, ...trendRevenue);
+  const ordersPoints  = trendOrders.map((v, i)  => ({ x: CHART_PAD_X + i * xStep, y: chartBaseline - (v / ordersMax) * plotH }));
+  const revenuePoints = trendRevenue.map((v, i) => ({ x: CHART_PAD_X + i * xStep, y: chartBaseline - (v / revenueMax) * plotH }));
 
   return (
     <>
@@ -1400,7 +1421,7 @@ const openCreateStaffModal = async () => {
 
             {/* ══ OVERVIEW ══ */}
             {activeTab === "overview" && !loading && stats && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", height: "calc(100vh - 140px)", minHeight: 540 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
 
                 {/* Billing alert strip */}
                 {Array.isArray(stats.sneakyBilling) && stats.sneakyBilling.length > 0 && (
@@ -1417,73 +1438,141 @@ const openCreateStaffModal = async () => {
                   </button>
                 )}
 
-                {/* Quick Stats */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.85rem", flexShrink: 0 }}>
+                {/* Quick Stats — 4 up, icon bubble top-right like the reference dash */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
                   {[
-                    { label: "Staff", value: stats.staffCount, sub: `${stats.activeStaff ?? 0} active`, bg: "#eff6ff", fg: "#2563eb", icon: <IcoStaff /> },
-                    { label: "Admins", value: stats.adminCount, sub: `${stats.activeUsers ?? 0} active`, bg: "#f5f3ff", fg: "#7c3aed", icon: <IcoUsers /> },
-                    { label: "Domains", value: stats.totalDomains, sub: `${stats.activeDomains ?? 0} active`, bg: "#fffbeb", fg: "#d97706", icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20 15.3 15.3 0 010-20z"/></svg> },
-                    { label: "Orders", value: stats.orderCount, sub: `${stats.todayOrders ?? 0} today`, bg: "#fdf2f8", fg: "#db2777", icon: <IcoOrders /> },
+                    { label: "Total Orders", value: (stats.orderCount ?? 0).toLocaleString(), sub: `${stats.todayOrders ?? 0} today`, up: true, bg: "#eef2ff", fg: "#4f46e5", icon: <IcoOrders /> },
+                    { label: "Admins & Staff", value: ((stats.adminCount ?? 0) + (stats.staffCount ?? 0)).toLocaleString(), sub: `${(stats.activeUsers ?? 0) + (stats.activeStaff ?? 0)} active`, up: true, bg: "#ecfdf5", fg: "#059669", icon: <IcoUsers /> },
+                    { label: "Total Revenue", value: `KES ${Number(stats.totalRevenue || 0).toLocaleString()}`, sub: `KES ${Number(stats.monthRevenue || 0).toLocaleString()} this month`, up: true, bg: "#fff7ed", fg: "#ea580c", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> },
+                    { label: "Active Domains", value: (stats.totalDomains ?? 0).toLocaleString(), sub: `${stats.activeDomains ?? 0} of ${stats.totalDomains ?? 0} live`, up: (stats.activeDomains ?? 0) >= (stats.totalDomains ?? 0), bg: "#fdf2f8", fg: "#db2777", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20 15.3 15.3 0 010-20z"/></svg> },
                   ].map(s => (
-                    <div className="sa-stat" key={s.label}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                        <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{s.label}</div>
-                        <div style={{ width: 28, height: 28, borderRadius: 8, background: s.bg, color: s.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>{s.icon}</div>
+                    <div className="sa-stat" key={s.label} style={{ position: "relative", padding: "1.3rem 1.35rem" }}>
+                      <div style={{ position: "absolute", top: 18, right: 18, width: 44, height: 44, borderRadius: 12, background: s.bg, color: s.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>{s.icon}</div>
+                      <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.5px", color: "var(--ink)" }}>{s.value ?? "—"}</div>
+                      <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 3 }}>{s.label}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 11, fontWeight: 600, color: s.up ? "#059669" : "#dc2626" }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: s.up ? "none" : "rotate(180deg)" }}><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                        {s.sub}
                       </div>
-                      <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.5px", color: "var(--ink)" }}>{s.value ?? "—"}</div>
-                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{s.sub}</div>
                     </div>
                   ))}
                 </div>
 
-                {/* Chart row — fills remaining height */}
-                <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "0.85rem", flex: 1, minHeight: 0 }}>
+                {/* Chart + activity row */}
+                <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: "1rem", alignItems: "stretch" }}>
 
-                  {/* Revenue chart */}
-                  <div className="sa-hero" style={{ background: "linear-gradient(135deg, #10b981 0%, #0f766e 100%)", display: "flex", flexDirection: "column" }}>
-                    <div style={{ position: "absolute", top: -40, right: -30, width: 160, height: 160, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
-                    <div style={{ position: "absolute", bottom: -60, right: 60, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative", flexShrink: 0 }}>
-                      <div>
-                        <div style={{ fontSize: 12, opacity: 0.85, textTransform: "uppercase", letterSpacing: "0.6px", fontWeight: 600 }}>Total Revenue</div>
-                        <div style={{ fontSize: 30, fontWeight: 700, marginTop: 6, letterSpacing: "-0.5px" }}>KES {Number(stats.totalRevenue || 0).toLocaleString()}</div>
-                        <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>{stats.orderCount ?? 0} orders across {stats.totalDomains ?? 0} stores</div>
-                      </div>
-                      <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                  {/* Orders & Revenue trend — smooth two-tone area chart */}
+                  <div className="sa-card" style={{ padding: "1.4rem 1.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>Orders &amp; Revenue Trend</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, color: "var(--muted)", fontWeight: 500 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: 2, background: "#f59e0b", display: "inline-block" }} /> Orders
+                        </span>
+                        <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, color: "var(--muted)", fontWeight: 500 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: 2, background: "#6366f1", display: "inline-block" }} /> Revenue
+                        </span>
                       </div>
                     </div>
-
-                    <div style={{ display: "flex", gap: 24, marginTop: 16, alignItems: "flex-end", flex: 1, position: "relative" }}>
-                      {revBars.map(([label, val]) => (
-                        <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: 1, height: "100%", justifyContent: "flex-end" }}>
-                          <span style={{ fontSize: 11, opacity: 0.9, fontWeight: 600 }}>{val > 0 ? Number(val).toLocaleString() : ""}</span>
-                          <div style={{ width: "100%", maxWidth: 46, height: `${Math.max(4, (val / revMax) * 100)}%`, borderRadius: "8px 8px 3px 3px", background: "rgba(255,255,255,0.92)" }} />
-                          <div style={{ fontSize: 11.5, opacity: 0.85, fontWeight: 500 }}>{label}</div>
-                        </div>
+                    <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} width="100%" height="230" preserveAspectRatio="none" style={{ overflow: "visible" }}>
+                      <defs>
+                        <linearGradient id="ovGradOrders" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.32" />
+                          <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
+                        </linearGradient>
+                        <linearGradient id="ovGradRevenue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#6366f1" stopOpacity="0.28" />
+                          <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      {/* gridlines */}
+                      {[0, 1, 2, 3].map(i => (
+                        <line key={i} x1={CHART_PAD_X} x2={CHART_W - CHART_PAD_X} y1={CHART_PAD_TOP + (plotH / 3) * i} y2={CHART_PAD_TOP + (plotH / 3) * i} stroke="var(--border)" strokeWidth="1" />
                       ))}
-                    </div>
+                      {/* revenue area (behind) */}
+                      <path d={smoothAreaPath(revenuePoints, chartBaseline)} fill="url(#ovGradRevenue)" />
+                      <path d={smoothLinePath(revenuePoints)} fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" />
+                      {/* orders area (front) */}
+                      <path d={smoothAreaPath(ordersPoints, chartBaseline)} fill="url(#ovGradOrders)" />
+                      <path d={smoothLinePath(ordersPoints)} fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
+                      {ordersPoints.map((p, i) => <circle key={`o${i}`} cx={p.x} cy={p.y} r="3.5" fill="#f59e0b" stroke="#fff" strokeWidth="1.5" />)}
+                      {revenuePoints.map((p, i) => <circle key={`r${i}`} cx={p.x} cy={p.y} r="3.5" fill="#6366f1" stroke="#fff" strokeWidth="1.5" />)}
+                      {/* x-axis labels */}
+                      {trendPeriods.map((label, i) => (
+                        <text key={label} x={CHART_PAD_X + i * xStep} y={CHART_H - 6} textAnchor="middle" fontSize="11" fill="var(--muted)">{label}</text>
+                      ))}
+                    </svg>
                   </div>
 
-                  {/* Account health donuts */}
-                  <div className="sa-card" style={{ padding: "1.25rem", display: "flex", flexDirection: "column" }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", flexShrink: 0 }}>Account Health</div>
-                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-around", minHeight: 0 }}>
-                      <Donut pct={staffActivePct} color="#2563eb" label="Staff active" />
-                      <Donut pct={adminActivePct} color="#7c3aed" label="Admins active" />
-                      <Donut pct={domainActivePct} color="#d97706" label="Domains active" />
+                  {/* Recent activity — task-list styled feed from recentLogs */}
+                  <div className="sa-card" style={{ padding: "1.3rem 1.4rem", display: "flex", flexDirection: "column" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, flexShrink: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>Recent Activity</div>
+                      <button onClick={() => changeTab("logs")} className="sa-icon-btn" style={{ width: 30, height: 30 }} title="View all logs">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                      </button>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, flexShrink: 0 }}>
-                      <div style={{ background: "var(--subtle)", borderRadius: 10, padding: "0.6rem 0.8rem" }}>
-                        <div style={{ fontSize: 10.5, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>Orders today</div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>{stats.todayOrders ?? 0}</div>
-                      </div>
-                      <div style={{ background: "var(--subtle)", borderRadius: 10, padding: "0.6rem 0.8rem" }}>
-                        <div style={{ fontSize: 10.5, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>Orders this week</div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>{stats.weekOrders ?? 0}</div>
-                      </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, overflowY: "auto", maxHeight: 260 }}>
+                      {Array.isArray(stats.recentLogs) && stats.recentLogs.length > 0 ? stats.recentLogs.slice(0, 6).map((log, i) => {
+                        const cfg = log.type === "error" ? { bg: "#fef2f2", fg: "#dc2626" } : log.type === "warning" ? { bg: "#fffbeb", fg: "#d97706" } : { bg: "#eff6ff", fg: "#2563eb" };
+                        return (
+                          <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "9px 6px", borderRadius: 10 }}>
+                            <div style={{ width: 30, height: 30, borderRadius: 9, background: cfg.bg, color: cfg.fg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
+                              <IcoLogs />
+                            </div>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{log.title || log.type || "Activity"}</div>
+                              <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{log.message || "—"}</div>
+                              {log.created_at && <div style={{ fontSize: 10.5, color: "var(--muted)", marginTop: 3, opacity: 0.75 }}>{new Date(log.created_at).toLocaleString()}</div>}
+                            </div>
+                          </div>
+                        );
+                      }) : (
+                        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 12.5, padding: "1.5rem 0" }}>No recent activity</div>
+                      )}
                     </div>
+                    <button onClick={() => changeTab("logs")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 12, padding: "8px 10px", borderRadius: 9, border: "1px dashed var(--border)", background: "transparent", color: "var(--muted)", fontFamily: "inherit", fontSize: 12, fontWeight: 600, cursor: "pointer", flexShrink: 0 }}>
+                      View all logs →
+                    </button>
                   </div>
+                </div>
+
+                {/* Billing alerts table — styled like the reference "Patient" list */}
+                <div className="sa-card">
+                  <div style={{ padding: "1.1rem 1.4rem", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>Billing Alerts</div>
+                    <button onClick={() => changeTab("billing")} className="sa-icon-btn" style={{ width: 30, height: 30 }} title="Go to billing">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                    </button>
+                  </div>
+                  {Array.isArray(stats.sneakyBilling) && stats.sneakyBilling.length > 0 ? (
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr>
+                          <th style={TH}>Store</th>
+                          <th style={TH}>Domain</th>
+                          <th style={TH}>Failed Attempts</th>
+                          <th style={TH}>Last Attempt</th>
+                          <th style={TH}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stats.sneakyBilling.slice(0, 6).map((b, i) => (
+                          <tr key={i} {...rowHover}>
+                            <td style={{ ...TD, fontWeight: 600 }}>{b.store_name || "—"}</td>
+                            <td style={TD}>{b.domain || "—"}</td>
+                            <td style={TD}>{b.failed_transactions ?? 0}</td>
+                            <td style={TD}>{b.last_attempt ? new Date(b.last_attempt).toLocaleString() : "—"}</td>
+                            <td style={TD}><Badge label="Needs review" type="warn" /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div style={{ padding: "2.2rem 1.4rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
+                      No billing issues detected — everything looks clear.
+                    </div>
+                  )}
                 </div>
               </div>
             )}
