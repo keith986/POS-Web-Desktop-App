@@ -93,6 +93,7 @@ interface AdminDetailPanelProps {
   onRenew?: (id: string) => void;
   onLifetime?: (id: string) => void;
   onCancelLifetime?: (id: string) => void;
+  onDelete?: (id: string, label: string) => void;
 }
 
 interface CopyableIdProps {
@@ -543,7 +544,7 @@ function SectionCard({ title, children, style } : SectionCardProps) {
 
 export function AdminDetailPanel({
   admin, billing, isStaff = false, onClose, onMessage, onReset, onToggle,
-  onGrant, onRevoke, onRenew, onLifetime, onCancelLifetime,
+  onGrant, onRevoke, onRenew, onLifetime, onCancelLifetime, onDelete,
 }: AdminDetailPanelProps) {
   const [tab, setTab] = useState("profile");
   const open = Boolean(admin);
@@ -677,6 +678,14 @@ export function AdminDetailPanel({
                       >
                         {isActive ? "Deactivate account" : "Activate account"}
                       </button>
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(String(admin.id), String(admin.full_name || admin.email || admin.id))}
+                          style={{ ...secondaryBtn, borderColor: "#fecaca", background: "#fef2f2", color: "#dc2626", fontWeight: 700 }}
+                        >
+                          {isStaff ? "Delete staff account" : "Delete admin account"}
+                        </button>
+                      )}
                     </div>
                   </>
                 ) : (
@@ -750,9 +759,9 @@ type ThemeKey = "cream" | "midnight" | "ocean" | "sunset" | "forest";
 export const THEMES: Record<ThemeKey, ThemeTokens> = {
   cream: { label: "Cream", swatch: "#f5f4f0", "--bg": "#f5f4f0", "--card": "#ffffff", "--border": "#e2e0d8", "--ink": "#141410", "--muted": "#9a9a8e", "--subtle": "#f0efe9", "--accent": "#141410", "--accent-text": "#ffffff", "--sidebar": "#ffffff", "--nav-hover": "#f5f4f0" },
   midnight: { label: "Midnight", swatch: "#18181f", "--bg": "#121218", "--card": "#1c1c24", "--border": "#2c2c36", "--ink": "#f2f2f5", "--muted": "#8b8b98", "--subtle": "#242430", "--accent": "#f2f2f5", "--accent-text": "#121218", "--sidebar": "#1c1c24", "--nav-hover": "#252530" },
-  ocean: { label: "Ocean", swatch: "#0e7490", "--bg": "#f0f9fb", "--card": "#ffffff", "--border": "#cfe8ee", "--ink": "#0c2b33", "--muted": "#5c8992", "--subtle": "#e3f4f7", "--accent": "#0e7490", "--accent-text": "#ffffff", "--sidebar": "#ffffff", "--nav-hover": "#e3f4f7" },
-  sunset: { label: "Sunset", swatch: "#c2410c", "--bg": "#fdf4ee", "--card": "#ffffff", "--border": "#f0dcca", "--ink": "#3a2416", "--muted": "#9c7a63", "--subtle": "#faece1", "--accent": "#c2410c", "--accent-text": "#ffffff", "--sidebar": "#ffffff", "--nav-hover": "#faece1" },
-  forest: { label: "Forest", swatch: "#166534", "--bg": "#f2f7f3", "--card": "#ffffff", "--border": "#d7e6da", "--ink": "#173321", "--muted": "#6c8574", "--subtle": "#e6f0e8", "--accent": "#166534", "--accent-text": "#ffffff", "--sidebar": "#ffffff", "--nav-hover": "#e6f0e8" },
+  ocean: { label: "Ocean", swatch: "#0a5f8f", "--bg": "#eef7fb", "--card": "#ffffff", "--border": "#c3ddec", "--ink": "#0a2733", "--muted": "#527f92", "--subtle": "#dceef6", "--accent": "#0a5f8f", "--accent-text": "#ffffff", "--sidebar": "#ffffff", "--nav-hover": "#dceef6" },
+  sunset: { label: "Sunset", swatch: "#b8380c", "--bg": "#fdf2ea", "--card": "#ffffff", "--border": "#efd5bc", "--ink": "#361f10", "--muted": "#96714f", "--subtle": "#f8e5d6", "--accent": "#b8380c", "--accent-text": "#ffffff", "--sidebar": "#ffffff", "--nav-hover": "#f8e5d6" },
+  forest: { label: "Forest", swatch: "#0f6b34", "--bg": "#eff7f1", "--card": "#ffffff", "--border": "#cde3d3", "--ink": "#12291a", "--muted": "#5f7f68", "--subtle": "#e0eee3", "--accent": "#0f6b34", "--accent-text": "#ffffff", "--sidebar": "#ffffff", "--nav-hover": "#e0eee3" },
 };
 
 interface ThemeContextValue {
@@ -843,6 +852,9 @@ export default function SuperAdminPage() {
   const [data,       setData]       = useState<Record<string, unknown>[]>([]);
   const [stats,      setStats]      = useState<OverviewStats | null>(null);
   const [search,     setSearch]     = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [sortBy,     setSortBy]     = useState<string>("");
+  const [sortDir,    setSortDir]    = useState<"asc" | "desc">("desc");
   const [page,       setPage]       = useState(1);
   const [perPage,    setPerPage]    = useState(10);
   const [notice,     setNotice]     = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
@@ -858,7 +870,7 @@ export default function SuperAdminPage() {
   const [supportLoading,   setSupportLoading]   = useState(false);
   const [admins,           setAdmins]           = useState<Record<string, unknown>[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalKind, setModalKind] = useState<"renew" | "lifetime" | "reset_password" | "create_admin" | "create_staff" | "grant_superadmin" | "remove_superadmin" | "create_superadmin" | null>(null);
+  const [modalKind, setModalKind] = useState<"renew" | "lifetime" | "reset_password" | "create_admin" | "create_staff" | "grant_superadmin" | "remove_superadmin" | "create_superadmin" | "delete_admin" | "delete_staff" | "sign_out" | null>(null);
   const [modalTargetId, setModalTargetId] = useState<string | null>(null);
   const [modalAction, setModalAction] = useState<string | null>(null);
   const [modalInput, setModalInput] = useState<string>("");
@@ -1130,6 +1142,47 @@ const openCreateStaffModal = async () => {
     setModalOpen(true);
   };
 
+  const openDeleteAdminModal = (id: string, label: string) => {
+    setModalKind("delete_admin");
+    setModalTargetId(id);
+    setFormData({ label });
+    setModalOpen(true);
+  };
+
+  const openDeleteStaffModal = (id: string, label: string) => {
+    setModalKind("delete_staff");
+    setModalTargetId(id);
+    setFormData({ label });
+    setModalOpen(true);
+  };
+
+  const handleDeleteAdmin = async () => {
+    if (!modalTargetId) return;
+    const ok = await runAdminAction("delete_admin", modalTargetId);
+    if (ok) {
+      setPanelAdmin(prev => (prev && String(prev.id) === modalTargetId) ? null : prev);
+    }
+    setModalOpen(false); setModalKind(null); setModalTargetId(null); setFormData({});
+  };
+
+  const handleDeleteStaff = async () => {
+    if (!modalTargetId) return;
+    const ok = await runAdminAction("delete_staff", modalTargetId);
+    if (ok) {
+      setPanelAdmin(prev => (prev && String(prev.id) === modalTargetId) ? null : prev);
+    }
+    setModalOpen(false); setModalKind(null); setModalTargetId(null); setFormData({});
+  };
+
+  /* ── Sign out (with confirmation) ── */
+  const [signOutOpen, setSignOutOpen] = useState(false);
+  const requestSignOut = () => setSignOutOpen(true);
+  const confirmSignOut = () => {
+    localStorage.removeItem("user");
+    setSignOutOpen(false);
+    router.push("/login");
+  };
+
   const handleFormChange = (key: string, value: string) => {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
@@ -1277,12 +1330,13 @@ const openCreateStaffModal = async () => {
           ? parseArray<SupportConversation>(body.conversations)
           : [];
       setConversations(convs);
-      if (selectedAdminId === null && convs.length > 0) {
-        setSelectedAdminId(convs[0].admin_id);
-      }
+      // Intentionally do NOT auto-select the first conversation here. Previously this
+      // opened the first chat automatically the moment conversations loaded (including
+      // on the silent background load at mount), so clicking the Support tab appeared
+      // to "jump" straight into a chat. Now a chat only opens when the user clicks it.
     } catch { setConversations([]); }
     finally  { setSupportLoading(false); }
-  }, [selectedAdminId]);
+  }, []);
 
   const loadMessages = useCallback(async (adminId: string) => {
     setSupportLoading(true);
@@ -1308,10 +1362,59 @@ const openCreateStaffModal = async () => {
 
   /* ── Filtered + paginated ── */
   const filtered   = data.filter(r => !search || Object.values(r).some(v => String(v ?? "").toLowerCase().includes(search.toLowerCase())));
-  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
-  const paginated  = filtered.slice((page - 1) * perPage, page * perPage);
 
-  const changeTab = (t: TabKey) => { setActiveTab(t); setSearch(""); setPage(1); };
+  /* ── Extra ways to find things besides the search bar: sort by column ── */
+  const SORT_FIELDS: Partial<Record<TabKey, { key: string; label: string }[]>> = {
+    users: [
+      { key: "updated_at", label: "Last updated" },
+      { key: "created_at", label: "Date joined" },
+      { key: "full_name",  label: "Name" },
+      { key: "store_name", label: "Store name" },
+      { key: "status",     label: "Status" },
+      { key: "plan",       label: "Plan" },
+    ],
+    staff: [
+      { key: "updated_at", label: "Last updated" },
+      { key: "created_at", label: "Date joined" },
+      { key: "full_name",  label: "Name" },
+      { key: "status",     label: "Status" },
+      { key: "shift_role", label: "Role" },
+    ],
+    orders: [
+      { key: "updated_at",   label: "Last updated" },
+      { key: "created_at",   label: "Date placed" },
+      { key: "total",        label: "Total" },
+      { key: "status",       label: "Status" },
+      { key: "staff_name",   label: "Staff" },
+      { key: "order_number", label: "Order #" },
+    ],
+    logs: [
+      { key: "created_at", label: "Date" },
+      { key: "type",       label: "Type" },
+      { key: "title",       label: "Title" },
+    ],
+  };
+  const sortOptions = SORT_FIELDS[activeTab] ?? [];
+  const sorted = sortBy
+    ? [...filtered].sort((a, b) => {
+        const rawA = a[sortBy] ?? (sortBy === "updated_at" ? a["created_at"] : undefined);
+        const rawB = b[sortBy] ?? (sortBy === "updated_at" ? b["created_at"] : undefined);
+        let cmp: number;
+        const numA = Number(rawA), numB = Number(rawB);
+        if (rawA != null && rawB != null && !Number.isNaN(numA) && !Number.isNaN(numB) && String(rawA).trim() !== "" && String(rawB).trim() !== "") {
+          cmp = numA - numB;
+        } else {
+          const dateA = Date.parse(String(rawA ?? "")), dateB = Date.parse(String(rawB ?? ""));
+          if (!Number.isNaN(dateA) && !Number.isNaN(dateB)) cmp = dateA - dateB;
+          else cmp = String(rawA ?? "").localeCompare(String(rawB ?? ""));
+        }
+        return sortDir === "asc" ? cmp : -cmp;
+      })
+    : filtered;
+  const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
+  const paginated  = sorted.slice((page - 1) * perPage, page * perPage);
+
+  const changeTab = (t: TabKey) => { setActiveTab(t); setSearch(""); setPage(1); setSortBy(""); setSortDir("desc"); };
 
   /* ── Notification bell: unread messages + recent activity, combined ── */
   const unreadConversations = conversations.filter(c => Number(c.unread_count || 0) > 0);
@@ -1372,7 +1475,10 @@ const openCreateStaffModal = async () => {
   const TH: React.CSSProperties = { textAlign: "left", padding: "0.6rem 1.25rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)", background: "var(--subtle)" };
   const TD: React.CSSProperties = { padding: "0.8rem 1.25rem", fontSize: 13, color: "var(--ink)" };
   const rowHover: { onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) => void; onMouseLeave: (e: React.MouseEvent<HTMLTableRowElement>) => void } = {
-    onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) => { e.currentTarget.style.background = "#fafaf8"; },
+    // Was hardcoded to "#fafaf8" (near-white), which made row text unreadable on dark
+    // themes like Midnight because --ink is a light color there. The theme token keeps
+    // contrast correct on every theme, including on hover.
+    onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) => { e.currentTarget.style.background = "var(--subtle)"; },
     onMouseLeave: (e: React.MouseEvent<HTMLTableRowElement>) => { e.currentTarget.style.background = ""; }
   };
 
@@ -1492,7 +1598,7 @@ const openCreateStaffModal = async () => {
           {/* Footer */}
           <div className="sa-sidebar-footer">
             <button
-              onClick={() => { localStorage.removeItem("user"); router.push("/login"); }}
+              onClick={requestSignOut}
               className="sa-signout-btn"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -1630,7 +1736,7 @@ const openCreateStaffModal = async () => {
               </div>
 
               <button
-                onClick={() => { localStorage.removeItem("user"); router.push("/login"); }}
+                onClick={requestSignOut}
                 className="sa-refresh-btn"
                 style={{ borderColor: "#fecaca", color: "#dc2626" }}
               >
@@ -1811,6 +1917,19 @@ const openCreateStaffModal = async () => {
               <div className="sa-card">
                 <div className="sa-toolbar">
                   <div className="sa-search"><IcoSearch /><input placeholder="Search users…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                  {sortOptions.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} style={{ padding: "9px 10px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", fontFamily: "inherit", fontSize: 12.5, cursor: "pointer" }}>
+                        <option value="">Sort by…</option>
+                        {sortOptions.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                      </select>
+                      {sortBy && (
+                        <button onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")} title={sortDir === "asc" ? "Ascending" : "Descending"} className="sa-icon-btn" style={{ width: 36, height: 36 }}>
+                          {sortDir === "asc" ? "↑" : "↓"}
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <button onClick={openCreateAdminModal} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: "none", background: "var(--accent)", color: "var(--accent-text)", cursor: "pointer", fontWeight: 600, fontSize: 12.5 }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     New Admin
@@ -1866,6 +1985,7 @@ const openCreateStaffModal = async () => {
                                   Number(r.is_super_admin) == 1
                                     ? { label: "Revoke superadmin", onClick: () => openRemoveSuperadminModal(String(r.email)), danger: true }
                                     : { label: "Grant superadmin", onClick: () => openGrantSuperadminModal(String(r.email)), accent: true },
+                                  { label: "Delete admin", onClick: () => openDeleteAdminModal(String(r.id), String(r.full_name || r.email || r.id)), danger: true },
                                 ]} />
                               </td>
                             </tr>
@@ -1884,6 +2004,19 @@ const openCreateStaffModal = async () => {
               <div className="sa-card">
                 <div className="sa-toolbar">
                   <div className="sa-search"><IcoSearch /><input placeholder="Search staff…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                  {sortOptions.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} style={{ padding: "9px 10px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", fontFamily: "inherit", fontSize: 12.5, cursor: "pointer" }}>
+                        <option value="">Sort by…</option>
+                        {sortOptions.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                      </select>
+                      {sortBy && (
+                        <button onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")} title={sortDir === "asc" ? "Ascending" : "Descending"} className="sa-icon-btn" style={{ width: 36, height: 36 }}>
+                          {sortDir === "asc" ? "↑" : "↓"}
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <button onClick={openCreateStaffModal} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: "none", background: "var(--accent)", color: "var(--accent-text)", cursor: "pointer", fontWeight: 600, fontSize: 12.5 }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     New Staff
@@ -1933,6 +2066,7 @@ const openCreateStaffModal = async () => {
                                     danger: String(r.status) === "active",
                                     accent: String(r.status) !== "active",
                                   },
+                                  { label: "Delete staff", onClick: () => openDeleteStaffModal(String(r.id), String(r.full_name || r.email || r.id)), danger: true },
                                 ]} />
                               </td>
                             </tr>
@@ -1951,6 +2085,19 @@ const openCreateStaffModal = async () => {
               <div className="sa-card">
                 <div className="sa-toolbar">
                   <div className="sa-search"><IcoSearch /><input placeholder="Search orders…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                  {sortOptions.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} style={{ padding: "9px 10px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", fontFamily: "inherit", fontSize: 12.5, cursor: "pointer" }}>
+                        <option value="">Sort by…</option>
+                        {sortOptions.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                      </select>
+                      {sortBy && (
+                        <button onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")} title={sortDir === "asc" ? "Ascending" : "Descending"} className="sa-icon-btn" style={{ width: 36, height: 36 }}>
+                          {sortDir === "asc" ? "↑" : "↓"}
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <span style={{ fontSize: 12, color: "#9a9a8e", marginLeft: "auto" }}>{filtered.length} order{filtered.length !== 1 ? "s" : ""}</span>
                 </div>
                 {loading ? <Spinner label="Loading orders…" /> : (
@@ -1958,28 +2105,21 @@ const openCreateStaffModal = async () => {
                     <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
                       <thead><tr>
-                        <th style={{ ...TH, width: "5%" }}>#</th>
-                        <th style={{ ...TH, width: "14%" }}>Order</th>
-                        <th style={{ ...TH, width: "20%" }}>Customer</th>
-                        <th style={{ ...TH, width: "11%" }}>Total</th>
-                        <th style={{ ...TH, width: "12%" }}>Payment</th>
-                        <th style={{ ...TH, width: "13%" }}>Status</th>
-                        <th style={{ ...TH, width: "13%" }}>Staff</th>
-                        <th style={{ ...TH, width: "12%" }}>Date</th>
+                        <th style={{ ...TH, width: "7%" }}>#</th>
+                        <th style={{ ...TH, width: "20%" }}>Order</th>
+                        <th style={{ ...TH, width: "16%" }}>Total</th>
+                        <th style={{ ...TH, width: "19%" }}>Status</th>
+                        <th style={{ ...TH, width: "19%" }}>Staff</th>
+                        <th style={{ ...TH, width: "19%" }}>Date</th>
                       </tr></thead>
                       <tbody>
                         {paginated.length === 0
-                          ? <tr><td colSpan={8} style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No orders found.</td></tr>
+                          ? <tr><td colSpan={6} style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No orders found.</td></tr>
                           : paginated.map((r, i) => (
                             <tr key={i} style={{ borderBottom: "1px solid var(--border)" }} {...rowHover}>
                               <td style={{ ...TD, color: "var(--muted)" }}>{(page - 1) * perPage + i + 1}</td>
                               <td style={{ ...TD, fontWeight: 600, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.order_number ?? shortId(r.id))}</td>
-                              <td style={{ ...TD, overflow: "hidden" }}>
-                                <div style={{ fontWeight: 500, color: "var(--ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.customer_name ?? "—")}</div>
-                                <div style={{ fontSize: 11.5, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.customer_email ?? "—")}</div>
-                              </td>
                               <td style={{ ...TD, fontWeight: 600, color: "var(--ink)" }}>KES {Number(r.total || 0).toLocaleString()}</td>
-                              <td style={{ ...TD, textTransform: "capitalize", color: "var(--muted)" }}>{String(r.payment_method ?? "—")}</td>
                               <td style={TD}>{statusBadge(r.status)}</td>
                               <td style={{ ...TD, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.staff_name ?? "—")}</td>
                               <td style={{ ...TD, color: "var(--muted)", fontSize: 12 }}>{fmtDate(r.created_at)}</td>
@@ -1999,6 +2139,19 @@ const openCreateStaffModal = async () => {
               <div className="sa-card">
                 <div className="sa-toolbar">
                   <div className="sa-search"><IcoSearch /><input placeholder="Search logs…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                  {sortOptions.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} style={{ padding: "9px 10px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", fontFamily: "inherit", fontSize: 12.5, cursor: "pointer" }}>
+                        <option value="">Sort by…</option>
+                        {sortOptions.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                      </select>
+                      {sortBy && (
+                        <button onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")} title={sortDir === "asc" ? "Ascending" : "Descending"} className="sa-icon-btn" style={{ width: 36, height: 36 }}>
+                          {sortDir === "asc" ? "↑" : "↓"}
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <span style={{ fontSize: 12, color: "#9a9a8e", marginLeft: "auto" }}>{filtered.length} log{filtered.length !== 1 ? "s" : ""}</span>
                 </div>
                 {loading ? <Spinner label="Loading logs…" /> : (
@@ -2353,7 +2506,7 @@ const openCreateStaffModal = async () => {
                               <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>Sign out</div>
                               <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 2 }}>End your current super admin session on this device</div>
                             </div>
-                            <button onClick={() => { localStorage.removeItem("user"); router.push("/login"); }} style={{ padding: "9px 16px", borderRadius: 9, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Sign out</button>
+                            <button onClick={requestSignOut} style={{ padding: "9px 16px", borderRadius: 9, border: "1px solid #fecaca", background: "#fef2f2", color: "#dc2626", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Sign out</button>
                           </div>
                         </div>
                       )}
@@ -2616,6 +2769,20 @@ const openCreateStaffModal = async () => {
                       <p style={{ marginTop: 8, color: '#991b1b', fontWeight: 500 }}>This user will lose all administrative capabilities.</p>
                     </div>
                   )}
+                  {modalKind === 'delete_admin' && (
+                    <div style={{ fontSize: 13, color: '#6b6b66', marginTop: 8 }}>
+                      <p>Delete this admin account:</p>
+                      <div style={{ background: '#fef2f2', padding: 8, borderRadius: 6, marginTop: 8, fontFamily: 'monospace', fontSize: 12 }}>{formData.label}</div>
+                      <p style={{ marginTop: 8, color: '#991b1b', fontWeight: 500 }}>This permanently removes the admin, their store data, and cannot be undone.</p>
+                    </div>
+                  )}
+                  {modalKind === 'delete_staff' && (
+                    <div style={{ fontSize: 13, color: '#6b6b66', marginTop: 8 }}>
+                      <p>Delete this staff account:</p>
+                      <div style={{ background: '#fef2f2', padding: 8, borderRadius: 6, marginTop: 8, fontFamily: 'monospace', fontSize: 12 }}>{formData.label}</div>
+                      <p style={{ marginTop: 8, color: '#991b1b', fontWeight: 500 }}>This permanently removes the staff account and cannot be undone.</p>
+                    </div>
+                  )}
                   {modalKind === 'create_superadmin' && (
                     <div style={{ fontSize: 13, color: '#6b6b66', marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <div>
@@ -2660,16 +2827,33 @@ const openCreateStaffModal = async () => {
                     modalKind === 'grant_superadmin' ? handleGrantSuperadmin :
                     modalKind === 'remove_superadmin' ? handleRemoveSuperadmin :
                     modalKind === 'create_superadmin' ? handleCreateSuperadmin :
+                    modalKind === 'delete_admin' ? handleDeleteAdmin :
+                    modalKind === 'delete_staff' ? handleDeleteStaff :
                     handleModalConfirm
-                  } style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: modalKind === 'remove_superadmin' ? '#991b1b' : '#141410', color: '#fff', cursor: 'pointer' }}>
-                    {modalKind === 'create_admin' || modalKind === 'create_staff' || modalKind === 'create_superadmin' ? 'Create' : modalKind === 'remove_superadmin' ? 'Remove' : 'Confirm'}
+                  } style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: (modalKind === 'remove_superadmin' || modalKind === 'delete_admin' || modalKind === 'delete_staff') ? '#991b1b' : '#141410', color: '#fff', cursor: 'pointer' }}>
+                    {modalKind === 'create_admin' || modalKind === 'create_staff' || modalKind === 'create_superadmin' ? 'Create' : modalKind === 'remove_superadmin' ? 'Remove' : (modalKind === 'delete_admin' || modalKind === 'delete_staff') ? 'Delete' : 'Confirm'}
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          <AdminDetailPanel admin={panelAdmin} isStaff={panelIsStaff} onClose={() => setPanelAdmin(null)} onMessage={messageAdmin} onReset={openResetModal} onToggle={toggleAccount} onGrant={openGrantSuperadminModal} onRevoke={openRemoveSuperadminModal} />
+          {signOutOpen && (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 6000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+              <div style={{ width: 380, background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 20, boxShadow: "0 20px 50px rgba(0,0,0,0.25)" }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", marginBottom: 6 }}>Sign out?</div>
+                <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.55, marginBottom: 18 }}>
+                  You'll be signed out of this super admin session on this device. You can sign back in anytime.
+                </div>
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <button onClick={() => setSignOutOpen(false)} style={{ padding: "9px 16px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+                  <button onClick={confirmSignOut} style={{ padding: "9px 16px", borderRadius: 9, border: "none", background: "#dc2626", color: "#fff", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Sign out</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <AdminDetailPanel admin={panelAdmin} isStaff={panelIsStaff} onClose={() => setPanelAdmin(null)} onMessage={messageAdmin} onReset={openResetModal} onToggle={toggleAccount} onGrant={openGrantSuperadminModal} onRevoke={openRemoveSuperadminModal} onDelete={panelIsStaff ? openDeleteStaffModal : openDeleteAdminModal} />
 
         </div>
       </div>
