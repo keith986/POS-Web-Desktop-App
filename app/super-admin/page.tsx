@@ -57,11 +57,6 @@ type TagProps = {
   children: ReactNode;
 };
 
-type StatProps = {
-  label: string;
-  value?: string | number | null;
-};
-
 interface Admin {
   id: string | number;
   full_name?: string;
@@ -288,14 +283,8 @@ function Pagination({ page, total, onChange }: { page: number; total: number; on
 }
 
 /*_________ sidebar view _________*/
-function gradientFor(seed = "") {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  const h1 = hash % 360;
-  const h2 = (h1 + 46 + (hash % 40)) % 360;
-  return `linear-gradient(135deg, hsl(${h1} 70% 52%), hsl(${h2} 70% 42%))`;
-}
- 
+
+
 function initials(name = "") {
   return name.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) || "—";
 }
@@ -349,17 +338,6 @@ function Tag({ children } : TagProps) {
     </span>
   );
 }
-
-/* 
-function Stat({ label, value }: StatProps) {
-  return (
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ fontSize: 10, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 15, fontWeight: 600, color: "#141410", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value ?? "—"}</div>
-    </div>
-  );
-}
-*/
 
 function StatusPill({ active, activeLabel = "Active", inactiveLabel = "Inactive" } : StatusPillProps) {
   return (
