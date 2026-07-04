@@ -83,6 +83,7 @@ interface Billing {
 interface AdminDetailPanelProps {
   admin: Admin | null;
   billing?: Billing | null;
+  isStaff?: boolean;
   onClose: () => void;
   onMessage?: (id: string) => void;
   onReset?: (id: string, action: string) => void;
@@ -223,9 +224,9 @@ function ActionsMenu({ items }: { items: { label: string; onClick: () => void; d
       </button>
       {open && (
         <>
-          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 5000 }} />
           <div style={{
-            position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 41, minWidth: 170,
+            position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 5001, minWidth: 170,
             background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10,
             boxShadow: "0 10px 28px rgba(0,0,0,0.14)", padding: 5, display: "flex", flexDirection: "column", gap: 2,
           }}>
@@ -251,6 +252,25 @@ function ActionsMenu({ items }: { items: { label: string; onClick: () => void; d
   );
 }
 
+/* ─── Donut ring ── */
+function Donut({ pct, color, size = 78, thickness = 10, label }: { pct: number; color: string; size?: number; thickness?: number; label?: string }) {
+  const clamped = Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0));
+  const deg = clamped * 3.6;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+      <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+        <div style={{ width: size, height: size, borderRadius: "50%", background: `conic-gradient(${color} 0deg ${deg}deg, var(--subtle) ${deg}deg 360deg)` }} />
+        <div style={{
+          position: "absolute", inset: thickness, borderRadius: "50%", background: "var(--card)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <span style={{ fontSize: size * 0.21, fontWeight: 700, color: "var(--ink)" }}>{Math.round(clamped)}%</span>
+        </div>
+      </div>
+      {label && <div style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 500, textAlign: "center" }}>{label}</div>}
+    </div>
+  );
+}
 
 /* ─── Smooth area/line path builder (used by overview trend chart) ── */
 function smoothLinePath(points: { x: number; y: number }[]): string {
@@ -334,18 +354,22 @@ function statusBadge(val: unknown) {
 }
 
 /* ─── Generic table (logs/orders fallback) ── */
-function GenericTable({ data }: { data: Record<string, unknown>[] }) {
+// Technical/duplicate columns that shouldn't be shown to admins in the table view.
+const GENERIC_TABLE_HIDDEN_KEYS = ["id", "admin_id", "user_id", "staff_id", "store_id", "updated_at", "password", "token"];
+
+function GenericTable({ data, excludeKeys = [], maxColumns = 6 }: { data: Record<string, unknown>[]; excludeKeys?: string[]; maxColumns?: number }) {
   if (!data.length) return (
     <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No records found.</div>
   );
-  const keys = Object.keys(data[0]).slice(0, 8);
+  const hidden = new Set([...GENERIC_TABLE_HIDDEN_KEYS, ...excludeKeys]);
+  const keys = Object.keys(data[0]).filter(k => !hidden.has(k)).slice(0, maxColumns);
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+    <div style={{ width: "100%", overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
         <thead>
           <tr>
             {keys.map(k => (
-              <th key={k} style={{ textAlign: "left", padding: "0.75rem 1.25rem", fontSize: 11, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)", background: "var(--subtle)", whiteSpace: "nowrap" }}>
+              <th key={k} style={{ textAlign: "left", padding: "0.75rem 1rem", fontSize: 11, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)", background: "var(--subtle)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {k.replace(/_/g, " ")}
               </th>
             ))}
@@ -357,7 +381,7 @@ function GenericTable({ data }: { data: Record<string, unknown>[] }) {
               onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = "var(--subtle)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = ""; }}>
               {keys.map(k => (
-                <td key={k} style={{ padding: "0.85rem 1.25rem", color: "var(--ink)", whiteSpace: "nowrap", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }}>
+                <td key={k} style={{ padding: "0.85rem 1rem", color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {["status", "payment_status", "subdomain_status"].includes(k)
                     ? statusBadge(row[k])
                     : String(row[k] ?? "—")}
@@ -522,7 +546,7 @@ function SectionCard({ title, children, style } : SectionCardProps) {
 }
 
 export function AdminDetailPanel({
-  admin, billing, onClose, onMessage, onReset, onToggle,
+  admin, billing, isStaff = false, onClose, onMessage, onReset, onToggle,
   onGrant, onRevoke, onRenew, onLifetime, onCancelLifetime,
 }: AdminDetailPanelProps) {
   const [tab, setTab] = useState("profile");
@@ -591,8 +615,8 @@ export function AdminDetailPanel({
  
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                     <Tag>{admin.store_name ?? "No store"}</Tag>
-                    {admin.pos_type && <Tag>{String(admin.pos_type)}</Tag>}
-                    {admin.domain && <Tag>{admin.domain}.upendoapps.com</Tag>}
+                    {!isStaff && admin.pos_type && <Tag>{String(admin.pos_type)}</Tag>}
+                    {!isStaff && admin.domain && <Tag>{admin.domain}.upendoapps.com</Tag>}
                   </div>
  
                   <button
@@ -603,47 +627,51 @@ export function AdminDetailPanel({
                       boxShadow: "0 4px 12px rgba(20,20,16,0.18)",
                     }}
                   >
-                    Message admin
+                    {isStaff ? "Message staff" : "Message admin"}
                   </button>
                 </div>
  
-                {/* Tab switcher */}
-                <div style={{ display: "flex", background: "#e9e7df", borderRadius: 12, padding: 4, gap: 4 }}>
-                  {[["profile", "Profile"], ["billing", "Billing"]].map(([key, label]) => (
-                    <button key={key} onClick={() => setTab(key)} style={{
-                      flex: 1, padding: "8px", borderRadius: 9, border: "none", cursor: "pointer",
-                      fontSize: 12.5, fontWeight: 600, fontFamily: "inherit",
-                      background: tab === key ? "#fff" : "transparent",
-                      color: tab === key ? "#141410" : "#8a8a7e",
-                      boxShadow: tab === key ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
-                      transition: "all 0.15s",
-                    }}>{label}</button>
-                  ))}
-                </div>
+                {/* Tab switcher — staff have no billing, so no tabs to switch between */}
+                {!isStaff && (
+                  <div style={{ display: "flex", background: "#e9e7df", borderRadius: 12, padding: 4, gap: 4 }}>
+                    {[["profile", "Profile"], ["billing", "Billing"]].map(([key, label]) => (
+                      <button key={key} onClick={() => setTab(key)} style={{
+                        flex: 1, padding: "8px", borderRadius: 9, border: "none", cursor: "pointer",
+                        fontSize: 12.5, fontWeight: 600, fontFamily: "inherit",
+                        background: tab === key ? "#fff" : "transparent",
+                        color: tab === key ? "#141410" : "#8a8a7e",
+                        boxShadow: tab === key ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                        transition: "all 0.15s",
+                      }}>{label}</button>
+                    ))}
+                  </div>
+                )}
  
-                {tab === "profile" ? (
+                {(isStaff || tab === "profile") ? (
                   <>
                     <SectionCard title="Account">
-                      <Row label="Admin ID" value={<CopyableId value={admin.id} display={String(admin.id ?? "").slice(0, 8) + "…"} />} />
+                      <Row label={isStaff ? "Staff ID" : "Admin ID"} value={<CopyableId value={admin.id} display={String(admin.id ?? "").slice(0, 8) + "…"} />} />
                       <Row label="Joined" value={fmtDate(admin.created_at)} />
-                      <Row label="Role" value={isSuper ? "Super admin" : "Admin"} />
+                      <Row label="Role" value={isStaff ? "Staff" : isSuper ? "Super admin" : "Admin"} />
                     </SectionCard>
  
                     <SectionCard title="Store">
                       <Row label="Store name" value={admin.store_name} />
-                      <Row label="Domain" value={admin.domain ? `${admin.domain}.upendoapps.com` : "—"} />
-                      <Row label="POS type" value={admin.pos_type} />
+                      {!isStaff && <Row label="Domain" value={admin.domain ? `${admin.domain}.upendoapps.com` : "—"} />}
+                      {!isStaff && <Row label="POS type" value={admin.pos_type} />}
                     </SectionCard>
  
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      <button onClick={() => onReset?.(String(admin.id), "reset_user_password")} style={secondaryBtn}>Reset password</button>
-                      {isSuper ? (
-                        <button onClick={() => onRevoke?.(String(admin.email))} style={{ ...secondaryBtn, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}>Revoke superadmin</button>
-                      ) : (
-                        <button onClick={() => onGrant?.(String(admin.email))} style={{ ...secondaryBtn, borderColor: "#bbf7d0", background: "#f0fdf4", color: "#16a34a" }}>Grant superadmin</button>
+                      <button onClick={() => onReset?.(String(admin.id), isStaff ? "reset_staff_password" : "reset_user_password")} style={secondaryBtn}>Reset password</button>
+                      {!isStaff && (
+                        isSuper ? (
+                          <button onClick={() => onRevoke?.(String(admin.email))} style={{ ...secondaryBtn, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}>Revoke superadmin</button>
+                        ) : (
+                          <button onClick={() => onGrant?.(String(admin.email))} style={{ ...secondaryBtn, borderColor: "#bbf7d0", background: "#f0fdf4", color: "#16a34a" }}>Grant superadmin</button>
+                        )
                       )}
                       <button
-                        onClick={() => onToggle?.(String(admin.id), !isActive, false)}
+                        onClick={() => onToggle?.(String(admin.id), !isActive, isStaff)}
                         style={{
                           ...secondaryBtn,
                           borderColor: isActive ? "#fecaca" : "#bbf7d0",
@@ -840,6 +868,7 @@ export default function SuperAdminPage() {
   const [modalInput, setModalInput] = useState<string>("");
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [panelAdmin, setPanelAdmin] = useState<Admin | null>(null);
+  const [panelIsStaff, setPanelIsStaff] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ full_name?: string; email?: string } | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
@@ -1716,7 +1745,7 @@ const openCreateStaffModal = async () => {
                               <td style={{ ...TD, color: "var(--muted)" }}>{fmtDate(r.created_at)}</td>
                               <td style={{ ...TD, textAlign: "right" }}>
                                 <ActionsMenu items={[
-                                  { label: "View profile", onClick: () => setPanelAdmin(r as unknown as Admin) },
+                                  { label: "View profile", onClick: () => { setPanelIsStaff(false); setPanelAdmin(r as unknown as Admin); } },
                                   { label: "Message admin", onClick: () => messageAdmin(String(r.id)) },
                                   { label: "Reset password", onClick: () => openResetModal(String(r.id), "reset_user_password") },
                                   Number(r.is_super_admin) == 1
@@ -1774,7 +1803,7 @@ const openCreateStaffModal = async () => {
                               <td style={{ ...TD, color: "var(--muted)" }}>{fmtDate(r.created_at)}</td>
                               <td style={{ ...TD, textAlign: "right" }}>
                                 <ActionsMenu items={[
-                                  { label: "View profile", onClick: () => setPanelAdmin(r as unknown as Admin) },
+                                  { label: "View profile", onClick: () => { setPanelIsStaff(true); setPanelAdmin(r as unknown as Admin); } },
                                   { label: "Message staff", onClick: () => messageAdmin(String(r.id)) },
                                   { label: "Reset password", onClick: () => openResetModal(String(r.id), "reset_staff_password") },
                                   {
@@ -2135,7 +2164,7 @@ const openCreateStaffModal = async () => {
                         </button>
                       ))
                     ) : selectedAdminId ? (
-                      <button
+                      <button 
                         style={{
                           display: "block", width: "100%", textAlign: "left",
                           padding: "0.9rem 1.25rem", borderBottom: "1px solid #e2e0d8",
@@ -2294,7 +2323,8 @@ const openCreateStaffModal = async () => {
                         </select>
                       </label>
                     </div>
-                  )}
+                  )} 
+
                   {modalKind === 'create_staff' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                       <label style={{ display: 'block', fontSize: 13, color: '#6b6b66' }}>
@@ -2387,7 +2417,7 @@ const openCreateStaffModal = async () => {
             </div>
           )}
 
-          <AdminDetailPanel admin={panelAdmin} onClose={() => setPanelAdmin(null)} onMessage={messageAdmin} onReset={openResetModal} onToggle={toggleAccount} onGrant={openGrantSuperadminModal} onRevoke={openRemoveSuperadminModal} />
+          <AdminDetailPanel admin={panelAdmin} isStaff={panelIsStaff} onClose={() => setPanelAdmin(null)} onMessage={messageAdmin} onReset={openResetModal} onToggle={toggleAccount} onGrant={openGrantSuperadminModal} onRevoke={openRemoveSuperadminModal} />
 
         </div>
       </div>
