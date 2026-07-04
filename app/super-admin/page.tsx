@@ -99,6 +99,7 @@ interface AdminDetailPanelProps {
   onRevoke?: (email: string) => void;
 }
 
+
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "overview",  label: "Overview",  icon: <IcoOverview /> },
   { key: "users",     label: "Users",     icon: <IcoUsers />    },
@@ -424,7 +425,7 @@ export function AdminDetailPanel({ admin, onClose, onMessage, onReset, onToggle,
   );
 }
 
-const secondaryBtn = {
+const secondaryBtn: React.CSSProperties = {
   width: "100%", padding: "11px", borderRadius: 12, cursor: "pointer",
   border: "1px solid #e2e0d8", background: "#fff", color: "#141410",
   fontSize: 13, fontWeight: 500, textAlign: "left",
@@ -462,7 +463,7 @@ export default function SuperAdminPage() {
   const [modalAction, setModalAction] = useState<string | null>(null);
   const [modalInput, setModalInput] = useState<string>("");
   const [formData, setFormData] = useState<Record<string, string>>({});
-  const [panelAdmin, setPanelAdmin] = useState<Record<string, unknown> | null>(null);
+  const [panelAdmin, setPanelAdmin] = useState<Admin | null>(null);
 
   /* ── Auth guard ── */
   useEffect(() => {
@@ -1120,7 +1121,7 @@ const openCreateStaffModal = async () => {
                               Grant SA
                               </button>
                               )}
-                              <button onClick={() => setPanelAdmin(r)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>
+                              <button onClick={() => setPanelAdmin(r as unknown as Admin)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>
                                   View
                               </button>
                               </td>
@@ -1167,7 +1168,7 @@ const openCreateStaffModal = async () => {
                                 <button onClick={() => toggleAccount(String(r.id), String(r.status) !== "active", true)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.status) !== "active" ? "#dcfce7" : "#fef2f2", color: String(r.status) !== "active" ? "#166534" : "#991b1b", cursor: "pointer" }}>
                                   {String(r.status) !== "active" ? "Activate" : "Deactivate"}
                                 </button>
-                                <button onClick={() => setPanelAdmin(r)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>
+                                <button onClick={() => setPanelAdmin(r as unknown as Admin)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>
                                   View
                                 </button>
                               </td>
