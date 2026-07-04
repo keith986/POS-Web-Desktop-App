@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, createContext, useContext } from "react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -76,29 +76,60 @@ interface Admin {
   subdomain_status?: string;
 }
 
-interface AdminDetailPanelProps {
-  admin: Admin | null;
-
-  onClose: () => void;
-
-  onMessage?: (id: string) => void;
-
-  onReset?: (
-    id: string,
-    action: string
-  ) => void;
-
-  onToggle?: (
-    id: string,
-    active: boolean,
-    force: boolean
-  ) => void;
-
-  onGrant?: (email: string) => void;
-
-  onRevoke?: (email: string) => void;
+interface Billing {
+  plan?: string;
+  status?: string;
+  amount?: number;
+  renewal_date?: string;
+  expiry_date?: string;
+  next_billing_date?: string;
 }
 
+interface AdminDetailPanelProps {
+  admin: Admin | null;
+  billing?: Billing | null;
+  onClose: () => void;
+  onMessage?: (id: string) => void;
+  onReset?: (id: string, action: string) => void;
+  onToggle?: (id: string, active: boolean, force: boolean) => void;
+  onGrant?: (email: string) => void;
+  onRevoke?: (email: string) => void;
+  onRenew?: (id: string) => void;
+  onLifetime?: (id: string) => void;
+  onCancelLifetime?: (id: string) => void;
+}
+
+interface CopyableIdProps {
+  value: string | number | null | undefined;
+  display: string;
+}
+
+interface RowProps {
+  label: string;
+  value?: ReactNode;
+  accent?: string;
+}
+
+interface SectionCardProps {
+  title?: string;
+  children: ReactNode;
+  style?: React.CSSProperties;
+}
+
+interface StatusPillProps {
+  active: boolean;
+  activeLabel?: string;
+  inactiveLabel?: string;
+}
+
+interface ThemeTokens {
+  label: string;
+  swatch: string;
+  "--bg": string; "--card": string; "--border": string;
+  "--ink": string; "--muted": string; "--subtle": string;
+  "--accent": string; "--accent-text": string;
+  "--sidebar": string; "--nav-hover": string;
+}
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "overview",  label: "Overview",  icon: <IcoOverview /> },
@@ -133,6 +164,7 @@ function shortId(id?: unknown) {
   if (s.length <= 12) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
+
 function fmtDate(d?: unknown) {
   if (!d) return "—";
   try { return new Date(String(d)).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); }
@@ -255,7 +287,6 @@ function Pagination({ page, total, onChange }: { page: number; total: number; on
   );
 }
 
-
 /*_________ sidebar view _________*/
 function gradientFor(seed = "") {
   let hash = 0;
@@ -268,19 +299,58 @@ function gradientFor(seed = "") {
 function initials(name = "") {
   return name.split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) || "—";
 }
+
+function daysUntil(d?: unknown): number | null {
+  if (!d) return null;
+  const diff = Math.ceil((new Date(String(d)).getTime() - Date.now()) / 86400000);
+  return Number.isFinite(diff) ? diff : null;
+}
+
+/* ─── Copy-to-clipboard ID chip ─── */
+
+function CopyableId({ value, display } : CopyableIdProps) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(String(value ?? ""));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch { /* clipboard unavailable */ }
+  };
+  return (
+    <button
+      onClick={copy}
+      title="Click to copy full ID"
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 6, border: "none", cursor: "pointer",
+        background: "transparent", padding: 0, fontFamily: "monospace", fontSize: 13, fontWeight: 600,
+        color: copied ? "#16a34a" : "#141410",
+      }}
+    >
+      {copied ? "Copied!" : display}
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {copied
+          ? <polyline points="20 6 9 17 4 12" />
+          : <><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></>
+        }
+      </svg>
+    </button>
+  );
+}
  
-function Tag({ children }: TagProps) {
+function Tag({ children } : TagProps) {
   return (
     <span style={{
-      display: "inline-flex", alignItems: "center", padding: "4px 10px",
-      borderRadius: 100, fontSize: 11, fontWeight: 500,
-      background: "#f5f4f0", color: "#4a4a40", border: "1px solid #e2e0d8",
+      display: "inline-flex", alignItems: "center", padding: "5px 11px",
+      borderRadius: 100, fontSize: 11.5, fontWeight: 500,
+      background: "#fff", color: "#4a4a40", border: "1px solid #e2e0d8",
     }}>
       {children}
     </span>
   );
 }
- 
+
+/* 
 function Stat({ label, value }: StatProps) {
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
@@ -289,133 +359,228 @@ function Stat({ label, value }: StatProps) {
     </div>
   );
 }
+*/
 
-export function AdminDetailPanel({ admin, onClose, onMessage, onReset, onToggle, onGrant, onRevoke } : AdminDetailPanelProps) {
+function StatusPill({ active, activeLabel = "Active", inactiveLabel = "Inactive" } : StatusPillProps) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 100,
+      fontSize: 11.5, fontWeight: 600,
+      background: active ? "#f0fdf4" : "#fef2f2",
+      color: active ? "#16a34a" : "#dc2626",
+      border: `1px solid ${active ? "#bbf7d0" : "#fecaca"}`,
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: active ? "#16a34a" : "#dc2626" }} />
+      {active ? activeLabel : inactiveLabel}
+    </span>
+  );
+}
+ 
+function Row({ label, value, accent } : RowProps) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 0", borderBottom: "1px solid #f0efe9" }}>
+      <span style={{ fontSize: 12.5, color: "#9a9a8e" }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: accent || "#141410", textAlign: "right" }}>{value ?? "—"}</span>
+    </div>
+  );
+}
+ 
+function SectionCard({ title, children, style } : SectionCardProps) {
+  return (
+    <div style={{
+      background: "#fff", border: "1px solid #e2e0d8", borderRadius: 16, padding: "1rem 1.15rem",
+      boxShadow: "0 1px 2px rgba(20,20,16,0.03)", ...style,
+    }}>
+      {title && <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", color: "#9a9a8e", marginBottom: 6 }}>{title}</div>}
+      {children}
+    </div>
+  );
+}
+
+export function AdminDetailPanel({
+  admin, billing, onClose, onMessage, onReset, onToggle,
+  onGrant, onRevoke, onRenew, onLifetime, onCancelLifetime,
+}: AdminDetailPanelProps) {
+  const [tab, setTab] = useState("profile");
   const open = Boolean(admin);
+ 
   const isSuper = admin ? Number(admin.is_super_admin) === 1 : false;
-  const isActive = admin ? String(admin.account_status ?? admin.subdomain_status) !== "inactive"
-                          && String(admin.account_status ?? admin.subdomain_status) !== "failed" : true;
+  const rawStatus = admin ? String(admin.account_status ?? admin.subdomain_status ?? "") : "";
+  const isActive = admin ? rawStatus !== "inactive" && rawStatus !== "failed" : true;
+ 
+  const remaining = billing?.next_billing_date ? daysUntil(billing.next_billing_date) : null;
+  const isLifetime = billing?.plan === "lifetime";
  
   return (
     <>
-      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
-          position: "fixed", inset: 0, background: "rgba(15,15,15,0.35)",
+          position: "fixed", inset: 0, background: "rgba(15,15,15,0.4)", backdropFilter: "blur(2px)",
           zIndex: 998, opacity: open ? 1 : 0, pointerEvents: open ? "auto" : "none",
           transition: "opacity 0.25s ease",
         }}
       />
  
-      {/* Panel */}
       <aside style={{
-        position: "fixed", top: 0, right: 0, height: "100vh", width: 400, maxWidth: "92vw",
-        background: "#f5f4f0", borderLeft: "1px solid #e2e0d8", zIndex: 999,
+        position: "fixed", top: 0, right: 0, height: "100vh", width: 420, maxWidth: "92vw",
+        background: "#f5f4f0", zIndex: 999,
         transform: open ? "translateX(0)" : "translateX(100%)",
-        transition: "transform 0.28s cubic-bezier(.4,0,.2,1)",
-        display: "flex", flexDirection: "column", boxShadow: "-8px 0 24px rgba(0,0,0,0.06)",
+        transition: "transform 0.3s cubic-bezier(.4,0,.2,1)",
+        display: "flex", flexDirection: "column", boxShadow: "-12px 0 32px rgba(0,0,0,0.08)",
       }}>
         {admin && (
           <>
-            {/* Close */}
-            <button onClick={onClose} aria-label="Close panel" style={{
-              position: "absolute", top: 14, right: 14, width: 30, height: 30, borderRadius: 8,
-              border: "1px solid #e2e0d8", background: "#fff", color: "#4a4a40", cursor: "pointer",
-              fontSize: 14, zIndex: 2,
-            }}>✕</button>
+            <div style={{ padding: "1.25rem 1.25rem 0", display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={onClose} aria-label="Close panel" style={{
+                width: 32, height: 32, borderRadius: 10, border: "1px solid #e2e0d8",
+                background: "#fff", color: "#4a4a40", cursor: "pointer", fontSize: 14,
+              }}>✕</button>
+            </div>
  
-            <div style={{ padding: "1.5rem", overflowY: "auto", flex: 1 }}>
-              {/* ── Card ── */}
-              <div style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 16, overflow: "hidden" }}>
-                {/* Gradient banner + avatar */}
-                <div style={{ height: 92, background: gradientFor(String(admin.id ?? admin.email ?? "")), position: "relative" }} />
-                <div style={{ padding: "0 1.25rem 1.25rem", marginTop: -40 }}>
-                  <div style={{
-                    width: 76, height: 76, borderRadius: "50%", background: "#141410",
-                    border: "4px solid #fff", display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "#fff", fontSize: 22, fontWeight: 600,
-                  }}>
-                    {initials(String(admin.full_name ?? admin.email ?? "?"))}
-                  </div>
- 
-                  <div style={{ marginTop: 12, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                    <div>
-                      <div style={{ fontSize: 17, fontWeight: 600, color: "#141410" }}>{admin.full_name ?? "—"}</div>
-                      <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 2 }}>{admin.email ?? "—"}</div>
+            <div style={{ overflowY: "auto", flex: 1, padding: "0.5rem 1.25rem 1.5rem" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {/* Identity card — flat, no gradient banner */}
+                <div style={{
+                  background: "#fff", borderRadius: 20, padding: "1.25rem 1.15rem",
+                  border: "1px solid #e2e0d8", boxShadow: "0 8px 20px rgba(20,20,16,0.06)",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 60, height: 60, borderRadius: "50%", flexShrink: 0,
+                      background: "#141410", display: "flex", alignItems: "center", justifyContent: "center",
+                      color: "#fff", fontSize: 18, fontWeight: 600,
+                    }}>
+                      {initials(String(admin.full_name ?? admin.email ?? "?"))}
                     </div>
-                    {isSuper && (
-                      <span style={{
-                        flexShrink: 0, fontSize: 10, fontWeight: 600, color: "#dc2626",
-                        background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 100, padding: "3px 9px",
-                      }}>SUPER ADMIN</span>
-                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 16.5, fontWeight: 700, color: "#141410", lineHeight: 1.2 }}>{admin.full_name ?? "—"}</div>
+                      <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{admin.email ?? "—"}</div>
+                    </div>
                   </div>
  
-                  {/* Tags */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 14 }}>
+                    {isSuper && <span style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 100, padding: "5px 11px" }}>★ SUPER ADMIN</span>}
+                    <StatusPill active={isActive} />
+                    {isLifetime && <span style={{ fontSize: 11, fontWeight: 600, color: "#7c3aed", background: "#f5f3ff", border: "1px solid #ddd6fe", borderRadius: 100, padding: "5px 11px" }}>♾ Lifetime</span>}
+                  </div>
+ 
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                     <Tag>{admin.store_name ?? "No store"}</Tag>
                     {admin.pos_type && <Tag>{String(admin.pos_type)}</Tag>}
-                    {admin.plan && <Tag>{String(admin.plan)} plan</Tag>}
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 100,
-                      fontSize: 11, fontWeight: 500,
-                      background: isActive ? "#f0fdf4" : "#fef2f2",
-                      color: isActive ? "#16a34a" : "#dc2626",
-                      border: `1px solid ${isActive ? "#bbf7d0" : "#fecaca"}`,
-                    }}>
-                      <span style={{ width: 5, height: 5, borderRadius: "50%", background: isActive ? "#16a34a" : "#dc2626" }} />
-                      {isActive ? "Active" : "Inactive"}
-                    </span>
+                    {admin.domain && <Tag>{admin.domain}.upendoapps.com</Tag>}
                   </div>
  
-                  {/* Stats row */}
-                  <div style={{ display: "flex", gap: 12, marginTop: 18, paddingTop: 16, borderTop: "1px solid #e2e0d8" }}>
-                    <Stat label="Domain" value={admin.domain} />
-                    <Stat label="Joined" value={admin.created_at ? new Date(admin.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"} />
-                    <Stat label="ID" value={String(admin.id ?? "").slice(0, 8) + "…"} />
-                  </div>
- 
-                  {/* Primary action */}
                   <button
                     onClick={() => onMessage?.(String(admin.id))}
                     style={{
-                      width: "100%", marginTop: 18, padding: "12px", borderRadius: 12, border: "none",
-                      background: "#141410", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer",
+                      width: "100%", marginTop: 16, padding: "12px", borderRadius: 13, border: "none",
+                      background: "#141410", color: "#fff", fontSize: 13.5, fontWeight: 600, cursor: "pointer",
+                      boxShadow: "0 4px 12px rgba(20,20,16,0.18)",
                     }}
                   >
                     Message admin
                   </button>
                 </div>
-              </div>
  
-              {/* ── Secondary actions ── */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
-                <button onClick={() => onReset?.(String(admin.id), "reset_user_password")} style={secondaryBtn}>
-                  Reset password
-                </button>
+                {/* Tab switcher */}
+                <div style={{ display: "flex", background: "#e9e7df", borderRadius: 12, padding: 4, gap: 4 }}>
+                  {[["profile", "Profile"], ["billing", "Billing"]].map(([key, label]) => (
+                    <button key={key} onClick={() => setTab(key)} style={{
+                      flex: 1, padding: "8px", borderRadius: 9, border: "none", cursor: "pointer",
+                      fontSize: 12.5, fontWeight: 600, fontFamily: "inherit",
+                      background: tab === key ? "#fff" : "transparent",
+                      color: tab === key ? "#141410" : "#8a8a7e",
+                      boxShadow: tab === key ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                      transition: "all 0.15s",
+                    }}>{label}</button>
+                  ))}
+                </div>
  
-                {isSuper ? (
-                  <button onClick={() => onRevoke?.(String(admin.email))} style={{ ...secondaryBtn, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}>
-                    Revoke superadmin
-                  </button>
+                {tab === "profile" ? (
+                  <>
+                    <SectionCard title="Account">
+                      <Row label="Admin ID" value={<CopyableId value={admin.id} display={String(admin.id ?? "").slice(0, 8) + "…"} />} />
+                      <Row label="Joined" value={fmtDate(admin.created_at)} />
+                      <Row label="Role" value={isSuper ? "Super admin" : "Admin"} />
+                    </SectionCard>
+ 
+                    <SectionCard title="Store">
+                      <Row label="Store name" value={admin.store_name} />
+                      <Row label="Domain" value={admin.domain ? `${admin.domain}.upendoapps.com` : "—"} />
+                      <Row label="POS type" value={admin.pos_type} />
+                    </SectionCard>
+ 
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <button onClick={() => onReset?.(String(admin.id), "reset_user_password")} style={secondaryBtn}>Reset password</button>
+                      {isSuper ? (
+                        <button onClick={() => onRevoke?.(String(admin.email))} style={{ ...secondaryBtn, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}>Revoke superadmin</button>
+                      ) : (
+                        <button onClick={() => onGrant?.(String(admin.email))} style={{ ...secondaryBtn, borderColor: "#bbf7d0", background: "#f0fdf4", color: "#16a34a" }}>Grant superadmin</button>
+                      )}
+                      <button
+                        onClick={() => onToggle?.(String(admin.id), !isActive, false)}
+                        style={{
+                          ...secondaryBtn,
+                          borderColor: isActive ? "#fecaca" : "#bbf7d0",
+                          background: isActive ? "#fef2f2" : "#f0fdf4",
+                          color: isActive ? "#991b1b" : "#166534",
+                        }}
+                      >
+                        {isActive ? "Deactivate account" : "Activate account"}
+                      </button>
+                    </div>
+                  </>
                 ) : (
-                  <button onClick={() => onGrant?.(String(admin.email))} style={{ ...secondaryBtn, borderColor: "#bbf7d0", background: "#f0fdf4", color: "#16a34a" }}>
-                    Grant superadmin
-                  </button>
-                )}
+                  <>
+                    <SectionCard>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div>
+                          <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px" }}>Current plan</div>
+                          <div style={{ fontSize: 20, fontWeight: 700, color: "#141410", marginTop: 2, textTransform: "capitalize" }}>{billing?.plan ?? "starter"}</div>
+                        </div>
+                        <StatusPill active={billing?.status === "active" || billing?.status === "paid"} activeLabel="Paid" inactiveLabel={billing?.status ?? "Unknown"} />
+                      </div>
+                    </SectionCard>
  
-                <button
-                  onClick={() => onToggle?.(String(admin.id), !isActive, false)}
-                  style={{
-                    ...secondaryBtn,
-                    borderColor: isActive ? "#fecaca" : "#bbf7d0",
-                    background: isActive ? "#fef2f2" : "#f0fdf4",
-                    color: isActive ? "#991b1b" : "#166534",
-                  }}
-                >
-                  {isActive ? "Deactivate account" : "Activate account"}
-                </button>
+                    <SectionCard title="Billing details">
+                      <Row label="Amount" value={billing?.amount != null ? `KES ${Number(billing.amount).toLocaleString()}` : "—"} />
+                      <Row label="Last renewed" value={fmtDate(billing?.renewal_date)} />
+                      <Row
+                        label="Next billing"
+                        value={isLifetime ? "Never (lifetime)" : fmtDate(billing?.expiry_date ?? billing?.next_billing_date)}
+                        accent={!isLifetime && remaining != null && remaining <= 3 ? "#dc2626" : undefined}
+                      />
+                      {!isLifetime && remaining != null && (
+                        <Row
+                          label="Time left"
+                          value={remaining < 0 ? `Overdue ${Math.abs(remaining)}d` : `${remaining} day${remaining === 1 ? "" : "s"}`}
+                          accent={remaining <= 3 ? "#dc2626" : remaining <= 14 ? "#d97706" : "#16a34a"}
+                        />
+                      )}
+                      <Row label="Payment method" value="M-Pesa" />
+                    </SectionCard>
+ 
+                    {!billing && (
+                      <div style={{ fontSize: 12, color: "#9a9a8e", textAlign: "center", padding: "0.5rem 0" }}>
+                        No billing record found for this admin.
+                      </div>
+                    )}
+ 
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <button onClick={() => onRenew?.(String(admin.id))} style={secondaryBtn}>Renew subscription</button>
+                      {isLifetime ? (
+                        <button onClick={() => onCancelLifetime?.(String(admin.id))} style={{ ...secondaryBtn, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}>
+                          Cancel lifetime subscription
+                        </button>
+                      ) : (
+                        <button onClick={() => onLifetime?.(String(admin.id))} style={{ ...secondaryBtn, borderColor: "#ddd6fe", background: "#f5f3ff", color: "#6d28d9" }}>
+                          Upgrade to lifetime
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </>
@@ -430,8 +595,95 @@ const secondaryBtn: React.CSSProperties = {
   border: "1px solid #e2e0d8", background: "#fff", color: "#141410",
   fontSize: 13, fontWeight: 500, textAlign: "left",
 };
- 
 
+/*Admin System Theme*/
+type ThemeKey = "cream" | "midnight" | "ocean" | "sunset" | "forest";
+
+export const THEMES: Record<ThemeKey, ThemeTokens> = {
+  cream: { label: "Cream", swatch: "#f5f4f0", "--bg": "#f5f4f0", "--card": "#ffffff", "--border": "#e2e0d8", "--ink": "#141410", "--muted": "#9a9a8e", "--subtle": "#f0efe9", "--accent": "#141410", "--accent-text": "#ffffff", "--sidebar": "#ffffff", "--nav-hover": "#f5f4f0" },
+  midnight: { label: "Midnight", swatch: "#18181f", "--bg": "#121218", "--card": "#1c1c24", "--border": "#2c2c36", "--ink": "#f2f2f5", "--muted": "#8b8b98", "--subtle": "#242430", "--accent": "#f2f2f5", "--accent-text": "#121218", "--sidebar": "#1c1c24", "--nav-hover": "#252530" },
+  ocean: { label: "Ocean", swatch: "#0e7490", "--bg": "#f0f9fb", "--card": "#ffffff", "--border": "#cfe8ee", "--ink": "#0c2b33", "--muted": "#5c8992", "--subtle": "#e3f4f7", "--accent": "#0e7490", "--accent-text": "#ffffff", "--sidebar": "#ffffff", "--nav-hover": "#e3f4f7" },
+  sunset: { label: "Sunset", swatch: "#c2410c", "--bg": "#fdf4ee", "--card": "#ffffff", "--border": "#f0dcca", "--ink": "#3a2416", "--muted": "#9c7a63", "--subtle": "#faece1", "--accent": "#c2410c", "--accent-text": "#ffffff", "--sidebar": "#ffffff", "--nav-hover": "#faece1" },
+  forest: { label: "Forest", swatch: "#166534", "--bg": "#f2f7f3", "--card": "#ffffff", "--border": "#d7e6da", "--ink": "#173321", "--muted": "#6c8574", "--subtle": "#e6f0e8", "--accent": "#166534", "--accent-text": "#ffffff", "--sidebar": "#ffffff", "--nav-hover": "#e6f0e8" },
+};
+
+interface ThemeContextValue {
+  themeKey: ThemeKey;
+  setThemeKey: (key: ThemeKey) => void;
+}
+
+const ThemeCtx = createContext<ThemeContextValue>({ themeKey: "cream", setThemeKey: () => {} });
+
+export const useTheme = () => useContext(ThemeCtx);
+
+interface ThemeProviderProps {
+  children: ReactNode;
+  defaultTheme?: ThemeKey;
+}
+
+export function ThemeProvider({ children, defaultTheme = "cream" }: ThemeProviderProps) {
+  const [themeKey, setThemeKey] = useState<ThemeKey>(defaultTheme);
+  const tokens = THEMES[themeKey] ?? THEMES.cream;
+  const cssVars = Object.fromEntries(
+    Object.entries(tokens).filter(([k]) => k.startsWith("--"))
+  ) as React.CSSProperties;
+
+  return (
+    <ThemeCtx.Provider value={{ themeKey, setThemeKey }}>
+      <div style={{ ...cssVars, minHeight: "100vh" }}>{children}</div>
+    </ThemeCtx.Provider>
+  );
+}
+
+export function ThemeSwitcher() {
+  const { themeKey, setThemeKey } = useTheme();
+  const [open, setOpen] = useState(false);
+  const current = THEMES[themeKey];
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: "flex", alignItems: "center", gap: 8, padding: "7px 12px",
+          background: "var(--card)", color: "var(--ink)", border: "1px solid var(--border)",
+          borderRadius: 7, fontFamily: "inherit", fontSize: 13, cursor: "pointer",
+        }}
+      >
+        <span style={{ width: 14, height: 14, borderRadius: "50%", background: current.swatch, border: "1px solid rgba(0,0,0,0.1)" }} />
+        {current.label}
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9" /></svg>
+      </button>
+
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+          <div style={{
+            position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 41,
+            background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)", padding: 6, minWidth: 160,
+          }}>
+            {(Object.entries(THEMES) as [ThemeKey, ThemeTokens][]).map(([key, t]) => (
+              <button
+                key={key}
+                onClick={() => { setThemeKey(key); setOpen(false); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 10px",
+                  border: "none", borderRadius: 7, background: key === themeKey ? "var(--subtle)" : "transparent",
+                  color: "var(--ink)", fontFamily: "inherit", fontSize: 13, cursor: "pointer", textAlign: "left",
+                }}
+              >
+                <span style={{ width: 14, height: 14, borderRadius: "50%", background: t.swatch, border: "1px solid rgba(0,0,0,0.1)" }} />
+                {t.label}
+                {key === themeKey && <span style={{ marginLeft: "auto", fontSize: 11 }}>✓</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 /* ─────────────────────────────────────────
    MAIN PAGE
@@ -823,8 +1075,8 @@ const openCreateStaffModal = async () => {
   };
 
   /* ── Shared table header style ── */
-  const TH: React.CSSProperties = { textAlign: "left", padding: "0.6rem 1.25rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "#9a9a8e", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", whiteSpace: "nowrap" };
-  const TD: React.CSSProperties = { padding: "0.8rem 1.25rem", fontSize: 13, color: "#4a4a40" };
+  const TH: React.CSSProperties = { textAlign: "left", padding: "0.6rem 1.25rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)", background: "var(--subtle)" };
+  const TD: React.CSSProperties = { padding: "0.8rem 1.25rem", fontSize: 13, color: "var(--ink)" };
   const rowHover: { onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) => void; onMouseLeave: (e: React.MouseEvent<HTMLTableRowElement>) => void } = {
     onMouseEnter: (e: React.MouseEvent<HTMLTableRowElement>) => { e.currentTarget.style.background = "#fafaf8"; },
     onMouseLeave: (e: React.MouseEvent<HTMLTableRowElement>) => { e.currentTarget.style.background = ""; }
@@ -834,19 +1086,20 @@ const openCreateStaffModal = async () => {
 
   return (
     <>
+     <ThemeProvider>
       <style>{`
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'DM Sans', sans-serif; }
-        .sa-shell { display: flex; min-height: 100vh; background: #f5f4f0; }
-        .sa-sidebar { width: 220px; background: #fff; border-right: 1px solid #e2e0d8; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sa-shell { background: var(--bg); }
+        .sa-sidebar { background: var(--sidebar); border-right: 1px solid var(--border); }
         .sa-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
         .sa-header { background: #fff; border-bottom: 1px solid #e2e0d8; padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: sticky; top: 0; z-index: 10; }
         .sa-main { flex: 1; padding: 1.75rem 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
-        .sa-nav-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 14px; border: none; background: transparent; border-radius: 8px; font-family: inherit; font-size: 13; cursor: pointer; color: #4a4a40; transition: all 0.15s; text-align: left; }
-        .sa-nav-btn:hover { background: #f5f4f0; color: #141410; }
-        .sa-nav-btn.active { background: #141410; color: #fff; font-weight: 500; }
+        .sa-nav-btn { color: var(--ink); }
+        .sa-nav-btn:hover { background: var(--nav-hover); color: var(--ink); }
+        .sa-nav-btn.active { background: var(--accent); color: var(--accent-text); }
         .sa-nav-btn.active svg { color: #fff; }
-        .sa-card { background: #fff; border: 1px solid #e2e0d8; border-radius: 12px; overflow: hidden; }
+        .sa-card, .sa-stat { background: var(--card); border: 1px solid var(--border); }
         .sa-stat { background: #fff; border: 1px solid #e2e0d8; border-radius: 12px; padding: 1.1rem 1.25rem; }
         .sa-toolbar { padding: 1rem 1.25rem; border-bottom: 1px solid #e2e0d8; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .sa-search { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 8px; background: #f5f4f0; border: 1px solid #c8c6bc; border-radius: 8px; padding: 0 10px; }
@@ -854,6 +1107,7 @@ const openCreateStaffModal = async () => {
         .sa-refresh-btn { display: flex; align-items: center; gap: 6px; padding: 7px 14px; background: #fff; color: #141410; border: 1px solid #c8c6bc; border-radius: 7px; font-family: inherit; font-size: 13px; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
         .sa-refresh-btn:hover { background: #f5f4f0; }
         @keyframes sa-spin { to { transform: rotate(360deg); } }
+        .sa-shell { background: var(--bg); }
       `}</style>
 
       <div className="sa-shell">
@@ -933,6 +1187,8 @@ const openCreateStaffModal = async () => {
               >
                 <IcoRefresh /> Refresh
               </button>
+
+              <ThemeSwitcher />
 
               <button
                 onClick={() => { localStorage.removeItem("user"); router.push("/login"); }}
@@ -1604,6 +1860,7 @@ const openCreateStaffModal = async () => {
 
         </div>
       </div>
+    </ThemeProvider>
     </>
   );
 } 
