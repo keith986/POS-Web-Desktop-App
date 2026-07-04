@@ -151,6 +151,7 @@ function IcoSearch()    { return <svg width="13" height="13" viewBox="0 0 24 24"
 function IcoChevronL()  { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>; }
 function IcoChevronR()  { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>; }
 function IcoSend()      { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>; }
+function IcoBell()      { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>; }
 
 /* ─── Helpers ── */
 function shortId(id?: unknown) {
@@ -694,11 +695,13 @@ export default function SuperAdminPage() {
   const [modalInput, setModalInput] = useState<string>("");
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [panelAdmin, setPanelAdmin] = useState<Admin | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ full_name?: string; email?: string } | null>(null);
 
   /* ── Auth guard ── */
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") || "null");
     if (!user || !user.is_super_admin) router.push("/login");
+    else setCurrentUser(user);
   }, [router]);
 
   /* ── Fetch section ── */
@@ -1061,30 +1064,42 @@ const openCreateStaffModal = async () => {
   };
 
   const dater = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date());
+  const revBars: [string, number][] = [
+    ["Today", Number(stats?.todayRevenue || 0)],
+    ["Week", Number(stats?.weekRevenue || 0)],
+    ["Month", Number(stats?.monthRevenue || 0)],
+    ["Year", Number(stats?.yearRevenue || 0)],
+  ];
+  const revMax = Math.max(1, ...revBars.map(([, v]) => v));
 
   return (
     <>
      <ThemeProvider>
       <style>{`
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: 'DM Sans', sans-serif; }
+        body { margin: 0; font-family: 'DM Sans', sans-serif; -webkit-font-smoothing: antialiased; }
         .sa-shell { display: flex; min-height: 100vh; background: var(--bg); }
-        .sa-sidebar { background: var(--sidebar); border-right: 1px solid var(--border); }
+        .sa-sidebar { background: var(--sidebar); border-right: 1px solid var(--border); width: 250px; flex-shrink: 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
         .sa-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-        .sa-header { background: #fff; border-bottom: 1px solid #e2e0d8; padding: 0 2rem; height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: sticky; top: 0; z-index: 10; }
-        .sa-main { flex: 1; padding: 1.75rem 2rem; display: flex; flex-direction: column; gap: 1.25rem; }
-        .sa-nav-btn { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 14px; border: none; background: transparent; border-radius: 8px; font-family: inherit; font-size: 13px; cursor: pointer; color: var(--ink); transition: all 0.15s; text-align: left; }
+        .sa-header { background: var(--card); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: sticky; top: 0; z-index: 10; }
+        .sa-main { flex: 1; padding: 1.75rem 2rem 2.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+        .sa-nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border: none; background: transparent; border-radius: 10px; font-family: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; color: var(--muted); transition: all 0.15s; text-align: left; position: relative; }
         .sa-nav-btn:hover { background: var(--nav-hover); color: var(--ink); }
-        .sa-nav-btn.active { background: var(--accent); color: var(--accent-text); }
+        .sa-nav-btn.active { background: var(--accent); color: var(--accent-text); box-shadow: 0 6px 16px -6px var(--accent); }
         .sa-nav-btn.active svg { color: var(--accent-text); }
-        .sa-card, .sa-stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
-        .sa-stat { padding: 1.1rem 1.25rem; }
+        .sa-card, .sa-stat { background: var(--card); border: 1px solid var(--border); border-radius: 16px; }
+        .sa-card { box-shadow: 0 2px 10px rgba(20,20,16,0.03); }
+        .sa-stat { padding: 1.15rem 1.3rem; box-shadow: 0 2px 10px rgba(20,20,16,0.03); transition: transform 0.15s, box-shadow 0.15s; }
+        .sa-stat:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(20,20,16,0.06); }
         .sa-card { overflow: hidden; }
-        .sa-toolbar { padding: 1rem 1.25rem; border-bottom: 1px solid #e2e0d8; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .sa-search { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 8px; background: #f5f4f0; border: 1px solid #c8c6bc; border-radius: 8px; padding: 0 10px; }
-        .sa-search input { flex: 1; border: none; background: transparent; font-family: inherit; font-size: 13px; color: #141410; outline: none; padding: 7px 0; }
-        .sa-refresh-btn { display: flex; align-items: center; gap: 6px; padding: 7px 14px; background: #fff; color: #141410; border: 1px solid #c8c6bc; border-radius: 7px; font-family: inherit; font-size: 13px; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
-        .sa-refresh-btn:hover { background: #f5f4f0; }
+        .sa-toolbar { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .sa-search { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 8px; background: var(--subtle); border: 1px solid var(--border); border-radius: 10px; padding: 0 10px; }
+        .sa-search input { flex: 1; border: none; background: transparent; font-family: inherit; font-size: 13px; color: var(--ink); outline: none; padding: 8px 0; }
+        .sa-refresh-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; background: var(--card); color: var(--ink); border: 1px solid var(--border); border-radius: 9px; font-family: inherit; font-size: 13px; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
+        .sa-refresh-btn:hover { background: var(--subtle); }
+        .sa-icon-btn { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; position: relative; flex-shrink: 0; }
+        .sa-icon-btn:hover { background: var(--subtle); color: var(--ink); }
+        .sa-hero { border-radius: 18px; padding: 1.4rem 1.5rem; position: relative; overflow: hidden; color: #fff; box-shadow: 0 10px 26px -10px rgba(16,120,90,0.45); }
         @keyframes sa-spin { to { transform: rotate(360deg); } }
       `}</style>
 
@@ -1093,35 +1108,39 @@ const openCreateStaffModal = async () => {
         {/* ── SIDEBAR ── */}
         <aside className="sa-sidebar">
           {/* Logo area */}
-          <div style={{ padding: "1.25rem 1rem 1rem", borderBottom: "1px solid #e2e0d8" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 36, height: 36, background: "#141410", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <div style={{ padding: "1.4rem 1.25rem 1.2rem", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+              <div style={{ width: 38, height: 38, background: "var(--accent)", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 6px 14px -4px var(--accent)" }}>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--accent-text)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#141410" }}>Super Admin</div>
-                <div style={{ fontSize: 11, color: "#9a9a8e" }}>POStore Control</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>Super Admin</div>
+                <div style={{ fontSize: 11, color: "var(--muted)" }}>POStore Control</div>
               </div>
             </div>
           </div>
 
           {/* Nav items */}
-          <nav style={{ padding: "0.75rem 0.75rem", flex: 1 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.6px", textTransform: "uppercase", color: "#9a9a8e", padding: "0 6px", marginBottom: 6 }}>Navigation</div>
-            {TABS.map(t => (
-              <button key={t.key} className={`sa-nav-btn ${activeTab === t.key ? "active" : ""}`} onClick={() => changeTab(t.key)}>
-                {t.icon}
-                {t.label}
-                {t.key === "support" && conversations.length > 0 && (() => {
-                  const totalUnread = conversations.reduce((s, c) => s + (Number(c.unread_count || 0)), 0);
-                  return (
-                    <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, background: activeTab === "support" ? "rgba(255,255,255,0.25)" : "#dc2626", color: "#fff", borderRadius: 100, padding: "1px 7px" }}>
-                      {totalUnread > 0 ? totalUnread : conversations.length}
-                    </span>
-                  );
-                })()}
-              </button>
-            ))}
+          <nav style={{ padding: "1rem 0.85rem", flex: 1, overflowY: "auto" }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.6px", textTransform: "uppercase", color: "var(--muted)", padding: "0 8px", marginBottom: 8 }}>Navigation</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {TABS.map(t => (
+                <button key={t.key} className={`sa-nav-btn ${activeTab === t.key ? "active" : ""}`} onClick={() => changeTab(t.key)}>
+                  {t.icon}
+                  {t.label}
+                  {t.key === "support" && conversations.length > 0 ? (() => {
+                    const totalUnread = conversations.reduce((s, c) => s + (Number(c.unread_count || 0)), 0);
+                    return (
+                      <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, background: activeTab === "support" ? "rgba(255,255,255,0.25)" : "#dc2626", color: "#fff", borderRadius: 100, padding: "1px 7px" }}>
+                        {totalUnread > 0 ? totalUnread : conversations.length}
+                      </span>
+                    );
+                  })() : activeTab === t.key && (
+                    <span style={{ marginLeft: "auto", width: 6, height: 6, borderRadius: "50%", background: "var(--accent-text)", opacity: 0.85 }} />
+                  )}
+                </button>
+              ))}
+            </div>
           </nav>
 
           {/* Footer */}
@@ -1143,30 +1162,50 @@ const openCreateStaffModal = async () => {
 
           {/* Header */}
           <header className="sa-header">
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: "#141410" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 17, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.3px" }}>
                   {TABS.find(t => t.key === activeTab)?.label}
                 </div>
-                <div style={{ fontSize: 11, color: "#9a9a8e" }}>{dater}</div>
+                <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{dater}</div>
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {/* Super admin badge */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 100, padding: "4px 12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 100, padding: "5px 12px" }}>
                 <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#dc2626" }} />
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#dc2626" }}>SUPER ADMIN</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", letterSpacing: "0.3px" }}>SUPER ADMIN</span>
               </div>
 
               <button
                 onClick={() => activeTab === "support" ? loadConversations() : fetchSection(activeTab)}
-                className="sa-refresh-btn"
+                className="sa-icon-btn"
+                title="Refresh"
               >
-                <IcoRefresh /> Refresh
+                <IcoRefresh />
+              </button>
+
+              <button className="sa-icon-btn" title="Notifications">
+                <IcoBell />
+                {Array.isArray(stats?.recentLogs) && stats!.recentLogs!.length > 0 && (
+                  <span style={{ position: "absolute", top: 6, right: 7, width: 7, height: 7, borderRadius: "50%", background: "#dc2626", border: "2px solid var(--card)" }} />
+                )}
               </button>
 
               <ThemeSwitcher />
+
+              <div style={{ width: 1, height: 26, background: "var(--border)", margin: "0 2px" }} />
+
+              <div
+                title={currentUser?.full_name || currentUser?.email || "Super Admin"}
+                style={{
+                  width: 34, height: 34, borderRadius: "50%", background: "var(--accent)", color: "var(--accent-text)",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12.5, fontWeight: 700, flexShrink: 0,
+                }}
+              >
+                {initials(String(currentUser?.full_name || currentUser?.email || "SA"))}
+              </div>
 
               <button
                 onClick={() => { localStorage.removeItem("user"); router.push("/login"); }}
@@ -1189,67 +1228,73 @@ const openCreateStaffModal = async () => {
             {/* ══ OVERVIEW ══ */}
             {activeTab === "overview" && !loading && stats && (
               <>
+                {/* HERO REVENUE CARD */}
+                <div className="sa-hero" style={{ background: "linear-gradient(135deg, #10b981 0%, #0f766e 100%)" }}>
+                  <div style={{ position: "absolute", top: -40, right: -30, width: 160, height: 160, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
+                  <div style={{ position: "absolute", bottom: -60, right: 60, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative" }}>
+                    <div>
+                      <div style={{ fontSize: 12, opacity: 0.85, textTransform: "uppercase", letterSpacing: "0.6px", fontWeight: 600 }}>Total Revenue</div>
+                      <div style={{ fontSize: 32, fontWeight: 700, marginTop: 6, letterSpacing: "-0.5px" }}>KES {Number(stats.totalRevenue || 0).toLocaleString()}</div>
+                      <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>{stats.orderCount ?? 0} orders across {stats.totalDomains ?? 0} stores</div>
+                    </div>
+                    <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 22, marginTop: 24, alignItems: "flex-end", height: 64, position: "relative" }}>
+                    {revBars.map(([label, val]) => (
+                      <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: 1 }}>
+                        <div style={{ width: "100%", maxWidth: 34, height: Math.max(6, (val / revMax) * 44), borderRadius: 6, background: "rgba(255,255,255,0.9)" }} />
+                        <div style={{ fontSize: 10.5, opacity: 0.85 }}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Quick Stats */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "0.8rem" }}>
-                  <div className="sa-stat">
-                    <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Staff</div>
-                    <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.5px", color: "#141410" }}>{stats.staffCount ?? "—"}</div>
-                    <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>{stats.activeStaff ?? 0} active</div>
-                  </div>
-                  <div className="sa-stat">
-                    <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Admins</div>
-                    <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.5px", color: "#141410" }}>{stats.adminCount ?? "—"}</div>
-                    <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>{stats.activeUsers ?? 0} active</div>
-                  </div>
-                  <div className="sa-stat">
-                    <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Domains</div>
-                    <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.5px", color: "#141410" }}>{stats.totalDomains ?? "—"}</div>
-                    <div style={{ fontSize: 11, color: "#c8c6bc", marginTop: 6 }}>{stats.activeDomains ?? 0} active</div>
-                  </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.9rem" }}>
+                  {[
+                    { label: "Staff", value: stats.staffCount, sub: `${stats.activeStaff ?? 0} active`, bg: "#eff6ff", fg: "#2563eb", icon: <IcoStaff /> },
+                    { label: "Admins", value: stats.adminCount, sub: `${stats.activeUsers ?? 0} active`, bg: "#f5f3ff", fg: "#7c3aed", icon: <IcoUsers /> },
+                    { label: "Domains", value: stats.totalDomains, sub: `${stats.activeDomains ?? 0} active`, bg: "#fffbeb", fg: "#d97706", icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 010 20 15.3 15.3 0 010-20z"/></svg> },
+                    { label: "Orders", value: stats.orderCount, sub: `${stats.todayOrders ?? 0} today`, bg: "#fdf2f8", fg: "#db2777", icon: <IcoOrders /> },
+                  ].map(s => (
+                    <div className="sa-stat" key={s.label}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                        <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{s.label}</div>
+                        <div style={{ width: 30, height: 30, borderRadius: 9, background: s.bg, color: s.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>{s.icon}</div>
+                      </div>
+                      <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.5px", color: "var(--ink)" }}>{s.value ?? "—"}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>{s.sub}</div>
+                    </div>
+                  ))}
                 </div>
 
-                {/* TRANSACTIONS SECTION */}
-                <div className="sa-card" style={{ padding: "1.25rem" }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: "1rem", color: "#141410" }}>Transactions</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
-                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
-                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Today</div>
-                      <div style={{ fontSize: 18, color: "#141410", marginTop: 6 }}>KES {Number(stats.todayRevenue || 0).toLocaleString()}</div>
-                    </div>
-                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
-                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>This Week</div>
-                      <div style={{ fontSize: 18, color: "#141410", marginTop: 6 }}>KES {Number(stats.weekRevenue || 0).toLocaleString()}</div>
-                    </div>
-                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
-                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>This Month</div>
-                      <div style={{ fontSize: 18, color: "#141410", marginTop: 6 }}>KES {Number(stats.monthRevenue || 0).toLocaleString()}</div>
-                    </div>
-                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
-                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>This Year</div>
-                      <div style={{ fontSize: 18, color: "#141410", marginTop: 6 }}>KES {Number(stats.yearRevenue || 0).toLocaleString()}</div>
+                {/* TRANSACTIONS + ORDERS SIDE BY SIDE */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "0.9rem" }}>
+                  <div className="sa-card" style={{ padding: "1.25rem" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, marginBottom: "1rem", color: "var(--ink)" }}>Transactions</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.75rem" }}>
+                      {[["Today", stats.todayRevenue], ["This Week", stats.weekRevenue], ["This Month", stats.monthRevenue], ["This Year", stats.yearRevenue]].map(([lab, v]) => (
+                        <div key={String(lab)} style={{ background: "var(--subtle)", borderRadius: 12, padding: "0.9rem 1rem" }}>
+                          <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>{lab}</div>
+                          <div style={{ fontSize: 16.5, fontWeight: 600, color: "var(--ink)" }}>KES {Number(v || 0).toLocaleString()}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
 
-                {/* ORDERS SECTION */}
-                <div className="sa-card" style={{ padding: "1.25rem" }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: "1rem", color: "#141410" }}>Orders</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
-                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
-                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Today</div>
-                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.todayOrders ?? 0}</div>
-                    </div>
-                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
-                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>This Week</div>
-                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.weekOrders ?? 0}</div>
-                    </div>
-                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
-                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>This Month</div>
-                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.monthOrders ?? 0}</div>
-                    </div>
-                    <div style={{ background: "#f5f4f0", borderRadius: 12, padding: "1rem" }}>
-                      <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Overall</div>
-                      <div style={{ fontSize: 18, fontWeight: 600, color: "#141410" }}>{stats.orderCount ?? 0}</div>
+                  <div className="sa-card" style={{ padding: "1.25rem" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, marginBottom: "1rem", color: "var(--ink)" }}>Orders</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.75rem" }}>
+                      {[["Today", stats.todayOrders], ["This Week", stats.weekOrders], ["This Month", stats.monthOrders], ["Overall", stats.orderCount]].map(([lab, v]) => (
+                        <div key={String(lab)} style={{ background: "var(--subtle)", borderRadius: 12, padding: "0.9rem 1rem" }}>
+                          <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>{lab}</div>
+                          <div style={{ fontSize: 16.5, fontWeight: 700, color: "var(--ink)" }}>{v ?? 0}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -1257,9 +1302,14 @@ const openCreateStaffModal = async () => {
                 {/* SNEAKY BILLING SECTION */}
                 {Array.isArray(stats.sneakyBilling) && stats.sneakyBilling.length > 0 && (
                   <div className="sa-card">
-                    <div style={{ padding: "1.25rem", borderBottom: "1px solid #e2e0d8" }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "#dc2626" }}>Billing Alert</div>
-                      <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 4 }}>Accounts with suspicious payment patterns</div>
+                    <div style={{ padding: "1.25rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 10, background: "#fef2f2", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#dc2626" }}>Billing Alert</div>
+                        <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Accounts with suspicious payment patterns</div>
+                      </div>
                     </div>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                       <thead><tr>
@@ -1267,11 +1317,11 @@ const openCreateStaffModal = async () => {
                       </tr></thead>
                       <tbody>
                         {(stats.sneakyBilling as Array<Record<string, unknown>>).slice(0, 5).map((r, i) => (
-                          <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }} {...rowHover}>
+                          <tr key={i} style={{ borderBottom: "1px solid var(--border)" }} {...rowHover}>
                             <td style={{ ...TD, fontWeight: 500 }}>{String(r.store_name ?? "—")}</td>
-                            <td style={{ ...TD, color: "#9a9a8e" }}>{String(r.domain ?? "—")}</td>
+                            <td style={{ ...TD, color: "var(--muted)" }}>{String(r.domain ?? "—")}</td>
                             <td style={{ ...TD, fontWeight: 600, color: "#dc2626" }}>{Number(r.failed_transactions ?? 0)}</td>
-                            <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDateTime(r.last_attempt)}</td>
+                            <td style={{ ...TD, color: "var(--muted)" }}>{fmtDateTime(r.last_attempt)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1282,22 +1332,27 @@ const openCreateStaffModal = async () => {
                 {/* RECENT LOGS SECTION */}
                 {Array.isArray(stats.recentLogs) && stats.recentLogs.length > 0 && (
                   <div className="sa-card">
-                    <div style={{ padding: "1.25rem", borderBottom: "1px solid #e2e0d8", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: "#141410" }}>Recent Activity</div>
-                        <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 4 }}>Last 5 log entries</div>
+                    <div style={{ padding: "1.25rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 10, background: "var(--subtle)", color: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <IcoLogs />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>Recent Activity</div>
+                          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Last 5 log entries</div>
+                        </div>
                       </div>
-                      <button onClick={() => changeTab("logs")} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer", fontSize: 12, fontWeight: 500 }}>View All Logs</button>
+                      <button onClick={() => changeTab("logs")} style={{ padding: "7px 13px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", cursor: "pointer", fontSize: 12, fontWeight: 500 }}>View All Logs</button>
                     </div>
                     <div style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                       {(stats.recentLogs as Array<Record<string, unknown>>).map((log, i) => (
-                        <div key={i} style={{ display: "flex", gap: "0.75rem", padding: "0.75rem", borderRadius: 8, background: "#f5f4f0" }}>
-                          <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.4px", fontWeight: 500, minWidth: 60 }}>{String(log.type ?? "—")}</div>
+                        <div key={i} style={{ display: "flex", gap: "0.75rem", padding: "0.85rem 0.9rem", borderRadius: 10, background: "var(--subtle)" }}>
+                          <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px", fontWeight: 600, minWidth: 60 }}>{String(log.type ?? "—")}</div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>{String(log.title ?? "—")}</div>
-                            <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 2 }}>{String(log.message ?? "").slice(0, 100)}{String(log.message ?? "").length > 100 ? "…" : ""}</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{String(log.title ?? "—")}</div>
+                            <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{String(log.message ?? "").slice(0, 100)}{String(log.message ?? "").length > 100 ? "…" : ""}</div>
                           </div>
-                          <div style={{ fontSize: 11, color: "#c8c6bc", whiteSpace: "nowrap" }}>{fmtDateTime(log.created_at)}</div>
+                          <div style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap" }}>{fmtDateTime(log.created_at)}</div>
                         </div>
                       ))}
                     </div>
