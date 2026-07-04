@@ -188,6 +188,89 @@ function parseArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? value as T[] : [];
 }
 
+/* ─── Avatar ── */
+const AVATAR_PALETTE = [
+  { bg: "#dbeafe", fg: "#2563eb" }, { bg: "#f5f3ff", fg: "#7c3aed" }, { bg: "#fce7f3", fg: "#db2777" },
+  { bg: "#fef3c7", fg: "#b45309" }, { bg: "#dcfce7", fg: "#16a34a" }, { bg: "#e0f2fe", fg: "#0891b2" },
+  { bg: "#ffe4e6", fg: "#e11d48" }, { bg: "#ede9fe", fg: "#6d28d9" },
+];
+function Avatar({ name, size = 32 }: { name: string; size?: number }) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  const { bg, fg } = AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%", background: bg, color: fg, flexShrink: 0,
+      display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.38, fontWeight: 700,
+    }}>
+      {initials(name)}
+    </div>
+  );
+}
+
+/* ─── Row actions dropdown ── */
+function ActionsMenu({ items }: { items: { label: string; onClick: () => void; danger?: boolean; accent?: boolean }[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ position: "relative", display: "inline-block" }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="sa-icon-btn"
+        style={{ width: 32, height: 32, borderRadius: 8 }}
+        aria-label="Row actions"
+      >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+      </button>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+          <div style={{
+            position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 41, minWidth: 170,
+            background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10,
+            boxShadow: "0 10px 28px rgba(0,0,0,0.14)", padding: 5, display: "flex", flexDirection: "column", gap: 2,
+          }}>
+            {items.map((it, i) => (
+              <button
+                key={i}
+                onClick={() => { setOpen(false); it.onClick(); }}
+                style={{
+                  display: "block", width: "100%", textAlign: "left", padding: "8px 10px", borderRadius: 7, border: "none",
+                  background: "transparent", cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, fontWeight: 500,
+                  color: it.danger ? "#dc2626" : it.accent ? "#16a34a" : "var(--ink)",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--subtle)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
+              >
+                {it.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ─── Donut ring ── */
+function Donut({ pct, color, size = 78, thickness = 10, label }: { pct: number; color: string; size?: number; thickness?: number; label?: string }) {
+  const clamped = Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0));
+  const deg = clamped * 3.6;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+      <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+        <div style={{ width: size, height: size, borderRadius: "50%", background: `conic-gradient(${color} 0deg ${deg}deg, var(--subtle) ${deg}deg 360deg)` }} />
+        <div style={{
+          position: "absolute", inset: thickness, borderRadius: "50%", background: "var(--card)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <span style={{ fontSize: size * 0.21, fontWeight: 700, color: "var(--ink)" }}>{Math.round(clamped)}%</span>
+        </div>
+      </div>
+      {label && <div style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 500, textAlign: "center" }}>{label}</div>}
+    </div>
+  );
+}
+
 /* ─── Status badge ── */
 function Badge({ label, type = "neutral" }: { label: string; type?: "ok" | "warn" | "err" | "neutral" | "info" }) {
   const cfg = {
@@ -216,7 +299,7 @@ function statusBadge(val: unknown) {
 /* ─── Generic table (logs/orders fallback) ── */
 function GenericTable({ data }: { data: Record<string, unknown>[] }) {
   if (!data.length) return (
-    <div style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No records found.</div>
+    <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No records found.</div>
   );
   const keys = Object.keys(data[0]).slice(0, 8);
   return (
@@ -225,7 +308,7 @@ function GenericTable({ data }: { data: Record<string, unknown>[] }) {
         <thead>
           <tr>
             {keys.map(k => (
-              <th key={k} style={{ textAlign: "left", padding: "0.6rem 1rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "#9a9a8e", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", whiteSpace: "nowrap" }}>
+              <th key={k} style={{ textAlign: "left", padding: "0.75rem 1.25rem", fontSize: 11, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)", background: "var(--subtle)", whiteSpace: "nowrap" }}>
                 {k.replace(/_/g, " ")}
               </th>
             ))}
@@ -233,11 +316,11 @@ function GenericTable({ data }: { data: Record<string, unknown>[] }) {
         </thead>
         <tbody>
           {data.map((row, i) => (
-            <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = "#fafaf8"; }}
+            <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = "var(--subtle)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = ""; }}>
               {keys.map(k => (
-                <td key={k} style={{ padding: "0.75rem 1rem", color: "#4a4a40", whiteSpace: "nowrap", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
+                <td key={k} style={{ padding: "0.85rem 1.25rem", color: "var(--ink)", whiteSpace: "nowrap", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis" }}>
                   {["status", "payment_status", "subdomain_status"].includes(k)
                     ? statusBadge(row[k])
                     : String(row[k] ?? "—")}
@@ -263,22 +346,47 @@ function Spinner({ label = "Loading…" }: { label?: string }) {
 }
 
 /* ─── Pagination ── */
-function Pagination({ page, total, onChange }: { page: number; total: number; onChange: (p: number) => void }) {
-  if (total <= 1) return null;
+function Pagination({ page, total, onChange, perPage, onPerPageChange, totalItems }: {
+  page: number; total: number; onChange: (p: number) => void;
+  perPage?: number; onPerPageChange?: (n: number) => void; totalItems?: number;
+}) {
   const pages = Array.from({ length: Math.min(total, 7) }, (_, i) => {
     if (total <= 7) return i + 1;
     if (page <= 4) return i + 1;
     if (page >= total - 3) return total - 6 + i;
     return page - 3 + i;
   });
+  const rangeStart = totalItems && perPage ? (totalItems === 0 ? 0 : (page - 1) * perPage + 1) : null;
+  const rangeEnd = totalItems && perPage ? Math.min(page * perPage, totalItems) : null;
+
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "0.75rem 1.25rem", borderTop: "1px solid #e2e0d8" }}>
-      <span style={{ fontSize: 12, color: "#9a9a8e", marginRight: "auto" }}>Page {page} of {total}</span>
-      <button onClick={() => onChange(Math.max(1, page - 1))} disabled={page === 1} style={{ width: 28, height: 28, border: "1px solid #e2e0d8", borderRadius: 6, background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: page === 1 ? 0.4 : 1 }}><IcoChevronL /></button>
-      {pages.map(p => (
-        <button key={p} onClick={() => onChange(p)} style={{ width: 28, height: 28, border: `1px solid ${p === page ? "#141410" : "#e2e0d8"}`, borderRadius: 6, background: p === page ? "#141410" : "#fff", color: p === page ? "#fff" : "#141410", cursor: "pointer", fontSize: 12, fontWeight: p === page ? 600 : 400, fontFamily: "inherit" }}>{p}</button>
-      ))}
-      <button onClick={() => onChange(Math.min(total, page + 1))} disabled={page === total} style={{ width: 28, height: 28, border: "1px solid #e2e0d8", borderRadius: 6, background: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: page === total ? 0.4 : 1 }}><IcoChevronR /></button>
+    <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "0.85rem 1.25rem", borderTop: "1px solid var(--border)", flexWrap: "wrap" }}>
+      {perPage !== undefined && onPerPageChange && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--muted)" }}>
+          Rows per page
+          <select
+            value={perPage}
+            onChange={e => onPerPageChange(Number(e.target.value))}
+            style={{ padding: "5px 8px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", fontFamily: "inherit", fontSize: 12 }}
+          >
+            {[10, 12, 25, 50].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
+      )}
+      {rangeStart !== null && (
+        <span style={{ fontSize: 12, color: "var(--muted)" }}>{rangeStart}-{rangeEnd} of {totalItems}</span>
+      )}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
+        <button onClick={() => onChange(Math.max(1, page - 1))} disabled={page === 1} style={{ width: 30, height: 30, border: "1px solid var(--border)", borderRadius: 8, background: "var(--card)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: page === 1 ? 0.4 : 1 }}><IcoChevronL /></button>
+        {pages.map(p => (
+          <button key={p} onClick={() => onChange(p)} style={{ width: 30, height: 30, border: `1px solid ${p === page ? "var(--accent)" : "var(--border)"}`, borderRadius: 8, background: p === page ? "var(--accent)" : "var(--card)", color: p === page ? "var(--accent-text)" : "var(--ink)", cursor: "pointer", fontSize: 12.5, fontWeight: p === page ? 700 : 500, fontFamily: "inherit" }}>{p}</button>
+        ))}
+        {total > 7 && page < total - 3 && <span style={{ color: "var(--muted)", fontSize: 12 }}>…</span>}
+        {total > 7 && page < total - 3 && (
+          <button onClick={() => onChange(total)} style={{ width: 30, height: 30, border: "1px solid var(--border)", borderRadius: 8, background: "var(--card)", color: "var(--ink)", cursor: "pointer", fontSize: 12.5, fontFamily: "inherit" }}>{total}</button>
+        )}
+        <button onClick={() => onChange(Math.min(total, page + 1))} disabled={page === total} style={{ width: 30, height: 30, border: "1px solid var(--border)", borderRadius: 8, background: "var(--card)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: page === total ? 0.4 : 1 }}><IcoChevronR /></button>
+      </div>
     </div>
   );
 }
@@ -675,7 +783,7 @@ export default function SuperAdminPage() {
   const [stats,      setStats]      = useState<OverviewStats | null>(null);
   const [search,     setSearch]     = useState("");
   const [page,       setPage]       = useState(1);
-  const PER_PAGE = 12;
+  const [perPage,    setPerPage]    = useState(10);
   const [notice,     setNotice]     = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
   const [superCurrentPassword, setSuperCurrentPassword] = useState("");
   const [superNewPassword,     setSuperNewPassword]     = useState("");
@@ -1026,8 +1134,8 @@ const openCreateStaffModal = async () => {
 
   /* ── Filtered + paginated ── */
   const filtered   = data.filter(r => !search || Object.values(r).some(v => String(v ?? "").toLowerCase().includes(search.toLowerCase())));
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-  const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+  const paginated  = filtered.slice((page - 1) * perPage, page * perPage);
 
   const changeTab = (t: TabKey) => { setActiveTab(t); setSearch(""); setPage(1); };
 
@@ -1071,6 +1179,10 @@ const openCreateStaffModal = async () => {
     ["Year", Number(stats?.yearRevenue || 0)],
   ];
   const revMax = Math.max(1, ...revBars.map(([, v]) => v));
+  const pct = (n?: number, d?: number) => (d && d > 0 ? (Number(n || 0) / d) * 100 : 0);
+  const staffActivePct  = pct(stats?.activeStaff,  stats?.staffCount);
+  const adminActivePct  = pct(stats?.activeUsers,  stats?.adminCount);
+  const domainActivePct = pct(stats?.activeDomains, stats?.totalDomains);
 
   return (
     <>
@@ -1227,34 +1339,25 @@ const openCreateStaffModal = async () => {
 
             {/* ══ OVERVIEW ══ */}
             {activeTab === "overview" && !loading && stats && (
-              <>
-                {/* HERO REVENUE CARD */}
-                <div className="sa-hero" style={{ background: "linear-gradient(135deg, #10b981 0%, #0f766e 100%)" }}>
-                  <div style={{ position: "absolute", top: -40, right: -30, width: 160, height: 160, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
-                  <div style={{ position: "absolute", bottom: -60, right: 60, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative" }}>
-                    <div>
-                      <div style={{ fontSize: 12, opacity: 0.85, textTransform: "uppercase", letterSpacing: "0.6px", fontWeight: 600 }}>Total Revenue</div>
-                      <div style={{ fontSize: 32, fontWeight: 700, marginTop: 6, letterSpacing: "-0.5px" }}>KES {Number(stats.totalRevenue || 0).toLocaleString()}</div>
-                      <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>{stats.orderCount ?? 0} orders across {stats.totalDomains ?? 0} stores</div>
-                    </div>
-                    <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                    </div>
-                  </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", height: "calc(100vh - 140px)", minHeight: 540 }}>
 
-                  <div style={{ display: "flex", gap: 22, marginTop: 24, alignItems: "flex-end", height: 64, position: "relative" }}>
-                    {revBars.map(([label, val]) => (
-                      <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: 1 }}>
-                        <div style={{ width: "100%", maxWidth: 34, height: Math.max(6, (val / revMax) * 44), borderRadius: 6, background: "rgba(255,255,255,0.9)" }} />
-                        <div style={{ fontSize: 10.5, opacity: 0.85 }}>{label}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                {/* Billing alert strip */}
+                {Array.isArray(stats.sneakyBilling) && stats.sneakyBilling.length > 0 && (
+                  <button
+                    onClick={() => changeTab("billing")}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10, padding: "0.65rem 1rem", borderRadius: 12,
+                      background: "#fef2f2", border: "1px solid #fecaca", cursor: "pointer", fontFamily: "inherit", textAlign: "left", flexShrink: 0,
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span style={{ fontSize: 12.5, color: "#991b1b", fontWeight: 600 }}>{stats.sneakyBilling.length} store{stats.sneakyBilling.length !== 1 ? "s" : ""} with suspicious billing activity</span>
+                    <span style={{ marginLeft: "auto", fontSize: 12, color: "#991b1b", fontWeight: 700 }}>View billing →</span>
+                  </button>
+                )}
 
                 {/* Quick Stats */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.9rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.85rem", flexShrink: 0 }}>
                   {[
                     { label: "Staff", value: stats.staffCount, sub: `${stats.activeStaff ?? 0} active`, bg: "#eff6ff", fg: "#2563eb", icon: <IcoStaff /> },
                     { label: "Admins", value: stats.adminCount, sub: `${stats.activeUsers ?? 0} active`, bg: "#f5f3ff", fg: "#7c3aed", icon: <IcoUsers /> },
@@ -1262,103 +1365,66 @@ const openCreateStaffModal = async () => {
                     { label: "Orders", value: stats.orderCount, sub: `${stats.todayOrders ?? 0} today`, bg: "#fdf2f8", fg: "#db2777", icon: <IcoOrders /> },
                   ].map(s => (
                     <div className="sa-stat" key={s.label}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                         <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>{s.label}</div>
-                        <div style={{ width: 30, height: 30, borderRadius: 9, background: s.bg, color: s.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>{s.icon}</div>
+                        <div style={{ width: 28, height: 28, borderRadius: 8, background: s.bg, color: s.fg, display: "flex", alignItems: "center", justifyContent: "center" }}>{s.icon}</div>
                       </div>
-                      <div style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.5px", color: "var(--ink)" }}>{s.value ?? "—"}</div>
-                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>{s.sub}</div>
+                      <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.5px", color: "var(--ink)" }}>{s.value ?? "—"}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{s.sub}</div>
                     </div>
                   ))}
                 </div>
 
-                {/* TRANSACTIONS + ORDERS SIDE BY SIDE */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "0.9rem" }}>
-                  <div className="sa-card" style={{ padding: "1.25rem" }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, marginBottom: "1rem", color: "var(--ink)" }}>Transactions</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.75rem" }}>
-                      {[["Today", stats.todayRevenue], ["This Week", stats.weekRevenue], ["This Month", stats.monthRevenue], ["This Year", stats.yearRevenue]].map(([lab, v]) => (
-                        <div key={String(lab)} style={{ background: "var(--subtle)", borderRadius: 12, padding: "0.9rem 1rem" }}>
-                          <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>{lab}</div>
-                          <div style={{ fontSize: 16.5, fontWeight: 600, color: "var(--ink)" }}>KES {Number(v || 0).toLocaleString()}</div>
+                {/* Chart row — fills remaining height */}
+                <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "0.85rem", flex: 1, minHeight: 0 }}>
+
+                  {/* Revenue chart */}
+                  <div className="sa-hero" style={{ background: "linear-gradient(135deg, #10b981 0%, #0f766e 100%)", display: "flex", flexDirection: "column" }}>
+                    <div style={{ position: "absolute", top: -40, right: -30, width: 160, height: 160, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
+                    <div style={{ position: "absolute", bottom: -60, right: 60, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", position: "relative", flexShrink: 0 }}>
+                      <div>
+                        <div style={{ fontSize: 12, opacity: 0.85, textTransform: "uppercase", letterSpacing: "0.6px", fontWeight: 600 }}>Total Revenue</div>
+                        <div style={{ fontSize: 30, fontWeight: 700, marginTop: 6, letterSpacing: "-0.5px" }}>KES {Number(stats.totalRevenue || 0).toLocaleString()}</div>
+                        <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>{stats.orderCount ?? 0} orders across {stats.totalDomains ?? 0} stores</div>
+                      </div>
+                      <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 24, marginTop: 16, alignItems: "flex-end", flex: 1, position: "relative" }}>
+                      {revBars.map(([label, val]) => (
+                        <div key={label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: 1, height: "100%", justifyContent: "flex-end" }}>
+                          <span style={{ fontSize: 11, opacity: 0.9, fontWeight: 600 }}>{val > 0 ? Number(val).toLocaleString() : ""}</span>
+                          <div style={{ width: "100%", maxWidth: 46, height: `${Math.max(4, (val / revMax) * 100)}%`, borderRadius: "8px 8px 3px 3px", background: "rgba(255,255,255,0.92)" }} />
+                          <div style={{ fontSize: 11.5, opacity: 0.85, fontWeight: 500 }}>{label}</div>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="sa-card" style={{ padding: "1.25rem" }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, marginBottom: "1rem", color: "var(--ink)" }}>Orders</div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.75rem" }}>
-                      {[["Today", stats.todayOrders], ["This Week", stats.weekOrders], ["This Month", stats.monthOrders], ["Overall", stats.orderCount]].map(([lab, v]) => (
-                        <div key={String(lab)} style={{ background: "var(--subtle)", borderRadius: 12, padding: "0.9rem 1rem" }}>
-                          <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>{lab}</div>
-                          <div style={{ fontSize: 16.5, fontWeight: 700, color: "var(--ink)" }}>{v ?? 0}</div>
-                        </div>
-                      ))}
+                  {/* Account health donuts */}
+                  <div className="sa-card" style={{ padding: "1.25rem", display: "flex", flexDirection: "column" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)", flexShrink: 0 }}>Account Health</div>
+                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-around", minHeight: 0 }}>
+                      <Donut pct={staffActivePct} color="#2563eb" label="Staff active" />
+                      <Donut pct={adminActivePct} color="#7c3aed" label="Admins active" />
+                      <Donut pct={domainActivePct} color="#d97706" label="Domains active" />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8, flexShrink: 0 }}>
+                      <div style={{ background: "var(--subtle)", borderRadius: 10, padding: "0.6rem 0.8rem" }}>
+                        <div style={{ fontSize: 10.5, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>Orders today</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>{stats.todayOrders ?? 0}</div>
+                      </div>
+                      <div style={{ background: "var(--subtle)", borderRadius: 10, padding: "0.6rem 0.8rem" }}>
+                        <div style={{ fontSize: 10.5, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>Orders this week</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>{stats.weekOrders ?? 0}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                {/* SNEAKY BILLING SECTION */}
-                {Array.isArray(stats.sneakyBilling) && stats.sneakyBilling.length > 0 && (
-                  <div className="sa-card">
-                    <div style={{ padding: "1.25rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ width: 34, height: 34, borderRadius: 10, background: "#fef2f2", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "#dc2626" }}>Billing Alert</div>
-                        <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Accounts with suspicious payment patterns</div>
-                      </div>
-                    </div>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                      <thead><tr>
-                        {["Store", "Domain", "Failed Transactions", "Last Attempt"].map(h => <th key={h} style={TH}>{h}</th>)}
-                      </tr></thead>
-                      <tbody>
-                        {(stats.sneakyBilling as Array<Record<string, unknown>>).slice(0, 5).map((r, i) => (
-                          <tr key={i} style={{ borderBottom: "1px solid var(--border)" }} {...rowHover}>
-                            <td style={{ ...TD, fontWeight: 500 }}>{String(r.store_name ?? "—")}</td>
-                            <td style={{ ...TD, color: "var(--muted)" }}>{String(r.domain ?? "—")}</td>
-                            <td style={{ ...TD, fontWeight: 600, color: "#dc2626" }}>{Number(r.failed_transactions ?? 0)}</td>
-                            <td style={{ ...TD, color: "var(--muted)" }}>{fmtDateTime(r.last_attempt)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {/* RECENT LOGS SECTION */}
-                {Array.isArray(stats.recentLogs) && stats.recentLogs.length > 0 && (
-                  <div className="sa-card">
-                    <div style={{ padding: "1.25rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ width: 34, height: 34, borderRadius: 10, background: "var(--subtle)", color: "var(--ink)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <IcoLogs />
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>Recent Activity</div>
-                          <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Last 5 log entries</div>
-                        </div>
-                      </div>
-                      <button onClick={() => changeTab("logs")} style={{ padding: "7px 13px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", cursor: "pointer", fontSize: 12, fontWeight: 500 }}>View All Logs</button>
-                    </div>
-                    <div style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                      {(stats.recentLogs as Array<Record<string, unknown>>).map((log, i) => (
-                        <div key={i} style={{ display: "flex", gap: "0.75rem", padding: "0.85rem 0.9rem", borderRadius: 10, background: "var(--subtle)" }}>
-                          <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px", fontWeight: 600, minWidth: 60 }}>{String(log.type ?? "—")}</div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{String(log.title ?? "—")}</div>
-                            <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{String(log.message ?? "").slice(0, 100)}{String(log.message ?? "").length > 100 ? "…" : ""}</div>
-                          </div>
-                          <div style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap" }}>{fmtDateTime(log.created_at)}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
+              </div>
             )}
             {activeTab === "overview" && loading && <Spinner label="Loading overview…" />}
 
@@ -1367,58 +1433,63 @@ const openCreateStaffModal = async () => {
               <div className="sa-card">
                 <div className="sa-toolbar">
                   <div className="sa-search"><IcoSearch /><input placeholder="Search users…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
-                  <button onClick={openCreateAdminModal} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#141410", color: "#fff", cursor: "pointer", fontWeight: 500, fontSize: 12 }}>+ New Admin</button>
-                  <button onClick={openCreateSuperadminModal} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#991b1b", color: "#fff", cursor: "pointer", fontWeight: 500, fontSize: 12 }}>+ New Superadmin</button>
-                  <span style={{ fontSize: 12, color: "#9a9a8e", marginLeft: "auto" }}>{filtered.length} user{filtered.length !== 1 ? "s" : ""}</span>
+                  <button onClick={openCreateAdminModal} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: "none", background: "var(--accent)", color: "var(--accent-text)", cursor: "pointer", fontWeight: 600, fontSize: 12.5 }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    New Admin
+                  </button>
+                  <button onClick={openCreateSuperadminModal} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", cursor: "pointer", fontWeight: 600, fontSize: 12.5 }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    New Superadmin
+                  </button>
+                  <span style={{ fontSize: 12, color: "var(--muted)", marginLeft: "auto" }}>{filtered.length} user{filtered.length !== 1 ? "s" : ""}</span>
                 </div>
                 {loading ? <Spinner label="Loading users…" /> : (
                   <>
+                    <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                       <thead><tr>
-                        {["ID", "Name", "Email", "Store", "Plan", "Status", "Joined"].map(h => <th key={h} style={TH}>{h}</th>)}
-                        <th style={TH}>Actions</th>
+                        {["User", "Store", "Plan", "Status", "Joined"].map(h => <th key={h} style={TH}>{h}</th>)}
+                        <th style={{ ...TH, textAlign: "right" }}>Actions</th>
                       </tr></thead>
                       <tbody>
                         {paginated.length === 0
-                          ? <tr><td colSpan={8} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No users found.</td></tr>
+                          ? <tr><td colSpan={6} style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No users found.</td></tr>
                           : paginated.map((r, i) => (
-                            <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }} {...rowHover}>
-                              <td style={{ ...TD, fontFamily: "monospace", fontSize: 11, color: "#9a9a8e" }}>{shortId(r.id)}</td>
-                              <td style={{ ...TD, fontWeight: 500, color: "#141410" }}>{String(r.full_name ?? "—")}</td>
-                              <td style={{ ...TD, color: "#9a9a8e" }}>{String(r.email ?? "—")}</td>
+                            <tr key={i} style={{ borderBottom: "1px solid var(--border)" }} {...rowHover}>
+                              <td style={TD}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                  <Avatar name={String(r.full_name ?? r.email ?? "?")} />
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                      <span style={{ fontWeight: 600, color: "var(--ink)" }}>{String(r.full_name ?? "—")}</span>
+                                      {Number(r.is_super_admin) === 1 && <span style={{ fontSize: 9.5, fontWeight: 700, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 100, padding: "1px 6px" }}>SA</span>}
+                                    </div>
+                                    <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{String(r.email ?? "—")}</div>
+                                  </div>
+                                </div>
+                              </td>
                               <td style={TD}>{String(r.store_name ?? "—")}</td>
                               <td style={TD}>
-                                {r.plan ? <Badge label={String(r.plan).charAt(0).toUpperCase() + String(r.plan).slice(1)} type="info" /> : <span style={{ color: "#c8c6bc" }}>—</span>}
+                                {r.plan ? <Badge label={String(r.plan).charAt(0).toUpperCase() + String(r.plan).slice(1)} type="info" /> : <span style={{ color: "var(--muted)" }}>—</span>}
                               </td>
                               <td style={TD}>{statusBadge(r.status ?? r.subdomain_status)}</td>
-                              <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDate(r.created_at)}</td>
-                              <td style={{ ...TD, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                <button onClick={() => messageAdmin(String(r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Message</button>
-                                <button onClick={() => openResetModal(String(r.id), "reset_user_password")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Reset</button>
-                                {Number(r.is_super_admin) == 1 ? (
-                                <button
-                                 onClick={() => openRemoveSuperadminModal(String(r.email))}
-                                 style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", cursor: "pointer", fontWeight: 500 }}
-                                >
-                                 Revoke SA
-                                </button>
-                                ) : (
-                               <button
-                              onClick={() => openGrantSuperadminModal(String(r.email))}
-                              style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #bbf7d0", background: "#f0fdf4", color: "#16a34a", cursor: "pointer", fontWeight: 500 }}
-                              >
-                              Grant SA
-                              </button>
-                              )}
-                              <button onClick={() => setPanelAdmin(r as unknown as Admin)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>
-                                  View
-                              </button>
+                              <td style={{ ...TD, color: "var(--muted)" }}>{fmtDate(r.created_at)}</td>
+                              <td style={{ ...TD, textAlign: "right" }}>
+                                <ActionsMenu items={[
+                                  { label: "View profile", onClick: () => setPanelAdmin(r as unknown as Admin) },
+                                  { label: "Message admin", onClick: () => messageAdmin(String(r.id)) },
+                                  { label: "Reset password", onClick: () => openResetModal(String(r.id), "reset_user_password") },
+                                  Number(r.is_super_admin) == 1
+                                    ? { label: "Revoke superadmin", onClick: () => openRemoveSuperadminModal(String(r.email)), danger: true }
+                                    : { label: "Grant superadmin", onClick: () => openGrantSuperadminModal(String(r.email)), accent: true },
+                                ]} />
                               </td>
                             </tr>
                           ))}
                       </tbody>
                     </table>
-                    <Pagination page={page} total={totalPages} onChange={setPage} />
+                    </div>
+                    <Pagination page={page} total={totalPages} onChange={setPage} perPage={perPage} onPerPageChange={n => { setPerPage(n); setPage(1); }} totalItems={filtered.length} />
                   </>
                 )}
               </div>
@@ -1429,43 +1500,57 @@ const openCreateStaffModal = async () => {
               <div className="sa-card">
                 <div className="sa-toolbar">
                   <div className="sa-search"><IcoSearch /><input placeholder="Search staff…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
-                  <button onClick={openCreateStaffModal} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#141410", color: "#fff", cursor: "pointer", fontWeight: 500, fontSize: 12 }}>+ New Staff</button>
-                  <span style={{ fontSize: 12, color: "#9a9a8e", marginLeft: "auto" }}>{filtered.length} staff member{filtered.length !== 1 ? "s" : ""}</span>
+                  <button onClick={openCreateStaffModal} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: "none", background: "var(--accent)", color: "var(--accent-text)", cursor: "pointer", fontWeight: 600, fontSize: 12.5 }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    New Staff
+                  </button>
+                  <span style={{ fontSize: 12, color: "var(--muted)", marginLeft: "auto" }}>{filtered.length} staff member{filtered.length !== 1 ? "s" : ""}</span>
                 </div>
                 {loading ? <Spinner label="Loading staff…" /> : (
                   <>
+                    <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                       <thead><tr>
-                        {["ID", "Name", "Email", "Store", "Role", "Status", "Joined"].map(h => <th key={h} style={TH}>{h}</th>)}
-                        <th style={TH}>Actions</th>
+                        {["User", "Store", "Role", "Status", "Joined"].map(h => <th key={h} style={TH}>{h}</th>)}
+                        <th style={{ ...TH, textAlign: "right" }}>Actions</th>
                       </tr></thead>
                       <tbody>
                         {paginated.length === 0
-                          ? <tr><td colSpan={8} style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No staff found.</td></tr>
+                          ? <tr><td colSpan={6} style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No staff found.</td></tr>
                           : paginated.map((r, i) => (
-                            <tr key={i} style={{ borderBottom: "1px solid #e2e0d8" }} {...rowHover}>
-                              <td style={{ ...TD, fontFamily: "monospace", fontSize: 11, color: "#9a9a8e" }}>{shortId(r.id)}</td>
-                              <td style={{ ...TD, fontWeight: 500, color: "#141410" }}>{String(r.full_name ?? "—")}</td>
-                              <td style={{ ...TD, color: "#9a9a8e" }}>{String(r.email ?? "—")}</td>
+                            <tr key={i} style={{ borderBottom: "1px solid var(--border)" }} {...rowHover}>
+                              <td style={TD}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                  <Avatar name={String(r.full_name ?? r.email ?? "?")} />
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontWeight: 600, color: "var(--ink)" }}>{String(r.full_name ?? "—")}</div>
+                                    <div style={{ fontSize: 11.5, color: "var(--muted)" }}>{String(r.email ?? "—")}</div>
+                                  </div>
+                                </div>
+                              </td>
                               <td style={TD}>{String(r.store_name ?? r.admin_id ?? "—")}</td>
                               <td style={TD}><Badge label={String(r.shift_role ?? r.role ?? "staff")} type="neutral" /></td>
                               <td style={TD}>{statusBadge(r.status)}</td>
-                              <td style={{ ...TD, color: "#9a9a8e" }}>{fmtDate(r.created_at)}</td>
-                              <td style={{ ...TD, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                <button onClick={() => messageAdmin(String(r.id))} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Message</button>
-                                <button onClick={() => openResetModal(String(r.id), "reset_staff_password")} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>Reset</button>
-                                <button onClick={() => toggleAccount(String(r.id), String(r.status) !== "active", true)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: String(r.status) !== "active" ? "#dcfce7" : "#fef2f2", color: String(r.status) !== "active" ? "#166534" : "#991b1b", cursor: "pointer" }}>
-                                  {String(r.status) !== "active" ? "Activate" : "Deactivate"}
-                                </button>
-                                <button onClick={() => setPanelAdmin(r as unknown as Admin)} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e0d8", background: "#fff", color: "#141410", cursor: "pointer" }}>
-                                  View
-                                </button>
+                              <td style={{ ...TD, color: "var(--muted)" }}>{fmtDate(r.created_at)}</td>
+                              <td style={{ ...TD, textAlign: "right" }}>
+                                <ActionsMenu items={[
+                                  { label: "View profile", onClick: () => setPanelAdmin(r as unknown as Admin) },
+                                  { label: "Message staff", onClick: () => messageAdmin(String(r.id)) },
+                                  { label: "Reset password", onClick: () => openResetModal(String(r.id), "reset_staff_password") },
+                                  {
+                                    label: String(r.status) !== "active" ? "Activate" : "Deactivate",
+                                    onClick: () => toggleAccount(String(r.id), String(r.status) !== "active", true),
+                                    danger: String(r.status) === "active",
+                                    accent: String(r.status) !== "active",
+                                  },
+                                ]} />
                               </td>
                             </tr>
                           ))}
                       </tbody>
                     </table>
-                    <Pagination page={page} total={totalPages} onChange={setPage} />
+                    </div>
+                    <Pagination page={page} total={totalPages} onChange={setPage} perPage={perPage} onPerPageChange={n => { setPerPage(n); setPage(1); }} totalItems={filtered.length} />
                   </>
                 )}
               </div>
@@ -1481,7 +1566,7 @@ const openCreateStaffModal = async () => {
                 {loading ? <Spinner label="Loading orders…" /> : (
                   <>
                     <GenericTable data={paginated} />
-                    <Pagination page={page} total={totalPages} onChange={setPage} />
+                    <Pagination page={page} total={totalPages} onChange={setPage} perPage={perPage} onPerPageChange={n => { setPerPage(n); setPage(1); }} totalItems={filtered.length} />
                   </>
                 )}
               </div>
@@ -1497,7 +1582,7 @@ const openCreateStaffModal = async () => {
                 {loading ? <Spinner label="Loading logs…" /> : (
                   <>
                     <GenericTable data={paginated} />
-                    <Pagination page={page} total={totalPages} onChange={setPage} />
+                    <Pagination page={page} total={totalPages} onChange={setPage} perPage={perPage} onPerPageChange={n => { setPerPage(n); setPage(1); }} totalItems={filtered.length} />
                   </>
                 )}
               </div>
@@ -1538,7 +1623,7 @@ const openCreateStaffModal = async () => {
                           ))}
                       </tbody>
                     </table>
-                    <Pagination page={page} total={totalPages} onChange={setPage} />
+                    <Pagination page={page} total={totalPages} onChange={setPage} perPage={perPage} onPerPageChange={n => { setPerPage(n); setPage(1); }} totalItems={filtered.length} />
                   </>
                 )}
               </div>
