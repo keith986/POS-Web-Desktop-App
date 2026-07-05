@@ -84,6 +84,7 @@ interface AdminDetailPanelProps {
   admin: Admin | null;
   billing?: Billing | null;
   isStaff?: boolean;
+  isPrimarySuperAdmin?: boolean;
   onClose: () => void;
   onMessage?: (id: string) => void;
   onReset?: (id: string, action: string) => void;
@@ -523,7 +524,7 @@ function SectionCard({ title, children, style } : SectionCardProps) {
 }
 
 export function AdminDetailPanel({
-  admin, billing, isStaff = false, onClose, onMessage, onReset, onToggle,
+  admin, billing, isStaff = false, isPrimarySuperAdmin = false, onClose, onMessage, onReset, onToggle,
   onGrant, onRevoke, onRenew, onLifetime, onCancelLifetime, onDelete,
 }: AdminDetailPanelProps) {
   const [tab, setTab] = useState("profile");
@@ -640,7 +641,7 @@ export function AdminDetailPanel({
  
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       <button onClick={() => onReset?.(String(admin.id), isStaff ? "reset_staff_password" : "reset_user_password")} style={secondaryBtn}>Reset password</button>
-                      {!isStaff && (
+                      {!isStaff && isPrimarySuperAdmin && (
                         isSuper ? (
                           <button onClick={() => onRevoke?.(String(admin.email))} style={{ ...secondaryBtn, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}>Revoke superadmin</button>
                         ) : (
@@ -658,7 +659,7 @@ export function AdminDetailPanel({
                       >
                         {isActive ? "Deactivate account" : "Activate account"}
                       </button>
-                      {onDelete && (
+                      {onDelete && isPrimarySuperAdmin && (
                         <button
                           onClick={() => onDelete(String(admin.id), String(admin.full_name || admin.email || admin.id))}
                           style={{ ...secondaryBtn, borderColor: "#fecaca", background: "#fef2f2", color: "#dc2626", fontWeight: 700 }}
@@ -706,14 +707,16 @@ export function AdminDetailPanel({
  
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       <button onClick={() => onRenew?.(String(admin.id))} style={secondaryBtn}>Renew subscription</button>
-                      {isLifetime ? (
-                        <button onClick={() => onCancelLifetime?.(String(admin.id))} style={{ ...secondaryBtn, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}>
-                          Cancel lifetime subscription
-                        </button>
-                      ) : (
-                        <button onClick={() => onLifetime?.(String(admin.id))} style={{ ...secondaryBtn, borderColor: "#ddd6fe", background: "#f5f3ff", color: "#6d28d9" }}>
-                          Upgrade to lifetime
-                        </button>
+                      {isPrimarySuperAdmin && (
+                        isLifetime ? (
+                          <button onClick={() => onCancelLifetime?.(String(admin.id))} style={{ ...secondaryBtn, borderColor: "#fecaca", background: "#fef2f2", color: "#991b1b" }}>
+                            Cancel lifetime subscription
+                          </button>
+                        ) : (
+                          <button onClick={() => onLifetime?.(String(admin.id))} style={{ ...secondaryBtn, borderColor: "#ddd6fe", background: "#f5f3ff", color: "#6d28d9" }}>
+                            Upgrade to lifetime
+                          </button>
+                        )
                       )}
                     </div>
                   </>
@@ -858,6 +861,8 @@ export default function SuperAdminPage() {
   const [panelAdmin, setPanelAdmin] = useState<Admin | null>(null);
   const [panelIsStaff, setPanelIsStaff] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ full_name?: string; email?: string } | null>(null);
+  // Only the default super admin account may add/remove super admins, delete staff, or manage lifetime plans
+  const isPrimarySuperAdmin = currentUser?.email === "admin@postore.app";
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
 
@@ -1970,10 +1975,12 @@ const openCreateStaffModal = async () => {
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     New Admin
                   </button>
-                  <button onClick={openCreateSuperadminModal} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", cursor: "pointer", fontWeight: 600, fontSize: 12.5 }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    New Superadmin
-                  </button>
+                  {isPrimarySuperAdmin && (
+                    <button onClick={openCreateSuperadminModal} style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 9, border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", cursor: "pointer", fontWeight: 600, fontSize: 12.5 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      New Superadmin
+                    </button>
+                  )}
                   <span style={{ fontSize: 12, color: "var(--muted)", marginLeft: "auto" }}>{filtered.length} user{filtered.length !== 1 ? "s" : ""}</span>
                 </div>
                 {loading ? <Spinner label="Loading users…" /> : (
@@ -2018,10 +2025,12 @@ const openCreateStaffModal = async () => {
                                   { label: "View profile", onClick: () => { setPanelIsStaff(false); setPanelAdmin(r as unknown as Admin); } },
                                   { label: "Message admin", onClick: () => messageAdmin(String(r.id)) },
                                   { label: "Reset password", onClick: () => openResetModal(String(r.id), "reset_user_password") },
-                                  Number(r.is_super_admin) == 1
-                                    ? { label: "Revoke superadmin", onClick: () => openRemoveSuperadminModal(String(r.email)), danger: true }
-                                    : { label: "Grant superadmin", onClick: () => openGrantSuperadminModal(String(r.email)), accent: true },
-                                  { label: "Delete admin", onClick: () => openDeleteAdminModal(String(r.id), String(r.full_name || r.email || r.id)), danger: true },
+                                  ...(isPrimarySuperAdmin ? [
+                                    Number(r.is_super_admin) == 1
+                                      ? { label: "Revoke superadmin", onClick: () => openRemoveSuperadminModal(String(r.email)), danger: true }
+                                      : { label: "Grant superadmin", onClick: () => openGrantSuperadminModal(String(r.email)), accent: true },
+                                    { label: "Delete admin", onClick: () => openDeleteAdminModal(String(r.id), String(r.full_name || r.email || r.id)), danger: true },
+                                  ] : []),
                                 ]} />
                               </td>
                             </tr>
@@ -2102,7 +2111,9 @@ const openCreateStaffModal = async () => {
                                     danger: String(r.status) === "active",
                                     accent: String(r.status) !== "active",
                                   },
-                                  { label: "Delete staff", onClick: () => openDeleteStaffModal(String(r.id), String(r.full_name || r.email || r.id)), danger: true },
+                                  ...(isPrimarySuperAdmin ? [
+                                    { label: "Delete staff", onClick: () => openDeleteStaffModal(String(r.id), String(r.full_name || r.email || r.id)), danger: true },
+                                  ] : []),
                                 ]} />
                               </td>
                             </tr>
@@ -2890,7 +2901,7 @@ const openCreateStaffModal = async () => {
             </div>
           )}
 
-          <AdminDetailPanel admin={panelAdmin} isStaff={panelIsStaff} onClose={() => setPanelAdmin(null)} onMessage={messageAdmin} onReset={openResetModal} onToggle={toggleAccount} onGrant={openGrantSuperadminModal} onRevoke={openRemoveSuperadminModal} onDelete={panelIsStaff ? openDeleteStaffModal : openDeleteAdminModal} />
+          <AdminDetailPanel admin={panelAdmin} isStaff={panelIsStaff} isPrimarySuperAdmin={isPrimarySuperAdmin} onClose={() => setPanelAdmin(null)} onMessage={messageAdmin} onReset={openResetModal} onToggle={toggleAccount} onGrant={openGrantSuperadminModal} onRevoke={openRemoveSuperadminModal} onDelete={panelIsStaff ? openDeleteStaffModal : openDeleteAdminModal} />
 
         </div>
       </div>

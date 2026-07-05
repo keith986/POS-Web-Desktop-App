@@ -46,16 +46,33 @@ interface AnalyticsRow extends RowDataPacket {
 }
 
 /* ── Auth helper ── */
+interface RequesterInfo { id: string; email: string; isSuperAdmin: boolean; isPrimary: boolean }
+
 async function verifyAdmin(
   pool: Awaited<ReturnType<typeof getPool>>,
   token: string | null
-): Promise<boolean> {
-  if (!token) return false;
-  const [rows] = await pool.query<UserRow[]>(
-    "SELECT id, email FROM users WHERE id = ? LIMIT 1", [token]
+): Promise<RequesterInfo | null> {
+  if (!token) return null;
+  const [rows] = await pool.query<RowDataPacket[]>(
+    "SELECT id, email, is_super_admin FROM users WHERE id = ? LIMIT 1", [token]
   );
-  return rows.length > 0 && rows[0].email === "admin@postore.app";
+  if (rows.length === 0) return null;
+  const row = rows[0] as { id: string; email: string; is_super_admin: number | boolean | null };
+  const isPrimary = row.email === "admin@postore.app";
+  const isSuperAdmin = isPrimary || !!row.is_super_admin;
+  if (!isSuperAdmin) return null;
+  return { id: row.id, email: row.email, isSuperAdmin, isPrimary };
 }
+
+/* Actions only the primary super admin (admin@postore.app) may perform */
+const PRIMARY_ONLY_ACTIONS = new Set([
+  "delete_staff",
+  "delete_admin",
+  "add_super_admin",
+  "remove_super_admin",
+  "set_lifetime",
+  "cancel_lifetime",
+]);
 
 /* ══════════════════════════════════════════════════════════
    NGINX LOG PARSER
@@ -468,7 +485,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   try {
     const pool = await getPool();
-    if (!await verifyAdmin(pool, token)) {
+    const requester = await verifyAdmin(pool, token);
+    if (!requester) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -477,6 +495,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       action: string; userId?: string; id?: string; domain?: string;
     };
     const targetId = userId || id || null;
+
+    // create_superadmin is implemented client-side as create_admin + add_super_admin,
+    // so gating add_super_admin here covers that flow too.
+    if (PRIMARY_ONLY_ACTIONS.has(action) && !requester.isPrimary) {
+      return NextResponse.json(
+        { error: "Only the primary super admin can perform this action" },
+        { status: 403 }
+      );
+    }
 
     if (action === "activate_user") {
       await pool.query(
