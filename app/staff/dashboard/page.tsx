@@ -470,14 +470,18 @@ export default function StaffDashboard() {
 
         @media (max-width: 1024px) {
           .staff-hamburger { display: flex; }
-          /* Sidebar is the first child of .staff-shell — collapse it into an
-             off-canvas drawer without needing to edit the Sidebar component. */
-          .staff-shell > *:first-child:not(.staff-mobile-overlay) {
-            position: fixed !important; top: 0; left: 0; height: 100vh;
-            z-index: 4000; transform: translateX(-100%);
-            transition: transform 0.25s ease; box-shadow: 8px 0 30px rgba(0,0,0,0.25);
+          /* Sidebar.tsx ships its own rule: @media (max-width:700px){.sidebar{display:none}}
+             We take over from 1024px down, so the !important here must cancel that
+             at every width in this range, including <=700px. */
+          .sidebar {
+            display: flex !important;
+            position: fixed !important; top: 0 !important; left: 0 !important;
+            height: 100vh !important; z-index: 4000;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+            box-shadow: 8px 0 30px rgba(0,0,0,0.25);
           }
-          .staff-shell.mobile-nav-open > *:first-child:not(.staff-mobile-overlay) { transform: translateX(0); }
+          .staff-shell.mobile-nav-open .sidebar { transform: translateX(0); }
           .staff-mobile-overlay.open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 3900; }
         }
 
@@ -854,7 +858,7 @@ export default function StaffDashboard() {
             <StaffSettingsTab staff={staff} settings={settings} formatCurrency={formatCurrency} />
           )}
 
-        </main> 
+        </main>
       </div>
 
       {/* ── PAYMENT MODAL — no orderId needed, order is created on success ── */}
@@ -869,7 +873,6 @@ export default function StaffDashboard() {
           onClose={handlePaymentClose}
         />
       )}
-
     </>
   );
 }
