@@ -289,26 +289,6 @@ function ActionsMenu({ items }: { items: { label: string; onClick: () => void; d
   );
 }
 
-/* ─── Donut ring ── */
-function Donut({ pct, color, size = 78, thickness = 10, label }: { pct: number; color: string; size?: number; thickness?: number; label?: string }) {
-  const clamped = Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0));
-  const deg = clamped * 3.6;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-      <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-        <div style={{ width: size, height: size, borderRadius: "50%", background: `conic-gradient(${color} 0deg ${deg}deg, var(--subtle) ${deg}deg 360deg)` }} />
-        <div style={{
-          position: "absolute", inset: thickness, borderRadius: "50%", background: "var(--card)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          <span style={{ fontSize: size * 0.21, fontWeight: 700, color: "var(--ink)" }}>{Math.round(clamped)}%</span>
-        </div>
-      </div>
-      {label && <div style={{ fontSize: 11.5, color: "var(--muted)", fontWeight: 500, textAlign: "center" }}>{label}</div>}
-    </div>
-  );
-}
-
 /* ─── Smooth area/line path builder (used by overview trend chart) ── */
 function smoothLinePath(points: { x: number; y: number }[]): string {
   if (points.length === 0) return "";
@@ -886,6 +866,9 @@ export default function SuperAdminPage() {
   const [notifPos, setNotifPos] = useState({ top: 0, left: 0 });
   const notifBtnRef = useRef<HTMLButtonElement>(null);
 
+  /* ── Mobile sidebar drawer (small screens) ── */
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   /* ── Settings page state ── */
   const [settingsTab, setSettingsTab] = useState<"general" | "notifications" | "security" | "appearance">("general");
   const [profileExtra, setProfileExtra] = useState({ phone: "", linkedin: "", dribbble: "", language: "English", currency: "USD" });
@@ -1414,7 +1397,7 @@ const openCreateStaffModal = async () => {
   const totalPages = Math.max(1, Math.ceil(sorted.length / perPage));
   const paginated  = sorted.slice((page - 1) * perPage, page * perPage);
 
-  const changeTab = (t: TabKey) => { setActiveTab(t); setSearch(""); setPage(1); setSortBy(""); setSortDir("desc"); };
+  const changeTab = (t: TabKey) => { setActiveTab(t); setSearch(""); setPage(1); setSortBy(""); setSortDir("desc"); setMobileNavOpen(false); };
 
   /* ── Notification bell: unread messages + recent activity, combined ── */
   const unreadConversations = conversations.filter(c => Number(c.unread_count || 0) > 0);
@@ -1502,12 +1485,55 @@ const openCreateStaffModal = async () => {
      <ThemeProvider>
       <style>{`
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: 'Book Antiqua', 'Palatino Linotype', Tahoma, serif; -webkit-font-smoothing: antialiased; }
+        html { -webkit-text-size-adjust: 100%; }
+        body { margin: 0; font-family: 'Book Antiqua', 'Palatino Linotype', Tahoma, serif; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+        img, svg { max-width: 100%; }
         .sa-shell { display: flex; min-height: 100vh; background: var(--bg); }
-        .sa-sidebar { background: #16213e; border-right: none; width: 260px; flex-shrink: 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
-        .sa-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .sa-sidebar { background: #16213e; border-right: none; width: 260px; flex-shrink: 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; z-index: 4000; transition: transform 0.25s ease; }
+        .sa-content { flex: 1; display: flex; flex-direction: column; min-width: 0; width: 100%; }
         .sa-header { background: var(--card); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; position: sticky; top: 0; z-index: 10; }
-        .sa-main { flex: 1; padding: 1.75rem 2rem 2.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+        .sa-main { flex: 1; padding: 1.75rem 2rem 2.5rem; display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+
+        /* Hamburger — hidden on desktop, shown at <=1024px */
+        .sa-hamburger { display: none; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--ink); cursor: pointer; flex-shrink: 0; }
+        .sa-mobile-overlay { display: none; }
+
+        /* Responsive grids used across tabs — inline gridTemplateColumns is overridden below */
+        .sa-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        .sa-overview-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 1rem; align-items: stretch; }
+        .sa-settings-grid { display: grid; grid-template-columns: 200px 1fr; min-height: 560px; overflow: visible; }
+        .sa-support-grid { display: grid; grid-template-columns: 300px 1fr; gap: 1rem; height: calc(100vh - 180px); min-height: 500px; }
+
+        /* ── Breakpoints ── */
+        @media (max-width: 1024px) {
+          .sa-hamburger { display: flex; }
+          .sa-sidebar { position: fixed; top: 0; left: 0; height: 100vh; transform: translateX(-100%); box-shadow: 8px 0 30px rgba(0,0,0,0.25); }
+          .sa-sidebar.open { transform: translateX(0); }
+          .sa-mobile-overlay.open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 3900; }
+          .sa-overview-grid { grid-template-columns: 1fr; }
+          .sa-support-grid { grid-template-columns: 260px 1fr; }
+        }
+        @media (max-width: 900px) {
+          .sa-stats-grid { grid-template-columns: repeat(2, 1fr); }
+          .sa-settings-grid { grid-template-columns: 1fr; }
+          .sa-settings-subnav { border-right: none !important; border-bottom: 1px solid var(--border); display: flex; overflow-x: auto; gap: 4px; padding: 0.75rem 0.75rem !important; }
+          .sa-settings-subnav-btn { width: auto !important; white-space: nowrap; margin-bottom: 0 !important; }
+        }
+        @media (max-width: 768px) {
+          .sa-header { padding: 0 1rem; height: auto; min-height: 60px; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
+          .sa-main { padding: 1.1rem 0.9rem 1.75rem; gap: 1rem; }
+          .sa-support-grid { grid-template-columns: 1fr; height: auto; min-height: 0; }
+          .sa-refresh-btn span, .sa-refresh-btn { white-space: nowrap; }
+        }
+        @media (max-width: 640px) {
+          .sa-stats-grid { grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+          .sa-header .sa-refresh-btn { padding: 8px 10px; }
+          .sa-header-actions { gap: 6px !important; }
+          .sa-logout-label { display: none; }
+        }
+        @media (max-width: 480px) {
+          .sa-stats-grid { grid-template-columns: 1fr; }
+        }
 
         /* Profile header */
         .sa-profile-header { padding: 2.1rem 1.25rem 1.5rem; display: flex; flex-direction: column; align-items: center; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.08); }
@@ -1548,7 +1574,9 @@ const openCreateStaffModal = async () => {
       <div className="sa-shell">
 
         {/* ── SIDEBAR ── */}
-        <aside className="sa-sidebar">
+        <div className={`sa-mobile-overlay ${mobileNavOpen ? "open" : ""}`} onClick={() => setMobileNavOpen(false)} />
+
+        <aside className={`sa-sidebar ${mobileNavOpen ? "open" : ""}`}>
           {/* Profile header */}
           <div className="sa-profile-header">
             <input
@@ -1613,6 +1641,14 @@ const openCreateStaffModal = async () => {
           {/* Header */}
           <header className="sa-header">
             <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
+              <button
+                className="sa-hamburger"
+                onClick={() => setMobileNavOpen(o => !o)}
+                aria-label="Toggle menu"
+                title="Menu"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              </button>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 17, fontWeight: 700, color: "var(--ink)", letterSpacing: "-0.3px" }}>
                   {TABS.find(t => t.key === activeTab)?.label}
@@ -1621,7 +1657,7 @@ const openCreateStaffModal = async () => {
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="sa-header-actions" style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <button
                 onClick={() => activeTab === "support" ? loadConversations() : fetchSection(activeTab)}
                 className="sa-icon-btn"
@@ -1649,7 +1685,7 @@ const openCreateStaffModal = async () => {
                 <>
                   <div onClick={() => setNotifOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 5000 }} />
                   <div style={{
-                    position: "fixed", top: notifPos.top, left: notifPos.left, zIndex: 5001, width: 340, maxHeight: "70vh",
+                    position: "fixed", top: notifPos.top, left: notifPos.left, zIndex: 5001, width: 340, maxWidth: "92vw", maxHeight: "70vh",
                     background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14,
                     boxShadow: "0 16px 40px rgba(0,0,0,0.16)", display: "flex", flexDirection: "column", overflow: "hidden",
                   }}>
@@ -1659,7 +1695,7 @@ const openCreateStaffModal = async () => {
                     <div style={{ overflowY: "auto", flex: 1 }}>
                       {unreadConversations.length === 0 && recentLogItems.length === 0 && (
                         <div style={{ padding: "2rem 1rem", textAlign: "center", color: "var(--muted)", fontSize: 12.5 }}>
-                          You're all caught up.
+                          You are all caught up.
                         </div>
                       )}
 
@@ -1741,7 +1777,7 @@ const openCreateStaffModal = async () => {
                 style={{ borderColor: "#fecaca", color: "#dc2626" }}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Logout
+                <span className="sa-logout-label">Logout</span>
               </button>
             </div>
           </header>
@@ -1773,7 +1809,7 @@ const openCreateStaffModal = async () => {
                 )}
 
                 {/* Quick Stats — 4 up, icon bubble top-right like the reference dash */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
+                <div className="sa-stats-grid">
                   {[
                     { label: "Total Orders", value: (stats.orderCount ?? 0).toLocaleString(), sub: `${stats.todayOrders ?? 0} today`, up: true, bg: "#eef2ff", fg: "#4f46e5", icon: <IcoOrders /> },
                     { label: "Admins & Staff", value: ((stats.adminCount ?? 0) + (stats.staffCount ?? 0)).toLocaleString(), sub: `${(stats.activeUsers ?? 0) + (stats.activeStaff ?? 0)} active`, up: true, bg: "#ecfdf5", fg: "#059669", icon: <IcoUsers /> },
@@ -1793,7 +1829,7 @@ const openCreateStaffModal = async () => {
                 </div>
 
                 {/* Chart + activity row */}
-                <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: "1rem", alignItems: "stretch" }}>
+                <div className="sa-overview-grid">
 
                   {/* Orders & Revenue trend — smooth two-tone area chart */}
                   <div className="sa-card" style={{ padding: "1.4rem 1.5rem" }}>
@@ -2306,10 +2342,10 @@ const openCreateStaffModal = async () => {
 
             {/* ══ SETTINGS ══ */}
             {activeTab === "settings" && (
-              <div className="sa-card" style={{ display: "grid", gridTemplateColumns: "200px 1fr", minHeight: 560, overflow: "visible" }}>
+              <div className="sa-card sa-settings-grid">
 
                 {/* Sub-nav */}
-                <div style={{ borderRight: "1px solid var(--border)", padding: "1.25rem 0.85rem" }}>
+                <div className="sa-settings-subnav" style={{ borderRight: "1px solid var(--border)", padding: "1.25rem 0.85rem" }}>
                   {([
                     { key: "general", label: "General" },
                     { key: "notifications", label: "Notifications" },
@@ -2318,6 +2354,7 @@ const openCreateStaffModal = async () => {
                   ] as const).map(t => (
                     <button
                       key={t.key}
+                      className="sa-settings-subnav-btn"
                       onClick={() => { setSettingsTab(t.key); setEditingField(null); }}
                       style={{
                         display: "block", width: "100%", textAlign: "left", padding: "10px 14px", marginBottom: 2,
@@ -2533,7 +2570,7 @@ const openCreateStaffModal = async () => {
 
             {/* ══ SUPPORT ══ */}
             {activeTab === "support" && (
-              <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: "1rem", height: "calc(100vh - 180px)", minHeight: 500 }}>
+              <div className="sa-support-grid">
 
                 {/* Conversation list */}
                 <div className="sa-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -2668,7 +2705,7 @@ const openCreateStaffModal = async () => {
           {/* ── GLOBAL MODAL (accessible from all tabs) ── */}
           {modalOpen && (
             <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,15,15,0.45)', zIndex: 9999 }}>
-              <div style={{ width: 520, maxHeight: '90vh', overflow: 'auto', background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+              <div style={{ width: 520, maxWidth: '92vw', maxHeight: '90vh', overflow: 'auto', background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: 15, fontWeight: 600 }}>
                     {modalKind === 'renew' && 'Renew billing'}
@@ -2840,10 +2877,10 @@ const openCreateStaffModal = async () => {
 
           {signOutOpen && (
             <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 6000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-              <div style={{ width: 380, background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 20, boxShadow: "0 20px 50px rgba(0,0,0,0.25)" }}>
+              <div style={{ width: 380, maxWidth: "92vw", background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 20, boxShadow: "0 20px 50px rgba(0,0,0,0.25)" }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", marginBottom: 6 }}>Sign out?</div>
                 <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.55, marginBottom: 18 }}>
-                  You'll be signed out of this super admin session on this device. You can sign back in anytime.
+                  You will be signed out of this super admin session on this device. You can sign back in anytime.
                 </div>
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                   <button onClick={() => setSignOutOpen(false)} style={{ padding: "9px 16px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", fontFamily: "inherit", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
