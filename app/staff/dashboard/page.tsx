@@ -6,6 +6,7 @@ import staffCss from "@/app/staff/component/staffStyles";
 import StaffSettingsTab from "@/app/staff/component/StaffSettingsTab";
 import StaffSupportTab from "@/app/staff/component/StaffSupportTab";
 import MpesaPaymentModal from "@/app/staff/component/MpesaPaymentModal";
+import { useStaffTheme, buildThemeCss } from "@/app/staff/component/theme";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface StoredStaff {
@@ -246,6 +247,9 @@ export default function StaffDashboard() {
   /* ── Mobile nav drawer (small screens) ── */
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
+  /* ── Theme (persisted, applied as data-theme on <html>) ── */
+  useStaffTheme();
+
   /* ── Auth guard ── */
   useEffect(() => {
     const params       = new URLSearchParams(window.location.search);
@@ -449,6 +453,7 @@ export default function StaffDashboard() {
   return (
     <>
       <style>{staffCss}</style>
+      <style>{buildThemeCss()}</style>
       <style>{`
         * { box-sizing: border-box; }
         img, svg { max-width: 100%; }

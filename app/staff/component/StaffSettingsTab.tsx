@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 //import { useRouter } from "next/navigation";
 import LogoutModal from "@/app/staff/component/Logoutmodal";
+import { THEMES, useStaffTheme } from "@/app/staff/component/theme";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface StoredStaff {
@@ -51,6 +52,7 @@ function IcoClock()   { return <svg width="14" height="14" viewBox="0 0 24 24" f
 function IcoLogout()  { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>; }
 function IcoCheck()   { return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>; }
 function IcoKey()     { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>; }
+function IcoPalette() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22a1 1 0 01-1-1v-1a2 2 0 00-2-2H8a2 2 0 01-2-2 2 2 0 00-2-2H3a1 1 0 01-1-1 10 10 0 1110 10z"/><circle cx="6.5" cy="11.5" r="1.5"/><circle cx="9.5" cy="7.5" r="1.5"/><circle cx="14.5" cy="7.5" r="1.5"/><circle cx="17.5" cy="11.5" r="1.5"/></svg>; }
 
 const css = `
   .sett-page {
@@ -165,6 +167,31 @@ const css = `
   /* Store skeleton */
   .sett-skel { height: 13px; border-radius: 4px; background: #ece9e1; animation: settPulse 1.4s ease-in-out infinite; }
   @keyframes settPulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* Theme picker */
+  .sett-theme-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px; padding: 1.25rem;
+  }
+  .sett-theme-opt {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 12px 8px; border-radius: 10px;
+    border: 1px solid var(--border2); background: var(--bg);
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.15s, transform 0.1s, background 0.15s;
+  }
+  .sett-theme-opt:hover { transform: translateY(-1px); }
+  .sett-theme-opt.active { border-color: var(--accent); background: var(--accent-bg); }
+  .sett-theme-swatch {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.12);
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,0.35);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sett-theme-name {
+    font-size: 11.5px; font-weight: 500; color: var(--ink);
+    display: flex; align-items: center; gap: 4px;
+  }
 `;
 
 /* ─────────────────────────────────────────
@@ -172,6 +199,8 @@ const css = `
 ───────────────────────────────────────── */
 export default function StaffSettingsTab({ staff, settings }: StaffSettingsTabProps) {
   //const router = useRouter();
+
+  const { theme, setTheme } = useStaffTheme();
 
   const [adminStore,    setAdminStore]    = useState<AdminStore | null>(null);
   const [storeLoading,  setStoreLoading]  = useState(true);
@@ -290,6 +319,36 @@ export default function StaffSettingsTab({ staff, settings }: StaffSettingsTabPr
                 <span className="sett-row-label">{r.label}</span>
                 <span className="sett-row-val">{r.value}</span>
               </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Appearance / Theme ── */}
+        <div className="sett-card">
+          <div className="sett-card-hd">
+            <div className="sett-card-icon" style={{ background: "#fdf4ff", color: "#9333ea" }}><IcoPalette /></div>
+            <div>
+              <div className="sett-card-title">Appearance</div>
+              <div className="sett-card-sub">Choose how the dashboard looks — saved to this device</div>
+            </div>
+          </div>
+          <div className="sett-theme-grid">
+            {THEMES.map(t => (
+              <button
+                key={t.id}
+                className={`sett-theme-opt ${theme === t.id ? "active" : ""}`}
+                onClick={() => setTheme(t.id)}
+                title={t.label}
+              >
+                <div className="sett-theme-swatch" style={{ background: t.swatch }}>
+                  {theme === t.id && (
+                    <span style={{ color: "#fff", filter: "drop-shadow(0 0 1.5px rgba(0,0,0,0.7))" }}>
+                      <IcoCheck />
+                    </span>
+                  )}
+                </div>
+                <span className="sett-theme-name">{t.label}</span>
+              </button>
             ))}
           </div>
         </div>
