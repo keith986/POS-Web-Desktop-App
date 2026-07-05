@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Sidebar from "@/app/staff/component/Sidebar";
 import staffCss from "@/app/staff/component/staffStyles";
 import StaffSettingsTab from "@/app/staff/component/StaffSettingsTab";
@@ -250,6 +250,20 @@ export default function StaffDashboard() {
   /* ── Theme (persisted, applied as data-theme on <html>) ── */
   const { theme, setTheme } = useStaffTheme();
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const themeMenuRef = useRef<HTMLDivElement>(null);
+
+  /* Close on click-outside — no full-screen overlay, so it can't get
+     stacked above the header/popover and swallow the real click. */
+  useEffect(() => {
+    if (!themeMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (themeMenuRef.current && !themeMenuRef.current.contains(e.target as Node)) {
+        setThemeMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [themeMenuOpen]);
 
   /* ── Auth guard ── */
   useEffect(() => {
@@ -456,9 +470,6 @@ export default function StaffDashboard() {
       <style>{staffCss}</style>
       <style>{buildThemeCss()}</style>
       <style>{`
-        /* ── Responsive overrides (page-level) ──
-           staffCss / Sidebar define the base desktop layout; these rules
-           adapt it for tablet and mobile without touching those files. */
         * { box-sizing: border-box; }
         img, svg { max-width: 100%; }
 
@@ -538,7 +549,7 @@ export default function StaffDashboard() {
           position: absolute; top: calc(100% + 8px); right: 0;
           background: var(--surface); border: 1px solid var(--border);
           border-radius: 10px; padding: 6px; width: 168px;
-          box-shadow: 0 12px 30px rgba(0,0,0,0.18); z-index: 500;
+          box-shadow: 0 12px 30px rgba(0,0,0,0.18); z-index: 5000;
         }
         .hdr-theme-opt {
           display: flex; align-items: center; gap: 9px; width: 100%;
@@ -549,13 +560,6 @@ export default function StaffDashboard() {
         .hdr-theme-opt:hover  { background: var(--bg); }
         .hdr-theme-opt.active { background: var(--accent-bg); font-weight: 500; }
       `}</style>
-
-      {themeMenuOpen && (
-        <div
-          onClick={() => setThemeMenuOpen(false)}
-          style={{ position: "fixed", inset: 0, zIndex: 490, background: "transparent" }}
-        />
-      )}
 
       {toast && (
         <div className="staff-toast" style={{ background: toast.type === "err" ? "#dc2626" : "#141410" }}>
@@ -572,7 +576,7 @@ export default function StaffDashboard() {
         <div className={`staff-mobile-overlay ${mobileNavOpen ? "open" : ""}`} onClick={() => setMobileNavOpen(false)} />
         <Sidebar activeTab={activeTab} setActiveTab={goToTab} cartCount={cartCount} />
 
-        <header className="staff-header" style={{ position: "relative" }}>
+        <header className="staff-header">
           <button
             className="staff-hamburger"
             onClick={() => setMobileNavOpen(o => !o)}
@@ -585,29 +589,31 @@ export default function StaffDashboard() {
           <div className="hdr-shift-pill"><div className="hdr-shift-dot" />{staff.full_name} · On Shift</div>
           <div className="hdr-time">{dater}</div>
 
-          <button
-            className="hdr-theme-btn"
-            onClick={() => setThemeMenuOpen(o => !o)}
-            title="Change theme"
-          >
-            <span className="hdr-theme-swatch" style={{ background: THEMES.find(t => t.id === theme)?.swatch ?? "#fff" }} />
-            <span className="hdr-theme-label">{THEMES.find(t => t.id === theme)?.label ?? "Theme"}</span>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          {themeMenuOpen && (
-            <div className="hdr-theme-menu">
-              {THEMES.map(t => (
-                <button
-                  key={t.id}
-                  className={`hdr-theme-opt ${theme === t.id ? "active" : ""}`}
-                  onClick={() => { setTheme(t.id); setThemeMenuOpen(false); }}
-                >
-                  <span className="hdr-theme-swatch" style={{ background: t.swatch }} />
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          )}
+          <div ref={themeMenuRef} style={{ position: "relative" }}>
+            <button
+              className="hdr-theme-btn"
+              onClick={() => setThemeMenuOpen(o => !o)}
+              title="Change theme"
+            >
+              <span className="hdr-theme-swatch" style={{ background: THEMES.find(t => t.id === theme)?.swatch ?? "#fff" }} />
+              <span className="hdr-theme-label">{THEMES.find(t => t.id === theme)?.label ?? "Theme"}</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            {themeMenuOpen && (
+              <div className="hdr-theme-menu">
+                {THEMES.map(t => (
+                  <button
+                    key={t.id}
+                    className={`hdr-theme-opt ${theme === t.id ? "active" : ""}`}
+                    onClick={() => { setTheme(t.id); setThemeMenuOpen(false); }}
+                  >
+                    <span className="hdr-theme-swatch" style={{ background: t.swatch }} />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <button className="hdr-btn" onClick={() => goToTab("Record Sale")}>+ New Sale</button>
         </header>
