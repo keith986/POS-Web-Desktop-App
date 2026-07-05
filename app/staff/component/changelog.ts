@@ -28,6 +28,15 @@ export interface ChangelogEntry {
   description: string;
   /** Why it matters to the staff member using the dashboard. */
   importance: string;
+  /**
+   * Mark true for fixes that can't safely wait for a staff member to
+   * click "Update" — e.g. a payment bug, a security patch, a data
+   * integrity issue. Critical entries still show the modal (so staff
+   * know what happened and why), but the "Ignore" option is hidden and
+   * the update applies itself automatically after a short countdown.
+   * Leave false/omitted for normal features, improvements, and fixes.
+   */
+  critical?: boolean;
 }
 
 /**
@@ -55,6 +64,19 @@ export const CHANGELOG: ChangelogEntry[] = [
   //     "Staff can no longer type a custom discount amount at checkout; only admin-configured discount codes can be applied.",
   //   importance:
   //     "Prevents unauthorized discounts at the till — all discounts are now tracked centrally by the admin.",
+  // },
+  //
+  // Example of a CRITICAL entry — applies itself automatically:
+  // {
+  //   version: "1.2.1",
+  //   date: "2026-08-02",
+  //   type: "fix",
+  //   title: "Fixed incorrect M-Pesa change calculation",
+  //   description:
+  //     "Cash change due was being calculated with the wrong rounding on amounts over KES 5,000.",
+  //   importance:
+  //     "Affects money handed back to customers — everyone needs this applied right away.",
+  //   critical: true,
   // },
 ];
 

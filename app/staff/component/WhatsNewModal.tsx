@@ -3,10 +3,15 @@
 import { ChangelogEntry, ChangeType } from "./changelog";
 
 interface WhatsNewModalProps {
-  open:     boolean;
-  entries:  ChangelogEntry[];
-  onUpdate: () => void;
-  onIgnore: () => void;
+  open:            boolean;
+  entries:         ChangelogEntry[];
+  onUpdate:        () => void;
+  onIgnore:        () => void;
+  isCritical?:     boolean;
+  /** Seconds remaining before a critical update applies itself. */
+  autoApplyIn?:    number | null;
+  /** True while the countdown is held because the staff member is busy. */
+  autoApplyPaused?: boolean;
 }
 
 /* ─── Per-type badge styling + icon ─────────────────────────── */
@@ -32,6 +37,26 @@ function IcoSparkle() {
       strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 3l1.9 4.9L19 9.8l-4.9 1.9L12 17l-1.9-4.9L5 9.8l4.9-1.9z" />
       <path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" />
+    </svg>
+  );
+}
+
+function IcoAlert() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+function IcoPause() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
     </svg>
   );
 }
@@ -64,6 +89,7 @@ const css = `
     animation: wnSlideUp 0.22s cubic-bezier(.4,0,.2,1);
     overflow: hidden;
   }
+  .wn-card.critical { border-color: #fecaca; }
 
   .wn-head {
     padding: 1.5rem 1.75rem 1.1rem;
@@ -77,6 +103,8 @@ const css = `
     display: flex; align-items: center; justify-content: center;
     margin-bottom: 0.85rem;
   }
+  .wn-icon-wrap.critical { background: #fef2f2; color: #dc2626; }
+
   .wn-title { font-size: 16px; font-weight: 600; color: var(--ink, #141410); margin-bottom: 4px; }
   .wn-sub   { font-size: 12.5px; color: var(--muted, #9a9a8e); line-height: 1.55; }
 
@@ -108,13 +136,16 @@ const css = `
     color: var(--ink, #4a4a40);
   }
   .wn-why b { color: var(--ink, #141410); }
+  .wn-why.critical { background: #fef2f2; color: #7f1d1d; }
+  .wn-why.critical b { color: #991b1b; }
 
   .wn-actions {
-    display: flex; gap: 8px;
+    display: flex; flex-direction: column; gap: 8px;
     padding: 1rem 1.75rem 1.5rem;
     border-top: 1px solid var(--border, #eee);
     flex-shrink: 0;
   }
+  .wn-actions-row { display: flex; gap: 8px; }
 
   .wn-btn-ignore {
     flex: 1; padding: 10px 0;
@@ -136,9 +167,21 @@ const css = `
   }
   .wn-btn-update:hover  { filter: brightness(1.08); }
   .wn-btn-update:active { transform: scale(0.98); }
+  .wn-btn-update.critical { background: #dc2626; }
+
+  .wn-countdown {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    text-align: center; font-size: 11.5px; color: var(--muted, #9a9a8e);
+  }
+  .wn-countdown b { color: #dc2626; }
+  .wn-countdown.paused { color: #b45309; }
+  .wn-countdown.paused b { color: #b45309; }
 `;
 
-export default function WhatsNewModal({ open, entries, onUpdate, onIgnore }: WhatsNewModalProps) {
+export default function WhatsNewModal({
+  open, entries, onUpdate, onIgnore,
+  isCritical = false, autoApplyIn = null, autoApplyPaused = false,
+}: WhatsNewModalProps) {
   if (!open || entries.length === 0) return null;
 
   const plural = entries.length > 1;
@@ -147,17 +190,27 @@ export default function WhatsNewModal({ open, entries, onUpdate, onIgnore }: Wha
     <>
       <style>{css}</style>
 
-      <div className="wn-overlay" onClick={onIgnore} />
+      {/* Critical updates can't be dismissed by clicking outside. */}
+      <div className="wn-overlay" onClick={isCritical ? undefined : onIgnore} />
 
-      <div className="wn-card">
+      <div className={`wn-card ${isCritical ? "critical" : ""}`}>
         <div className="wn-head">
-          <div className="wn-icon-wrap"><IcoSparkle /></div>
+          <div className={`wn-icon-wrap ${isCritical ? "critical" : ""}`}>
+            {isCritical ? <IcoAlert /> : <IcoSparkle />}
+          </div>
           <div className="wn-title">
-            {plural ? `${entries.length} updates are available` : "An update is available"}
+            {isCritical
+              ? "A critical update is ready"
+              : plural
+                ? `${entries.length} updates are available`
+                : "An update is available"}
           </div>
           <div className="wn-sub">
-            Here&apos;s what changed on your dashboard. Update now, or keep working and update later
-            from the button in the header.
+            {isCritical
+              ? autoApplyPaused
+                ? "This fixes something important. It'll apply itself as soon as you finish what you're doing — no rush."
+                : "This fixes something important and will be applied automatically — you don't need to do anything."
+              : "Here\u2019s what changed on your dashboard. Update now, or keep working and update later from the button in the header."}
           </div>
         </div>
 
@@ -174,8 +227,8 @@ export default function WhatsNewModal({ open, entries, onUpdate, onIgnore }: Wha
                 </div>
                 <div className="wn-entry-title">{e.title}</div>
                 <div className="wn-entry-desc">{e.description}</div>
-                <div className="wn-why">
-                  <span>💡</span>
+                <div className={`wn-why ${isCritical ? "critical" : ""}`}>
+                  <span>{isCritical ? "⚠️" : "💡"}</span>
                   <span><b>Why it matters:</b> {e.importance}</span>
                 </div>
               </div>
@@ -184,8 +237,31 @@ export default function WhatsNewModal({ open, entries, onUpdate, onIgnore }: Wha
         </div>
 
         <div className="wn-actions">
-          <button className="wn-btn-ignore" onClick={onIgnore}>Ignore for now</button>
-          <button className="wn-btn-update" onClick={onUpdate}>Update now</button>
+          {isCritical ? (
+            <>
+              <div className="wn-actions-row">
+                <button className="wn-btn-update critical" onClick={onUpdate} style={{ flex: 1 }}>
+                  Update now
+                </button>
+              </div>
+              {autoApplyIn !== null && (
+                autoApplyPaused ? (
+                  <div className="wn-countdown paused">
+                    <IcoPause /> Paused — waiting until you&apos;re free
+                  </div>
+                ) : (
+                  <div className="wn-countdown">
+                    Applying automatically in <b>{autoApplyIn}s</b>
+                  </div>
+                )
+              )}
+            </>
+          ) : (
+            <div className="wn-actions-row">
+              <button className="wn-btn-ignore" onClick={onIgnore}>Ignore for now</button>
+              <button className="wn-btn-update" onClick={onUpdate}>Update now</button>
+            </div>
+          )}
         </div>
       </div>
     </>
