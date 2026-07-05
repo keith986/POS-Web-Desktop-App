@@ -10,6 +10,10 @@ const SW_URL = "/sw.js";
  *  Only counts down while the staff member isn't mid-action. */
 const CRITICAL_AUTO_APPLY_SECONDS = 10;
 
+/** How often to actively ask the browser "is there a newer sw.js yet?"
+ *  instead of waiting for the next full page navigation to find out. */
+const UPDATE_CHECK_INTERVAL_MS = 60_000; // 1 minute
+
 /**
  * @param isBusy Pass `true` while the staff member is mid-action and a
  * reload would lose work — e.g. items in the cart, the payment modal
@@ -28,6 +32,8 @@ export function useAppUpdates(isBusy: boolean = false) {
 
   const waitingWorker = useRef<ServiceWorker | null>(null);
   const countdownId   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const checkIntervalId = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cleanupExtras   = useRef<(() => void) | null>(null);
   const busyRef        = useRef(isBusy);
 
   useEffect(() => { busyRef.current = isBusy; }, [isBusy]);
@@ -117,6 +123,27 @@ export function useAppUpdates(isBusy: boolean = false) {
           }
         });
       });
+
+      // The browser only re-checks sw.js for changes on navigation by
+      // default, which on a dashboard people leave open all shift could
+      // mean hours before a deploy is even noticed. Ask explicitly:
+      // periodically, and whenever the tab comes back into focus.
+      const checkForUpdate = () => { reg.update().catch(() => {}); };
+
+      checkIntervalId.current = setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);
+
+      const onVisibilityChange = () => {
+        if (document.visibilityState === "visible") checkForUpdate();
+      };
+      document.addEventListener("visibilitychange", onVisibilityChange);
+      window.addEventListener("focus", checkForUpdate);
+
+      // Stash these so the outer cleanup (below) can remove them —
+      // they're only created once `reg` resolves.
+      cleanupExtras.current = () => {
+        document.removeEventListener("visibilitychange", onVisibilityChange);
+        window.removeEventListener("focus", checkForUpdate);
+      };
     }).catch(() => {
       // Service workers can fail to register (unsupported browser,
       // insecure context, etc.) — fail quietly, app just runs unfrozen.
@@ -125,7 +152,10 @@ export function useAppUpdates(isBusy: boolean = false) {
     return () => {
       navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
       clearCountdown();
+      if (checkIntervalId.current) clearInterval(checkIntervalId.current);
+      cleanupExtras.current?.();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clearCountdown]);
 
   /** "Ignore for now" — close the modal but keep the header pill lit.

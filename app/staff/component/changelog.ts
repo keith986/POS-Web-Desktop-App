@@ -45,14 +45,15 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.1.0",
+    version: "1.2.0",
     date: "2026-07-05",
     type: "feature",
-    title: "Update notifications",
+    title: "Background Changes",
     description:
       "The dashboard now tells you when new features or changes are available instead of updating silently in the background.",
     importance:
       "You'll never be confused by something that changed without warning. You decide when to refresh.",
+    critical: true,
   },
   // Example of a future entry — copy this shape when you ship something new:
   // {
