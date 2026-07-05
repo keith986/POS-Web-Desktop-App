@@ -450,9 +450,6 @@ export default function StaffDashboard() {
     <>
       <style>{staffCss}</style>
       <style>{`
-        /* ── Responsive overrides (page-level) ──
-           staffCss / Sidebar define the base desktop layout; these rules
-           adapt it for tablet and mobile without touching those files. */
         * { box-sizing: border-box; }
         img, svg { max-width: 100%; }
 
@@ -470,18 +467,15 @@ export default function StaffDashboard() {
 
         @media (max-width: 1024px) {
           .staff-hamburger { display: flex; }
-          /* Sidebar.tsx ships its own rule: @media (max-width:700px){.sidebar{display:none}}
-             We take over from 1024px down, so the !important here must cancel that
-             at every width in this range, including <=700px. */
           .sidebar {
             display: flex !important;
-            position: fixed !important; top: 0 !important; left: 0 !important;
+            position: fixed !important; top: 0 !important;
             height: 100vh !important; z-index: 4000;
-            transform: translateX(-100%);
-            transition: transform 0.25s ease;
+            left: -280px;
+            transition: left 0.25s ease;
             box-shadow: 8px 0 30px rgba(0,0,0,0.25);
           }
-          .staff-shell.mobile-nav-open .sidebar { transform: translateX(0); }
+          .staff-shell.mobile-nav-open .sidebar { left: 0 !important; }
           .staff-mobile-overlay.open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 3900; }
         }
 
@@ -493,7 +487,7 @@ export default function StaffDashboard() {
         @media (max-width: 768px) {
           .staff-header { flex-wrap: wrap !important; height: auto !important; min-height: 60px; padding: 10px 1rem !important; row-gap: 8px; }
           .staff-main { padding: 1rem 0.9rem 1.75rem !important; }
-          .staff-tabs { overflow-x: auto; flex-wrap: nowrap !important; -webkit-overflow-scrolling: touch; }
+          .staff-tabs { width: 100% !important; max-width: 100%; overflow-x: auto; flex-wrap: nowrap !important; -webkit-overflow-scrolling: touch; }
           .staff-tab-btn { white-space: nowrap; flex-shrink: 0; }
           .toolbar { flex-wrap: wrap !important; }
           .search-wrap { min-width: 0 !important; flex: 1 1 200px; }
