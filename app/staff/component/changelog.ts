@@ -53,6 +53,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       "The dashboard now tells you when new features or changes are available instead of updating silently in the background.",
     importance:
       "You'll never be confused by something that changed without warning. You decide when to refresh.",
+    critical : false,
   },
   // Example of a future entry — copy this shape when you ship something new:
   // {
