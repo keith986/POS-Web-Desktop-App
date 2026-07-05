@@ -6,7 +6,7 @@ import staffCss from "@/app/staff/component/staffStyles";
 import StaffSettingsTab from "@/app/staff/component/StaffSettingsTab";
 import StaffSupportTab from "@/app/staff/component/StaffSupportTab";
 import MpesaPaymentModal from "@/app/staff/component/MpesaPaymentModal";
-import { useStaffTheme, buildThemeCss } from "@/app/staff/component/theme";
+import { useStaffTheme, buildThemeCss, THEMES } from "@/app/staff/component/theme";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface StoredStaff {
@@ -248,7 +248,8 @@ export default function StaffDashboard() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   /* ── Theme (persisted, applied as data-theme on <html>) ── */
-  useStaffTheme();
+  const { theme, setTheme } = useStaffTheme();
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
 
   /* ── Auth guard ── */
   useEffect(() => {
@@ -455,6 +456,9 @@ export default function StaffDashboard() {
       <style>{staffCss}</style>
       <style>{buildThemeCss()}</style>
       <style>{`
+        /* ── Responsive overrides (page-level) ──
+           staffCss / Sidebar define the base desktop layout; these rules
+           adapt it for tablet and mobile without touching those files. */
         * { box-sizing: border-box; }
         img, svg { max-width: 100%; }
 
@@ -498,13 +502,60 @@ export default function StaffDashboard() {
           .search-wrap { min-width: 0 !important; flex: 1 1 200px; }
           .product-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important; }
           .hdr-time { display: none; }
+          .hdr-theme-label { display: none; }
+          .hdr-theme-btn { padding: 6px 8px; }
         }
 
         @media (max-width: 480px) {
           .stat-strip { grid-template-columns: 1fr !important; }
           .hdr-shift-pill { display: none !important; }
         }
+
+        .staff-tabs {
+          background: var(--surface) !important;
+          border: 1px solid var(--border) !important;
+        }
+        .staff-tab-btn {
+          background: transparent !important;
+          color: var(--muted) !important;
+        }
+        .staff-tab-btn:hover  { color: var(--ink) !important; background: var(--bg) !important; }
+        .staff-tab-btn.active {
+          background: var(--accent) !important;
+          color: #fff !important;
+        }
+
+        /* ── Header theme toggle ── */
+        .hdr-theme-btn {
+          display: flex; align-items: center; gap: 7px;
+          padding: 6px 10px; border-radius: 8px;
+          border: 1px solid var(--border2); background: var(--bg);
+          color: var(--ink); font-family: 'DM Sans', sans-serif;
+          font-size: 12px; cursor: pointer; flex-shrink: 0;
+        }
+        .hdr-theme-swatch { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0; }
+        .hdr-theme-menu {
+          position: absolute; top: calc(100% + 8px); right: 0;
+          background: var(--surface); border: 1px solid var(--border);
+          border-radius: 10px; padding: 6px; width: 168px;
+          box-shadow: 0 12px 30px rgba(0,0,0,0.18); z-index: 500;
+        }
+        .hdr-theme-opt {
+          display: flex; align-items: center; gap: 9px; width: 100%;
+          padding: 7px 8px; border-radius: 7px; border: none; background: transparent;
+          font-family: 'DM Sans', sans-serif; font-size: 12.5px; color: var(--ink);
+          cursor: pointer; text-align: left;
+        }
+        .hdr-theme-opt:hover  { background: var(--bg); }
+        .hdr-theme-opt.active { background: var(--accent-bg); font-weight: 500; }
       `}</style>
+
+      {themeMenuOpen && (
+        <div
+          onClick={() => setThemeMenuOpen(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 490, background: "transparent" }}
+        />
+      )}
 
       {toast && (
         <div className="staff-toast" style={{ background: toast.type === "err" ? "#dc2626" : "#141410" }}>
@@ -521,7 +572,7 @@ export default function StaffDashboard() {
         <div className={`staff-mobile-overlay ${mobileNavOpen ? "open" : ""}`} onClick={() => setMobileNavOpen(false)} />
         <Sidebar activeTab={activeTab} setActiveTab={goToTab} cartCount={cartCount} />
 
-        <header className="staff-header">
+        <header className="staff-header" style={{ position: "relative" }}>
           <button
             className="staff-hamburger"
             onClick={() => setMobileNavOpen(o => !o)}
@@ -533,6 +584,31 @@ export default function StaffDashboard() {
           <div className="hdr-title">{HEADER_TITLES[activeTab]}</div>
           <div className="hdr-shift-pill"><div className="hdr-shift-dot" />{staff.full_name} · On Shift</div>
           <div className="hdr-time">{dater}</div>
+
+          <button
+            className="hdr-theme-btn"
+            onClick={() => setThemeMenuOpen(o => !o)}
+            title="Change theme"
+          >
+            <span className="hdr-theme-swatch" style={{ background: THEMES.find(t => t.id === theme)?.swatch ?? "#fff" }} />
+            <span className="hdr-theme-label">{THEMES.find(t => t.id === theme)?.label ?? "Theme"}</span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          {themeMenuOpen && (
+            <div className="hdr-theme-menu">
+              {THEMES.map(t => (
+                <button
+                  key={t.id}
+                  className={`hdr-theme-opt ${theme === t.id ? "active" : ""}`}
+                  onClick={() => { setTheme(t.id); setThemeMenuOpen(false); }}
+                >
+                  <span className="hdr-theme-swatch" style={{ background: t.swatch }} />
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           <button className="hdr-btn" onClick={() => goToTab("Record Sale")}>+ New Sale</button>
         </header>
 
