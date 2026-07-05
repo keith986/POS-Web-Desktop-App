@@ -565,16 +565,6 @@ export default function StaffDashboard() {
         .hdr-theme-opt:hover  { background: var(--bg); }
         .hdr-theme-opt.active { background: var(--accent-bg); font-weight: 500; }
 
-    body, .staff-shell {
-    background:
-      radial-gradient(circle at 12% 18%, rgba(124, 58, 237, 0.85) 0%, transparent 42%),
-      radial-gradient(circle at 88% 12%, rgba(249, 115, 22, 0.75) 0%, transparent 38%),
-      radial-gradient(circle at 25% 92%, rgba(59, 130, 246, 0.7) 0%, transparent 45%),
-      radial-gradient(circle at 90% 85%, rgba(236, 72, 153, 0.55) 0%, transparent 40%),
-      #4c1d95;
-    background-attachment: fixed;
-  }
-
       `}</style>
 
       {toast && (

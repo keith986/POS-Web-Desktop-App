@@ -45,10 +45,10 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.2.0",
+    version: "1.3.0",
     date: "2026-07-05",
     type: "feature",
-    title: "Background Changes",
+    title: "Update Notifications",
     description:
       "The dashboard now tells you when new features or changes are available instead of updating silently in the background.",
     importance:
