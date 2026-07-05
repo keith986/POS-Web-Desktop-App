@@ -14,6 +14,11 @@ const CRITICAL_AUTO_APPLY_SECONDS = 10;
  *  instead of waiting for the next full page navigation to find out. */
 const UPDATE_CHECK_INTERVAL_MS = 60_000; // 1 minute
 
+/** If SKIP_WAITING doesn't cause a controllerchange event within this
+ *  long, force a reload anyway rather than leaving the staff member
+ *  stuck on the old version with no feedback. */
+const RELOAD_FALLBACK_MS = 4_000;
+
 /**
  * @param isBusy Pass `true` while the staff member is mid-action and a
  * reload would lose work — e.g. items in the cart, the payment modal
@@ -30,11 +35,12 @@ export function useAppUpdates(isBusy: boolean = false) {
   const [autoApplyIn,      setAutoApplyIn]      = useState<number | null>(null);
   const [autoApplyPaused,  setAutoApplyPaused]  = useState(false);
 
-  const waitingWorker = useRef<ServiceWorker | null>(null);
-  const countdownId   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const waitingWorker   = useRef<ServiceWorker | null>(null);
+  const countdownId     = useRef<ReturnType<typeof setInterval> | null>(null);
   const checkIntervalId = useRef<ReturnType<typeof setInterval> | null>(null);
   const cleanupExtras   = useRef<(() => void) | null>(null);
-  const busyRef        = useRef(isBusy);
+  const reloadFallbackId = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const busyRef         = useRef(isBusy);
 
   useEffect(() => { busyRef.current = isBusy; }, [isBusy]);
 
@@ -45,25 +51,33 @@ export function useAppUpdates(isBusy: boolean = false) {
     }
   }, []);
 
-  /** "Update now" — promote the waiting worker to active.
-   *  The actual reload happens once the browser confirms the new
-   *  version has taken over (controllerchange, below). */
+  /** "Update now" (from the modal OR the header pill — both call this
+   *  directly) — promote the waiting worker to active. The reload
+   *  normally happens via the browser's controllerchange event, but if
+   *  that doesn't fire quickly for any reason, we force it ourselves
+   *  so clicking Update always ends in a reload, no dead ends. */
   const applyUpdate = useCallback(() => {
     clearCountdown();
     waitingWorker.current?.postMessage({ type: "SKIP_WAITING" });
     setShowModal(false);
+
+    if (reloadFallbackId.current) clearTimeout(reloadFallbackId.current);
+    reloadFallbackId.current = setTimeout(() => {
+      window.location.reload();
+    }, RELOAD_FALLBACK_MS);
   }, [clearCountdown]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
     let reloaded = false;
-    const onControllerChange = () => {
+    const doReload = () => {
       if (reloaded) return;
       reloaded = true;
+      if (reloadFallbackId.current) clearTimeout(reloadFallbackId.current);
       window.location.reload();
     };
-    navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+    navigator.serviceWorker.addEventListener("controllerchange", doReload);
 
     const flagUpdate = (worker: ServiceWorker) => {
       waitingWorker.current = worker;
@@ -97,8 +111,7 @@ export function useAppUpdates(isBusy: boolean = false) {
           setAutoApplyIn(remaining);
           if (remaining <= 0) {
             clearCountdown();
-            waitingWorker.current?.postMessage({ type: "SKIP_WAITING" });
-            setShowModal(false);
+            applyUpdate();
           }
         }, 1000);
       } else {
@@ -127,9 +140,11 @@ export function useAppUpdates(isBusy: boolean = false) {
       // The browser only re-checks sw.js for changes on navigation by
       // default, which on a dashboard people leave open all shift could
       // mean hours before a deploy is even noticed. Ask explicitly:
-      // periodically, and whenever the tab comes back into focus.
+      // once right away, periodically after that, and whenever the tab
+      // comes back into focus.
       const checkForUpdate = () => { reg.update().catch(() => {}); };
 
+      checkForUpdate(); // don't wait for the first interval tick
       checkIntervalId.current = setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);
 
       const onVisibilityChange = () => {
@@ -150,13 +165,14 @@ export function useAppUpdates(isBusy: boolean = false) {
     });
 
     return () => {
-      navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+      navigator.serviceWorker.removeEventListener("controllerchange", doReload);
       clearCountdown();
       if (checkIntervalId.current) clearInterval(checkIntervalId.current);
+      if (reloadFallbackId.current) clearTimeout(reloadFallbackId.current);
       cleanupExtras.current?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clearCountdown]);
+  }, [clearCountdown, applyUpdate]);
 
   /** "Ignore for now" — close the modal but keep the header pill lit.
    *  Not available for critical updates: those can't be silenced,

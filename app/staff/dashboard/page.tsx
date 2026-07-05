@@ -520,6 +520,8 @@ export default function StaffDashboard() {
           .hdr-time { display: none; }
           .hdr-theme-label { display: none; }
           .hdr-theme-btn { padding: 6px 8px; }
+          .hdr-update-label { display: none; }
+          .hdr-update-btn { padding: 6px 8px; }
         }
 
         @media (max-width: 480px) {
@@ -565,6 +567,34 @@ export default function StaffDashboard() {
         .hdr-theme-opt:hover  { background: var(--bg); }
         .hdr-theme-opt.active { background: var(--accent-bg); font-weight: 500; }
 
+        /* ── Header "Update available" pill ──
+           Sits as its own item in the header row (not nested inside the
+           theme toggle's relative wrapper, which was clipping/overlapping
+           it before). Styled as a quiet pill, same family as hdr-shift-pill,
+           so it reads as a status indicator rather than a primary action —
+           the orange "+ New Sale" button stays the visually loudest thing. */
+        .hdr-update-btn {
+          display: flex; align-items: center; gap: 7px;
+          padding: 6px 12px; border-radius: 100px;
+          border: 1px solid rgba(22,163,74,0.3);
+          background: rgba(22,163,74,0.1);
+          color: #16a34a; font-family: 'DM Sans', sans-serif;
+          font-size: 12px; font-weight: 600; cursor: pointer;
+          flex-shrink: 0; white-space: nowrap; line-height: 1;
+          transition: background 0.15s, transform 0.1s;
+        }
+        .hdr-update-btn:hover  { background: rgba(22,163,74,0.18); }
+        .hdr-update-btn:active { transform: scale(0.97); }
+        .hdr-update-dot {
+          width: 6px; height: 6px; border-radius: 50%;
+          background: #16a34a; flex-shrink: 0;
+          animation: hdrUpdatePulse 1.8s ease-in-out infinite;
+        }
+        @keyframes hdrUpdatePulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,74,0.45); }
+          50%      { box-shadow: 0 0 0 5px rgba(22,163,74,0); }
+        }
+
       `}</style>
 
       {toast && (
@@ -605,11 +635,6 @@ export default function StaffDashboard() {
               <span className="hdr-theme-label">{THEMES.find(t => t.id === theme)?.label ?? "Theme"}</span>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            {updateAvailable && (
-             <button className="hdr-btn" style={{ background: "#16a34a" }} onClick={reopenModal}>
-              Update available
-             </button>
-            )}
             {themeMenuOpen && (
               <div className="hdr-theme-menu">
                 {THEMES.map(t => (
@@ -625,6 +650,13 @@ export default function StaffDashboard() {
               </div>
             )}
           </div>
+
+          {updateAvailable && (
+            <button className="hdr-update-btn" onClick={applyUpdate} title="Click to update and reload now">
+              <span className="hdr-update-dot" />
+              <span className="hdr-update-label">Update available</span>
+            </button>
+          )}
 
           <button className="hdr-btn" onClick={() => goToTab("Record Sale")}>+ New Sale</button>
         </header>
