@@ -243,6 +243,9 @@ export default function StaffDashboard() {
 
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
 
+  /* ── Mobile nav drawer (small screens) ── */
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   /* ── Auth guard ── */
   useEffect(() => {
     const params       = new URLSearchParams(window.location.search);
@@ -441,9 +444,64 @@ export default function StaffDashboard() {
     weekday: "short", day: "numeric", month: "short", year: "numeric",
   }).format(new Date());
 
+  const goToTab = (t: string) => { setActiveTab(t); setMobileNavOpen(false); };
+
   return (
     <>
       <style>{staffCss}</style>
+      <style>{`
+        /* ── Responsive overrides (page-level) ──
+           staffCss / Sidebar define the base desktop layout; these rules
+           adapt it for tablet and mobile without touching those files. */
+        * { box-sizing: border-box; }
+        img, svg { max-width: 100%; }
+
+        .staff-dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+        .staff-hamburger { display: none; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); cursor: pointer; flex-shrink: 0; margin-right: 4px; }
+        .staff-mobile-overlay { display: none; }
+
+        .tbl-scroll { overflow-x: auto; }
+        .tbl-scroll .tbl { min-width: 560px; }
+
+        @media (max-width: 1200px) {
+          .sale-layout { grid-template-columns: 1fr !important; }
+        }
+
+        @media (max-width: 1024px) {
+          .staff-hamburger { display: flex; }
+          /* Sidebar is the first child of .staff-shell — collapse it into an
+             off-canvas drawer without needing to edit the Sidebar component. */
+          .staff-shell > *:first-child:not(.staff-mobile-overlay) {
+            position: fixed !important; top: 0; left: 0; height: 100vh;
+            z-index: 4000; transform: translateX(-100%);
+            transition: transform 0.25s ease; box-shadow: 8px 0 30px rgba(0,0,0,0.25);
+          }
+          .staff-shell.mobile-nav-open > *:first-child:not(.staff-mobile-overlay) { transform: translateX(0); }
+          .staff-mobile-overlay.open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 3900; }
+        }
+
+        @media (max-width: 900px) {
+          .staff-dashboard-grid { grid-template-columns: 1fr; }
+          .stat-strip { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+
+        @media (max-width: 768px) {
+          .staff-header { flex-wrap: wrap !important; height: auto !important; min-height: 60px; padding: 10px 1rem !important; row-gap: 8px; }
+          .staff-main { padding: 1rem 0.9rem 1.75rem !important; }
+          .staff-tabs { overflow-x: auto; flex-wrap: nowrap !important; -webkit-overflow-scrolling: touch; }
+          .staff-tab-btn { white-space: nowrap; flex-shrink: 0; }
+          .toolbar { flex-wrap: wrap !important; }
+          .search-wrap { min-width: 0 !important; flex: 1 1 200px; }
+          .product-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important; }
+          .hdr-time { display: none; }
+        }
+
+        @media (max-width: 480px) {
+          .stat-strip { grid-template-columns: 1fr !important; }
+          .hdr-shift-pill { display: none !important; }
+        }
+      `}</style>
 
       {toast && (
         <div className="staff-toast" style={{ background: toast.type === "err" ? "#dc2626" : "#141410" }}>
@@ -456,21 +514,30 @@ export default function StaffDashboard() {
         </div>
       )}
 
-      <div className="staff-shell">
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} cartCount={cartCount} />
+      <div className={`staff-shell ${mobileNavOpen ? "mobile-nav-open" : ""}`}>
+        <div className={`staff-mobile-overlay ${mobileNavOpen ? "open" : ""}`} onClick={() => setMobileNavOpen(false)} />
+        <Sidebar activeTab={activeTab} setActiveTab={goToTab} cartCount={cartCount} />
 
         <header className="staff-header">
+          <button
+            className="staff-hamburger"
+            onClick={() => setMobileNavOpen(o => !o)}
+            aria-label="Toggle menu"
+            title="Menu"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
           <div className="hdr-title">{HEADER_TITLES[activeTab]}</div>
           <div className="hdr-shift-pill"><div className="hdr-shift-dot" />{staff.full_name} · On Shift</div>
           <div className="hdr-time">{dater}</div>
-          <button className="hdr-btn" onClick={() => setActiveTab("Record Sale")}>+ New Sale</button>
+          <button className="hdr-btn" onClick={() => goToTab("Record Sale")}>+ New Sale</button>
         </header>
 
         <main className="staff-main">
 
           <div className="staff-tabs">
             {TABS.map(t => (
-              <button key={t} className={`staff-tab-btn ${activeTab === t ? "active" : ""}`} onClick={() => setActiveTab(t)}>
+              <button key={t} className={`staff-tab-btn ${activeTab === t ? "active" : ""}`} onClick={() => goToTab(t)}>
                 {t}
                 {t === "Record Sale" && cartCount > 0 && <span className="staff-tab-count">{cartCount}</span>}
               </button>
@@ -495,7 +562,7 @@ export default function StaffDashboard() {
                 ))}
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="staff-dashboard-grid">
                 <div className="card">
                   <div className="card-header"><span className="card-title">Recent Sales</span><span className="card-meta">{sales.length} this shift</span></div>
                   {fetching
@@ -503,6 +570,7 @@ export default function StaffDashboard() {
                     : sales.length === 0
                       ? <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No sales yet today.</div>
                       : (
+                        <div className="tbl-scroll">
                         <table className="tbl">
                           <thead><tr><th>Order</th><th>Items</th><th>Total</th><th>Method</th></tr></thead>
                           <tbody>
@@ -520,6 +588,7 @@ export default function StaffDashboard() {
                             })}
                           </tbody>
                         </table>
+                        </div>
                       )}
                 </div>
 
@@ -749,6 +818,7 @@ export default function StaffDashboard() {
                 : sales.length === 0
                   ? <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No sales recorded today.</div>
                   : (
+                    <div className="tbl-scroll">
                     <table className="tbl">
                       <thead><tr><th>Order</th><th>Time</th><th>Items</th><th>Total</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
                       <tbody>
@@ -769,6 +839,7 @@ export default function StaffDashboard() {
                         })}
                       </tbody>
                     </table>
+                    </div>
                   )}
             </div>
           )}
@@ -783,7 +854,7 @@ export default function StaffDashboard() {
             <StaffSettingsTab staff={staff} settings={settings} formatCurrency={formatCurrency} />
           )}
 
-        </main>
+        </main> 
       </div>
 
       {/* ── PAYMENT MODAL — no orderId needed, order is created on success ── */}
@@ -798,6 +869,7 @@ export default function StaffDashboard() {
           onClose={handlePaymentClose}
         />
       )}
+
     </>
   );
 }
