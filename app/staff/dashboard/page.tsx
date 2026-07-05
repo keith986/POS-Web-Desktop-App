@@ -7,6 +7,10 @@ import StaffSettingsTab from "@/app/staff/component/StaffSettingsTab";
 import StaffSupportTab from "@/app/staff/component/StaffSupportTab";
 import MpesaPaymentModal from "@/app/staff/component/MpesaPaymentModal";
 import { useStaffTheme, buildThemeCss, THEMES } from "@/app/staff/component/theme";
+import { useAppUpdates } from "@/app/staff/component/useAppUpdates";
+import WhatsNewModal from "@/app/staff/component/WhatsNewModal";
+
+
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface StoredStaff {
@@ -234,6 +238,7 @@ export default function StaffDashboard() {
   const [search,           setSearch]           = useState("");
   const [catFilter,        setCatFilter]        = useState("All");
   const [fetching,         setFetching]         = useState(true);
+  const { pendingEntries, showModal, updateAvailable, applyUpdate, ignoreUpdate, reopenModal } = useAppUpdates();
 
   /*
    * payModalOpen — payment modal is visible
@@ -599,6 +604,11 @@ export default function StaffDashboard() {
               <span className="hdr-theme-label">{THEMES.find(t => t.id === theme)?.label ?? "Theme"}</span>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
+            {updateAvailable && (
+             <button className="hdr-btn" style={{ background: "#16a34a" }} onClick={reopenModal}>
+              Update available
+             </button>
+            )}
             {themeMenuOpen && (
               <div className="hdr-theme-menu">
                 {THEMES.map(t => (
@@ -954,6 +964,14 @@ export default function StaffDashboard() {
           onClose={handlePaymentClose}
         />
       )}
+
+        <WhatsNewModal
+         open={showModal}
+         entries={pendingEntries}
+         onUpdate={applyUpdate}
+         onIgnore={ignoreUpdate}
+        />
+
     </>
   );
 }
