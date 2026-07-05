@@ -55,16 +55,32 @@ function IcoKey()     { return <svg width="14" height="14" viewBox="0 0 24 24" f
 function IcoPalette() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22a1 1 0 01-1-1v-1a2 2 0 00-2-2H8a2 2 0 01-2-2 2 2 0 00-2-2H3a1 1 0 01-1-1 10 10 0 1110 10z"/><circle cx="6.5" cy="11.5" r="1.5"/><circle cx="9.5" cy="7.5" r="1.5"/><circle cx="14.5" cy="7.5" r="1.5"/><circle cx="17.5" cy="11.5" r="1.5"/></svg>; }
 
 const css = `
+  /* ── Bento grid ──
+     12-column grid; each block claims a span. Below 880px every
+     block collapses to full width and stacks in document order. */
   .sett-page {
-    display: flex; flex-direction: column; gap: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: min-content;
+    gap: 1rem;
+  }
+  .sett-b-7  { grid-column: span 7; }
+  .sett-b-5  { grid-column: span 5; }
+  .sett-b-4  { grid-column: span 4; }
+  .sett-b-8  { grid-column: span 8; }
+  .sett-b-12 { grid-column: span 12; }
+
+  @media (max-width: 880px) {
+    .sett-b-7, .sett-b-5, .sett-b-4, .sett-b-8, .sett-b-12 { grid-column: span 12; }
   }
 
-  /* Section card */
+  /* Block */
   .sett-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 14px;
     overflow: hidden;
+    display: flex; flex-direction: column;
   }
   .sett-card-hd {
     display: flex; align-items: center; gap: 10px;
@@ -78,41 +94,50 @@ const css = `
   }
   .sett-card-title { font-size: 13px; font-weight: 600; color: var(--ink); }
   .sett-card-sub   { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .sett-card-body  { padding: 1.1rem 1.25rem; flex: 1; display: flex; flex-direction: column; }
 
-  /* Info rows */
-  .sett-row {
-    display: flex; align-items: center;
-    padding: 0.85rem 1.25rem;
-    border-bottom: 1px solid var(--border);
-    gap: 12px;
+  /* Fact tiles — the "block" replacement for the old label/value rows */
+  .sett-fact-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
-  .sett-row:last-child { border-bottom: none; }
-  .sett-row-label {
-    font-size: 12px; color: var(--muted);
-    min-width: 130px; flex-shrink: 0;
+  .sett-fact {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.65rem 0.75rem;
+    display: flex; flex-direction: column; gap: 4px;
+    min-width: 0;
   }
-  .sett-row-val {
-    font-size: 13px; font-weight: 500; color: var(--ink); flex: 1;
+  .sett-fact-full { grid-column: 1 / -1; }
+  .sett-fact-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .sett-fact-val {
+    font-size: 13px; font-weight: 500; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .sett-row-badge {
     display: inline-flex; align-items: center; gap: 4px;
     padding: 2px 8px; border-radius: 100px;
-    font-size: 11px; font-weight: 600;
+    font-size: 11px; font-weight: 600; width: fit-content;
   }
 
   /* Avatar section */
   .sett-profile-hero {
-    display: flex; align-items: center; gap: 16px;
-    padding: 1.25rem 1.25rem 0;
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 1rem;
   }
   .sett-avatar-lg {
-    width: 56px; height: 56px; border-radius: 50%;
+    width: 52px; height: 52px; border-radius: 50%;
     background: #eff6ff; border: 2px solid #bfdbfe;
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px; font-weight: 700; color: #2563eb;
+    font-size: 17px; font-weight: 700; color: #2563eb;
     flex-shrink: 0;
   }
-  .sett-profile-name  { font-size: 16px; font-weight: 600; color: var(--ink); }
+  .sett-profile-name  { font-size: 15px; font-weight: 600; color: var(--ink); }
   .sett-profile-email { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .sett-profile-role  {
     display: inline-flex; align-items: center; gap: 5px;
@@ -123,7 +148,7 @@ const css = `
   .sett-active-dot { width: 5px; height: 5px; border-radius: 50%; background: #16a34a; }
 
   /* Change password form */
-  .sett-form { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.85rem; }
+  .sett-form { display: flex; flex-direction: column; gap: 0.85rem; flex: 1; }
   .sett-label { font-size: 11px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink2); display: block; margin-bottom: 5px; }
   .sett-input {
     width: 100%; background: var(--bg); border: 1px solid var(--border2);
@@ -134,13 +159,13 @@ const css = `
   }
   .sett-input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(20,20,16,0.07); }
   .sett-save-btn {
-    padding: 9px 20px; background: var(--ink); color: #fff;
+    padding: 9px 20px; background: var(--ink); color: var(--surface);
     border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif;
     font-size: 13px; font-weight: 500; cursor: pointer; align-self: flex-start;
     display: flex; align-items: center; gap: 6px;
     transition: background 0.15s, transform 0.1s;
   }
-  .sett-save-btn:hover  { background: #2a2a22; }
+  .sett-save-btn:hover  { opacity: 0.85; }
   .sett-save-btn:active { transform: scale(0.98); }
   .sett-save-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
@@ -170,8 +195,8 @@ const css = `
 
   /* Theme picker */
   .sett-theme-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-    gap: 10px; padding: 1.25rem;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: 10px;
   }
   .sett-theme-opt {
     display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -183,7 +208,7 @@ const css = `
   .sett-theme-opt:hover { transform: translateY(-1px); }
   .sett-theme-opt.active { border-color: var(--accent); background: var(--accent-bg); }
   .sett-theme-swatch {
-    width: 36px; height: 36px; border-radius: 50%;
+    width: 32px; height: 32px; border-radius: 50%;
     border: 1px solid rgba(0,0,0,0.12);
     box-shadow: inset 0 0 0 3px rgba(255,255,255,0.35);
     display: flex; align-items: center; justify-content: center;
@@ -278,7 +303,7 @@ export default function StaffSettingsTab({ staff, settings }: StaffSettingsTabPr
       <div className="sett-page">
 
         {/* ── My Profile ── */}
-        <div className="sett-card">
+        <div className="sett-card sett-b-7">
           <div className="sett-card-hd">
             <div className="sett-card-icon" style={{ background: "#eff6ff", color: "#2563eb" }}><IcoUser /></div>
             <div>
@@ -286,167 +311,188 @@ export default function StaffSettingsTab({ staff, settings }: StaffSettingsTabPr
               <div className="sett-card-sub">Your account details</div>
             </div>
           </div>
-
-          {/* Avatar + name hero */}
-          <div className="sett-profile-hero">
-            <div className="sett-avatar-lg">{initials}</div>
-            <div>
-              <div className="sett-profile-name">{staff.full_name}</div>
-              <div className="sett-profile-email">{staff.email}</div>
-              <div className="sett-profile-role">
-                <span className="sett-active-dot" />
-                {shiftRole} · {staff.status === "active" ? "Active" : "Inactive"}
+          <div className="sett-card-body">
+            <div className="sett-profile-hero">
+              <div className="sett-avatar-lg">{initials}</div>
+              <div>
+                <div className="sett-profile-name">{staff.full_name}</div>
+                <div className="sett-profile-email">{staff.email}</div>
+                <div className="sett-profile-role">
+                  <span className="sett-active-dot" />
+                  {shiftRole} · {staff.status === "active" ? "Active" : "Inactive"}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Info rows */}
-          <div style={{ marginTop: "0.75rem" }}>
-            {[
-              { label: "Full Name",  value: staff.full_name },
-              { label: "Email",      value: staff.email     },
-              { label: "Role",       value: shiftRole       },
-              { label: "Status",
-                value: (
-                  <span className="sett-row-badge" style={{ background: staff.status === "active" ? "#f0fdf4" : "#f5f4f0", color: staff.status === "active" ? "#16a34a" : "#9a9a8e", border: `1px solid ${staff.status === "active" ? "#bbf7d0" : "#e2e0d8"}` }}>
-                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: staff.status === "active" ? "#16a34a" : "#9a9a8e", display: "inline-block" }} />
-                    {staff.status === "active" ? "Active" : "Inactive"}
-                  </span>
-                )
-              },
-            ].map(r => (
-              <div className="sett-row" key={r.label}>
-                <span className="sett-row-label">{r.label}</span>
-                <span className="sett-row-val">{r.value}</span>
+            <div className="sett-fact-grid">
+              <div className="sett-fact">
+                <span className="sett-fact-label">Full Name</span>
+                <span className="sett-fact-val">{staff.full_name}</span>
               </div>
-            ))}
+              <div className="sett-fact">
+                <span className="sett-fact-label">Email</span>
+                <span className="sett-fact-val">{staff.email}</span>
+              </div>
+              <div className="sett-fact">
+                <span className="sett-fact-label">Role</span>
+                <span className="sett-fact-val">{shiftRole}</span>
+              </div>
+              <div className="sett-fact">
+                <span className="sett-fact-label">Status</span>
+                <span className="sett-row-badge" style={{ background: staff.status === "active" ? "#f0fdf4" : "#f5f4f0", color: staff.status === "active" ? "#16a34a" : "#9a9a8e", border: `1px solid ${staff.status === "active" ? "#bbf7d0" : "#e2e0d8"}` }}>
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: staff.status === "active" ? "#16a34a" : "#9a9a8e", display: "inline-block" }} />
+                  {staff.status === "active" ? "Active" : "Inactive"}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* ── Appearance / Theme ── */}
-        <div className="sett-card">
+        <div className="sett-card sett-b-5">
           <div className="sett-card-hd">
             <div className="sett-card-icon" style={{ background: "#fdf4ff", color: "#9333ea" }}><IcoPalette /></div>
             <div>
               <div className="sett-card-title">Appearance</div>
-              <div className="sett-card-sub">Choose how the dashboard looks — saved to this device</div>
+              <div className="sett-card-sub">Saved to this device</div>
             </div>
           </div>
-          <div className="sett-theme-grid">
-            {THEMES.map(t => (
-              <button
-                key={t.id}
-                className={`sett-theme-opt ${theme === t.id ? "active" : ""}`}
-                onClick={() => setTheme(t.id)}
-                title={t.label}
-              >
-                <div className="sett-theme-swatch" style={{ background: t.swatch }}>
-                  {theme === t.id && (
-                    <span style={{ color: "#fff", filter: "drop-shadow(0 0 1.5px rgba(0,0,0,0.7))" }}>
-                      <IcoCheck />
-                    </span>
-                  )}
-                </div>
-                <span className="sett-theme-name">{t.label}</span>
-              </button>
-            ))}
+          <div className="sett-card-body">
+            <div className="sett-theme-grid">
+              {THEMES.map(t => (
+                <button
+                  key={t.id}
+                  className={`sett-theme-opt ${theme === t.id ? "active" : ""}`}
+                  onClick={() => setTheme(t.id)}
+                  title={t.label}
+                >
+                  <div className="sett-theme-swatch" style={{ background: t.swatch }}>
+                    {theme === t.id && (
+                      <span style={{ color: "#fff", filter: "drop-shadow(0 0 1.5px rgba(0,0,0,0.7))" }}>
+                        <IcoCheck />
+                      </span>
+                    )}
+                  </div>
+                  <span className="sett-theme-name">{t.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* ── Store Info ── */}
-        <div className="sett-card">
+        <div className="sett-card sett-b-4">
           <div className="sett-card-hd">
             <div className="sett-card-icon" style={{ background: "#f5f4f0", color: "#4a4a40" }}><IcoStore /></div>
             <div>
               <div className="sett-card-title">Store Information</div>
-              <div className="sett-card-sub">Your assigned store — managed by admin</div>
+              <div className="sett-card-sub">Managed by admin</div>
             </div>
           </div>
-          {storeLoading ? (
-            <div style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: 10 }}>
-              <div className="sett-skel" style={{ width: "60%" }} />
-              <div className="sett-skel" style={{ width: "40%" }} />
-              <div className="sett-skel" style={{ width: "50%" }} />
-            </div>
-          ) : (
-            <>
-              {[
-                { label: "Store Name",  value: storeName },
-                { label: "Domain",      value: adminStore?.domain   ?? "—" },
-                { label: "POS Type",    value: adminStore?.pos_type ?? "—" },
-                { label: "Admin",       value: adminStore?.full_name ?? "—" },
-              ].map(r => (
-                <div className="sett-row" key={r.label}>
-                  <span className="sett-row-label">{r.label}</span>
-                  <span className="sett-row-val" style={{ textTransform: r.label === "POS Type" ? "capitalize" : "none" }}>{r.value}</span>
+          <div className="sett-card-body">
+            {storeLoading ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div className="sett-skel" style={{ width: "60%" }} />
+                <div className="sett-skel" style={{ width: "40%" }} />
+                <div className="sett-skel" style={{ width: "50%" }} />
+              </div>
+            ) : (
+              <div className="sett-fact-grid">
+                <div className="sett-fact sett-fact-full">
+                  <span className="sett-fact-label">Store Name</span>
+                  <span className="sett-fact-val">{storeName}</span>
                 </div>
-              ))}
-            </>
-          )}
+                <div className="sett-fact">
+                  <span className="sett-fact-label">Domain</span>
+                  <span className="sett-fact-val">{adminStore?.domain ?? "—"}</span>
+                </div>
+                <div className="sett-fact">
+                  <span className="sett-fact-label">POS Type</span>
+                  <span className="sett-fact-val" style={{ textTransform: "capitalize" }}>{adminStore?.pos_type ?? "—"}</span>
+                </div>
+                <div className="sett-fact sett-fact-full">
+                  <span className="sett-fact-label">Admin</span>
+                  <span className="sett-fact-val">{adminStore?.full_name ?? "—"}</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Tax & Currency ── */}
-        <div className="sett-card">
+        <div className="sett-card sett-b-4">
           <div className="sett-card-hd">
             <div className="sett-card-icon" style={{ background: "#fffbeb", color: "#d97706" }}><IcoReceipt /></div>
             <div>
               <div className="sett-card-title">Tax & Currency</div>
-              <div className="sett-card-sub">Applied to all sales you process</div>
+              <div className="sett-card-sub">Applied to all sales</div>
             </div>
           </div>
-          {[
-            { label: "Currency",      value: settings.currency },
-            { label: "Tax",           value: (
+          <div className="sett-card-body">
+            <div className="sett-fact-grid">
+              <div className="sett-fact">
+                <span className="sett-fact-label">Currency</span>
+                <span className="sett-fact-val">{settings.currency}</span>
+              </div>
+              <div className="sett-fact">
+                <span className="sett-fact-label">Tax</span>
                 <span className="sett-row-badge" style={{ background: settings.tax_enabled ? "#f0fdf4" : "#f5f4f0", color: settings.tax_enabled ? "#16a34a" : "#9a9a8e", border: `1px solid ${settings.tax_enabled ? "#bbf7d0" : "#e2e0d8"}` }}>
                   {settings.tax_enabled ? "Enabled" : "Disabled"}
                 </span>
-              )
-            },
-            { label: "Tax Name",      value: settings.tax_name },
-            { label: "Tax Rate",      value: `${settings.tax_rate}%` },
-            { label: "Tax Inclusive", value: (
+              </div>
+              <div className="sett-fact">
+                <span className="sett-fact-label">Tax Name</span>
+                <span className="sett-fact-val">{settings.tax_name}</span>
+              </div>
+              <div className="sett-fact">
+                <span className="sett-fact-label">Tax Rate</span>
+                <span className="sett-fact-val">{settings.tax_rate}%</span>
+              </div>
+              <div className="sett-fact sett-fact-full">
+                <span className="sett-fact-label">Tax Inclusive</span>
                 <span className="sett-row-badge" style={{ background: settings.tax_inclusive ? "#eff6ff" : "#f5f4f0", color: settings.tax_inclusive ? "#2563eb" : "#9a9a8e", border: `1px solid ${settings.tax_inclusive ? "#bfdbfe" : "#e2e0d8"}` }}>
                   {settings.tax_inclusive ? "Yes — prices include tax" : "No — tax added on top"}
                 </span>
-              )
-            },
-          ].map(r => (
-            <div className="sett-row" key={r.label}>
-              <span className="sett-row-label">{r.label}</span>
-              <span className="sett-row-val">{r.value}</span>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
 
         {/* ── Shift Status ── */}
-        <div className="sett-card">
+        <div className="sett-card sett-b-4">
           <div className="sett-card-hd">
             <div className="sett-card-icon" style={{ background: "#f0fdf4", color: "#16a34a" }}><IcoClock /></div>
             <div>
               <div className="sett-card-title">Shift Status</div>
-              <div className="sett-card-sub">Current session info</div>
+              <div className="sett-card-sub">Current session</div>
             </div>
           </div>
-          {[
-            { label: "Shift Status", value: (
+          <div className="sett-card-body">
+            <div className="sett-fact-grid">
+              <div className="sett-fact sett-fact-full">
+                <span className="sett-fact-label">Shift Status</span>
                 <span className="sett-row-badge" style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0" }}>
                   <span className="sett-active-dot" /> Active
                 </span>
-              )
-            },
-            { label: "Current Time", value: <span style={{ fontVariantNumeric: "tabular-nums" }}>{shiftTime}</span> },
-            { label: "Logged in as", value: staff.full_name },
-            { label: "Staff ID",     value: <span style={{ fontFamily: "monospace", fontSize: 12, color: "var(--muted)" }}>{staff.id}</span> },
-          ].map(r => (
-            <div className="sett-row" key={r.label}>
-              <span className="sett-row-label">{r.label}</span>
-              <span className="sett-row-val">{r.value}</span>
+              </div>
+              <div className="sett-fact">
+                <span className="sett-fact-label">Current Time</span>
+                <span className="sett-fact-val" style={{ fontVariantNumeric: "tabular-nums" }}>{shiftTime}</span>
+              </div>
+              <div className="sett-fact">
+                <span className="sett-fact-label">Logged in as</span>
+                <span className="sett-fact-val">{staff.full_name}</span>
+              </div>
+              <div className="sett-fact sett-fact-full">
+                <span className="sett-fact-label">Staff ID</span>
+                <span className="sett-fact-val" style={{ fontFamily: "monospace" }}>{staff.id}</span>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
 
         {/* ── Change Password ── */}
-        <div className="sett-card">
+        <div className="sett-card sett-b-8">
           <div className="sett-card-hd">
             <div className="sett-card-icon" style={{ background: "#fdf4ff", color: "#9333ea" }}><IcoKey /></div>
             <div>
@@ -454,53 +500,55 @@ export default function StaffSettingsTab({ staff, settings }: StaffSettingsTabPr
               <div className="sett-card-sub">Update your login password</div>
             </div>
           </div>
-          <div className="sett-form">
-            <div>
-              <label className="sett-label">Current Password</label>
-              <input className="sett-input" type="password" placeholder="Enter current password"
-                value={currentPwd} onChange={e => setCurrentPwd(e.target.value)} />
-            </div>
-            <div>
-              <label className="sett-label">New Password</label>
-              <input className="sett-input" type="password" placeholder="Min. 6 characters"
-                value={newPwd} onChange={e => setNewPwd(e.target.value)} />
-            </div>
-            <div>
-              <label className="sett-label">Confirm New Password</label>
-              <input className="sett-input" type="password" placeholder="Repeat new password"
-                value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)} />
-            </div>
-
-            {pwdError && (
-              <div style={{ padding: "8px 12px", borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", fontSize: 12 }}>
-                {pwdError}
+          <div className="sett-card-body">
+            <div className="sett-form">
+              <div>
+                <label className="sett-label">Current Password</label>
+                <input className="sett-input" type="password" placeholder="Enter current password"
+                  value={currentPwd} onChange={e => setCurrentPwd(e.target.value)} />
               </div>
-            )}
-
-            {pwdSuccess && (
-              <div className="sett-success">
-                <IcoCheck /> Password updated successfully.
+              <div>
+                <label className="sett-label">New Password</label>
+                <input className="sett-input" type="password" placeholder="Min. 6 characters"
+                  value={newPwd} onChange={e => setNewPwd(e.target.value)} />
               </div>
-            )}
+              <div>
+                <label className="sett-label">Confirm New Password</label>
+                <input className="sett-input" type="password" placeholder="Repeat new password"
+                  value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)} />
+              </div>
 
-            <button className="sett-save-btn" onClick={handleChangePassword} disabled={pwdSaving}>
-              {pwdSaving ? "Updating…" : <><IcoKey /> Update Password</>}
-            </button>
+              {pwdError && (
+                <div style={{ padding: "8px 12px", borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", fontSize: 12 }}>
+                  {pwdError}
+                </div>
+              )}
+
+              {pwdSuccess && (
+                <div className="sett-success">
+                  <IcoCheck /> Password updated successfully.
+                </div>
+              )}
+
+              <button className="sett-save-btn" onClick={handleChangePassword} disabled={pwdSaving}>
+                {pwdSaving ? "Updating…" : <><IcoKey /> Update Password</>}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* ── Security / Sign Out ── */}
-        <div className="sett-card">
+        <div className="sett-card sett-b-4">
           <div className="sett-card-hd">
             <div className="sett-card-icon" style={{ background: "#fef2f2", color: "#dc2626" }}><IcoShield /></div>
             <div>
               <div className="sett-card-title">Security</div>
-              <div className="sett-card-sub">End your session safely</div>
+              <div className="sett-card-sub">End your session</div>
             </div>
           </div>
-          <div style={{ padding: "1.25rem" }}>
-            <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: "1rem", background: "var(--bg)", borderRadius: 8, padding: "0.75rem 1rem" }}>
-              Signing out will end your current shift session. Make sure all sales are completed and the cart is cleared before signing out.
+          <div className="sett-card-body">
+            <div style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.6, marginBottom: "1rem", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 10, padding: "0.75rem 0.9rem", flex: 1 }}>
+              Signing out ends your current shift session. Make sure all sales are completed and the cart is cleared first.
             </div>
             <button className="sett-danger-btn" onClick={() => setShowLogout(true)}>
               <IcoLogout /> Sign out of my account
@@ -509,6 +557,6 @@ export default function StaffSettingsTab({ staff, settings }: StaffSettingsTabPr
         </div>
 
       </div>
-    </>
+    </>  
   );
 }
