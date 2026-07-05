@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
-module.exports = {
-  async headers() {
+
+const nextConfig: NextConfig = {
+  /* config options here */
+   async headers() {
     return [
       {
         source : "/sw.js",
@@ -11,10 +13,6 @@ module.exports = {
       }
     ]
   }
-}
-
-const nextConfig: NextConfig = {
-  /* config options here */
 };
 
 

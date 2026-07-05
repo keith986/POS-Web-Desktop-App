@@ -22,6 +22,7 @@ interface StoredStaff {
   shift_role: string | null;
   status:     "active" | "inactive";
 }
+
 interface Product {
   id:       string;
   name:     string;
