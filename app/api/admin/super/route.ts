@@ -5,6 +5,8 @@ import bcrypt from "bcryptjs";
 import { execSync } from "child_process";
 import fs from "fs";
 import { randomUUID } from "crypto";
+import { exec } from "child_process";
+import { promisify } from "util";
 
 /* ── Row types matching your exact schema ── */
 interface CountResult extends RowDataPacket { count: number }
@@ -155,9 +157,28 @@ function parseNginxLogs(): Record<string, NginxDomainStat> {
   return stats;
 }
 
+
+const execAsync = promisify(exec);
+
+interface CpanelResult { success: boolean; error?: string; url?: string }
+
+async function createSubdomain(subdomain: string): Promise<CpanelResult> {
+  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "upendoapps.com";
+  try {
+    const { stdout, stderr } = await execAsync(`sudo /usr/local/bin/create-subdomain.sh ${subdomain}`);
+    if (stdout.includes("SUCCESS")) {
+      return { success: true, url: `https://${subdomain}.${baseDomain}` };
+    }
+    return { success: false, error: stderr };
+  } catch (err) {
+    return { success: false, error: (err as Error).message };
+  }
+}
+
 /* ══════════════════════════════════════════════════════════
    GET
 ══════════════════════════════════════════════════════════ */
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
   const section = searchParams.get("section") || "overview";
@@ -521,40 +542,39 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: true, message: "User deactivated — login blocked" });
     }
 
-    if (action === "delete_user") {
-      const [rows] = await pool.query<UserRow[]>(
-        "SELECT id, domain FROM users WHERE id = ? AND email != 'admin@postore.app' LIMIT 1",
-        [userId]
-      );
-      if (rows.length === 0) return NextResponse.json({ error: "User not found" }, { status: 404 });
-      const userDomain = rows[0].domain;
+    if (action === "delete_admin") {
+  const [rows] = await pool.query<UserRow[]>(
+    "SELECT id, domain FROM users WHERE id = ? AND email != 'admin@postore.app' LIMIT 1",
+    [userId]
+  );
+  if (rows.length === 0) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  const userDomain = rows[0].domain;
 
-      // Delete in FK-safe order using your exact table names
-      await pool.query("DELETE FROM staff               WHERE admin_id = ?", [userId]);
-      await pool.query("DELETE FROM orders              WHERE admin_id = ?", [userId]);
-      await pool.query("DELETE FROM notifications       WHERE admin_id = ?", [userId]);
-      await pool.query("DELETE FROM products            WHERE admin_id = ?", [userId]);
-      await pool.query("DELETE FROM customers           WHERE admin_id = ?", [userId]);
-      await pool.query("DELETE FROM stock_movements     WHERE admin_id = ?", [userId]);
-      await pool.query("DELETE FROM settings            WHERE admin_id = ?", [userId]);
-      await pool.query("DELETE FROM appointments        WHERE admin_id = ?", [userId]);
-      await pool.query("DELETE FROM services            WHERE admin_id = ?", [userId]);
-      await pool.query("DELETE FROM suppliers           WHERE admin_id = ?", [userId]);
-      await pool.query("DELETE FROM menu_items          WHERE admin_id = ?", [userId]);
-      await pool.query("DELETE FROM prescriptions       WHERE admin_id = ?", [userId]);
-      await pool.query("DELETE FROM price_tiers         WHERE admin_id = ?", [userId]);
-      await pool.query("DELETE FROM mpesa_transactions  WHERE user_id  = ?", [userId]);
-      await pool.query("DELETE FROM subscriptions       WHERE user_id  = ?", [userId]);
-      await pool.query("DELETE FROM password_resets     WHERE user_id  = ?", [userId]);
-      if (userDomain) {
-        try { await pool.query("DELETE FROM site_analytics WHERE domain = ?", [userDomain]); }
-        catch { /* may not exist */ }
-      }
-      await pool.query(
-        "DELETE FROM users WHERE id = ? AND email != 'admin@postore.app'",
-        [userId]
-      );
-      return NextResponse.json({ success: true, message: "User and all related data deleted" });
+  await pool.query("DELETE FROM staff               WHERE admin_id = ?", [userId]);
+  await pool.query("DELETE FROM orders              WHERE admin_id = ?", [userId]);
+  await pool.query("DELETE FROM notifications       WHERE admin_id = ?", [userId]);
+  await pool.query("DELETE FROM products            WHERE admin_id = ?", [userId]);
+  await pool.query("DELETE FROM customers           WHERE admin_id = ?", [userId]);
+  await pool.query("DELETE FROM stock_movements     WHERE admin_id = ?", [userId]);
+  await pool.query("DELETE FROM settings            WHERE admin_id = ?", [userId]);
+  await pool.query("DELETE FROM appointments        WHERE admin_id = ?", [userId]);
+  await pool.query("DELETE FROM services            WHERE admin_id = ?", [userId]);
+  await pool.query("DELETE FROM suppliers           WHERE admin_id = ?", [userId]);
+  await pool.query("DELETE FROM menu_items          WHERE admin_id = ?", [userId]);
+  await pool.query("DELETE FROM prescriptions       WHERE admin_id = ?", [userId]);
+  await pool.query("DELETE FROM price_tiers         WHERE admin_id = ?", [userId]);
+  await pool.query("DELETE FROM mpesa_transactions  WHERE user_id  = ?", [userId]);
+  await pool.query("DELETE FROM subscriptions       WHERE user_id  = ?", [userId]);
+  await pool.query("DELETE FROM password_resets     WHERE user_id  = ?", [userId]);
+  if (userDomain) {
+    try { await pool.query("DELETE FROM site_analytics WHERE domain = ?", [userDomain]); }
+    catch { /* may not exist */ }
+  }
+  await pool.query(
+    "DELETE FROM users WHERE id = ? AND email != 'admin@postore.app'",
+    [userId]
+  );
+  return NextResponse.json({ success: true, message: "Admin and all related data deleted" });
     }
 
     if (action === "delete_domain") {
@@ -726,65 +746,68 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     if (action === "create_admin") {
-      const full_name = body?.full_name;
-      const email = body?.email;
-      const password = body?.password;
-      const store_name = body?.store_name;
-      const domain = body?.domain;
-      const pos_type = body?.pos_type;
+  const full_name = body?.full_name;
+  const email = body?.email;
+  const password = body?.password;
+  const store_name = body?.store_name;
+  const domain = body?.domain;
+  const pos_type = body?.pos_type;
 
-      if (!full_name || !email || !password || !store_name || !domain) {
-        return NextResponse.json({ error: "Missing required fields: full_name, email, password, store_name, domain" }, { status: 400 });
-      }
+  if (!full_name || !email || !password || !store_name || !domain) {
+    return NextResponse.json({ error: "Missing required fields: full_name, email, password, store_name, domain" }, { status: 400 });
+  }
+  if (password.length < 6) {
+    return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+  }
+  if (!/^[a-z0-9-]{2,50}$/.test(domain)) {
+    return NextResponse.json({ error: "Invalid domain — only lowercase letters, numbers and hyphens" }, { status: 400 });
+  }
 
-      if (password.length < 6) {
-        return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
-      }
+  const [emailRows] = await pool.query<UserRow[]>(
+    "SELECT id FROM users WHERE email = ? LIMIT 1", [email.toLowerCase().trim()]
+  );
+  if (emailRows.length > 0) {
+    return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
+  }
 
-      if (!/^[a-z0-9-]{2,50}$/.test(domain)) {
-        return NextResponse.json({ error: "Invalid domain — only lowercase letters, numbers and hyphens" }, { status: 400 });
-      }
+  const [domainRows] = await pool.query<UserRow[]>(
+    "SELECT id FROM users WHERE domain = ? LIMIT 1", [domain]
+  );
+  if (domainRows.length > 0) {
+    return NextResponse.json({ error: "That store domain is already taken" }, { status: 409 });
+  }
 
-      // Check email uniqueness
-      const [emailRows] = await pool.query<UserRow[]>(
-        "SELECT id FROM users WHERE email = ? LIMIT 1",
-        [email.toLowerCase().trim()]
-      );
-      if (emailRows.length > 0) {
-        return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
-      }
+  // 🔑 actually provision the subdomain, same as the public signup flow
+  const cpanel = await createSubdomain(domain);
+  const subdomain_url = cpanel.url ?? null;
+  const subdomain_status = cpanel.success ? "active" : "pending";
+  if (!cpanel.success) {
+    console.warn(`[SuperAdmin] Subdomain failed for "${domain}": ${cpanel.error}. Account created anyway.`);
+  }
 
-      // Check domain uniqueness
-      const [domainRows] = await pool.query<UserRow[]>(
-        "SELECT id FROM users WHERE domain = ? LIMIT 1",
-        [domain]
-      );
-      if (domainRows.length > 0) {
-        return NextResponse.json({ error: "That store domain is already taken" }, { status: 409 });
-      }
+  const id = randomUUID();
+  const hashed = await bcrypt.hash(password, 10);
 
-      // Create new admin
-      const id = randomUUID();
-      const hashed = await bcrypt.hash(password, 10);
+  await pool.query(
+    `INSERT INTO users (id, full_name, email, password, role, is_super_admin, store_name, domain, subdomain_url, pos_type, subdomain_status)
+     VALUES (?, ?, ?, ?, 'admin', FALSE, ?, ?, ?, ?, ?)`,
+    [id, full_name, email.toLowerCase().trim(), hashed, store_name, domain, subdomain_url, pos_type || null, subdomain_status]
+  );
 
-      await pool.query(
-        `INSERT INTO users (id, full_name, email, password, role, is_super_admin, store_name, domain, pos_type, subdomain_status)
-         VALUES (?, ?, ?, ?, 'admin', FALSE, ?, ?, ?, 'active')`,
-        [id, full_name, email.toLowerCase().trim(), hashed, store_name, domain, pos_type || null]
-      );
+  // No payment required — created directly by super admin, lifetime/free access
+  await pool.query(
+    `INSERT INTO subscriptions (user_id, plan, status, amount, next_billing_date)
+     VALUES (?, 'starter', 'active', 0, '9999-12-31')`,
+    [id]
+  );
 
-      // Create subscription with lifetime access for newly created admins
-      await pool.query(
-        `INSERT INTO subscriptions (user_id, plan, status, amount, next_billing_date)
-         VALUES (?, 'starter', 'active', 0, '9999-12-31')`,
-        [id]
-      );
-
-      return NextResponse.json({ 
-        success: true, 
-        message: `Admin "${full_name}" created with email ${email}`,
-        admin_id: id
-      });
+  return NextResponse.json({
+    success: true,
+    message: cpanel.success
+      ? `Admin "${full_name}" created with email ${email} — subdomain live at ${subdomain_url}`
+      : `Admin "${full_name}" created, but subdomain provisioning failed (${cpanel.error}). Status set to pending.`,
+    admin_id: id,
+  });
     }
 
     if (action === "create_staff") {
