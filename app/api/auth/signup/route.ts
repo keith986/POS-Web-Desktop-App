@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/app/_lib/db";
 import bcrypt from "bcryptjs";
-import { exec } from "child_process";
-import { promisify } from "util";
-
-const execAsync = promisify(exec);
 
 /* ─────────────────────────────────────────────────────────
    This API is called AFTER M-Pesa payment completes.
@@ -13,7 +9,13 @@ const execAsync = promisify(exec);
      2. Confirms status = 'completed'
      3. Confirms amount matches the selected plan
      4. Confirms transaction not already used
-   Only then creates: user + subdomain + subscription
+   Only then creates: user + subscription
+
+   NOTE: No subdomain-provisioning script is needed. Nginx already has a
+   wildcard server block (server_name *.upendoapps.com) that routes every
+   subdomain — including brand new ones — straight to this app, and
+   Cloudflare's wildcard DNS + orange-cloud proxy already cover DNS + SSL.
+   So the subdomain is live the instant the row is inserted.
 ──────────────────────────────────────────────────────────── */
 
 /* ── Pricing matrix — mirrors your plans.ts ── */
@@ -32,27 +34,6 @@ function getExpectedPrice(posType: string, plan: string): number | null {
   const pos = POS_PRICES[posType as PosType];
   if (!pos) return null;
   return pos[plan as PlanId] ?? null;
-}
-
-interface CpanelResult {
-  success: boolean;
-  error?:  string;
-  url?:    string;
-}
-
-async function createSubdomain(subdomain: string): Promise<CpanelResult> {
-  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "upendoapps.com";
-  try {
-    const { stdout, stderr } = await execAsync(
-      `sudo /usr/local/bin/create-subdomain.sh ${subdomain}`
-    );
-    if (stdout.includes("SUCCESS")) {
-      return { success: true, url: `https://${subdomain}.${baseDomain}` };
-    }
-    return { success: false, error: stderr };
-  } catch (err) {
-    return { success: false, error: (err as Error).message };
-  }
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -148,13 +129,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if ((domainRows as unknown[]).length > 0)
       return NextResponse.json({ error: "That store domain is already taken." }, { status: 409 });
 
-    /* ── 4. Create subdomain ── */
-    const cpanel           = await createSubdomain(domain);
-    const subdomain_url    = cpanel.url ?? null;
-    const subdomain_status = cpanel.success ? "active" : "pending";
-
-    if (!cpanel.success)
-      console.warn(`[Signup] Subdomain failed for "${domain}": ${cpanel.error}. Account created anyway.`);
+    /* ── 4. Subdomain is served by the wildcard Nginx block — nothing to provision ── */
+    const subdomain_url    = `https://${domain}.upendoapps.com`;
+    const subdomain_status = "active";
 
     /* ── 5. Create user account ── */
     const id     = crypto.randomUUID();
@@ -203,7 +180,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({
       success:           true,
-      subdomain_created: cpanel.success,
+      subdomain_created: true,
       user: {
         id,
         full_name,

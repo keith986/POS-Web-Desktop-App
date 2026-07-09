@@ -5,8 +5,6 @@ import bcrypt from "bcryptjs";
 import { execSync } from "child_process";
 import fs from "fs";
 import { randomUUID } from "crypto";
-import { exec } from "child_process";
-import { promisify } from "util";
 
 /* ── Row types matching your exact schema ── */
 interface CountResult extends RowDataPacket { count: number }
@@ -157,28 +155,9 @@ function parseNginxLogs(): Record<string, NginxDomainStat> {
   return stats;
 }
 
-
-const execAsync = promisify(exec);
-
-interface CpanelResult { success: boolean; error?: string; url?: string }
-
-async function createSubdomain(subdomain: string): Promise<CpanelResult> {
-  const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "upendoapps.com";
-  try {
-    const { stdout, stderr } = await execAsync(`sudo /usr/local/bin/create-subdomain.sh ${subdomain}`);
-    if (stdout.includes("SUCCESS")) {
-      return { success: true, url: `https://${subdomain}.${baseDomain}` };
-    }
-    return { success: false, error: stderr };
-  } catch (err) {
-    return { success: false, error: (err as Error).message };
-  }
-}
-
 /* ══════════════════════════════════════════════════════════
    GET
 ══════════════════════════════════════════════════════════ */
-
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
   const section = searchParams.get("section") || "overview";
@@ -209,7 +188,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const [[activeStaff]]  = await pool.query<CountResult[]>(
         "SELECT COUNT(*) as count FROM staff WHERE status = 'active'"
       );
-      
+
       /* ── ORDERS BY TIME PERIOD ── */
       const [[todayOrders]]  = await pool.query<CountResult[]>(
         "SELECT COUNT(*) as count FROM orders WHERE DATE(created_at) = CURDATE()"
@@ -223,7 +202,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const [[yearOrders]]   = await pool.query<CountResult[]>(
         "SELECT COUNT(*) as count FROM orders WHERE YEAR(created_at) = YEAR(CURDATE())"
       );
-      
+
       /* ── TRANSACTIONS BY TIME PERIOD ── */
       const [[todayTransactions]]  = await pool.query<CountResult[]>(
         "SELECT COUNT(*) as count FROM mpesa_transactions WHERE status = 'completed' AND DATE(created_at) = CURDATE()"
@@ -237,7 +216,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const [[yearTransactions]]   = await pool.query<CountResult[]>(
         "SELECT COUNT(*) as count FROM mpesa_transactions WHERE status = 'completed' AND YEAR(created_at) = YEAR(CURDATE())"
       );
-      
+
       /* ── REVENUE BY TIME PERIOD ── */
       const [[todayRevenue]] = await pool.query<CountResult[]>(
         "SELECT COALESCE(SUM(total), 0) as count FROM orders WHERE status = 'completed' AND DATE(created_at) = CURDATE()"
@@ -251,12 +230,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const [[yearRevenue]]  = await pool.query<CountResult[]>(
         "SELECT COALESCE(SUM(total), 0) as count FROM orders WHERE status = 'completed' AND YEAR(created_at) = YEAR(CURDATE())"
       );
-      
+
       /* ── TOTAL REVENUE ── */
       const [[totalRevenue]] = await pool.query<CountResult[]>(
         "SELECT COALESCE(SUM(total), 0) as count FROM orders WHERE status = 'completed'"
       );
-      
+
       /* ── DOMAINS ── */
       const [[totalDomains]] = await pool.query<CountResult[]>(
         "SELECT COUNT(*) as count FROM users WHERE domain IS NOT NULL AND domain != '' AND email != 'admin@postore.app'"
@@ -264,7 +243,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const [[activeDomains]] = await pool.query<CountResult[]>(
         "SELECT COUNT(*) as count FROM users WHERE subdomain_status = 'active' AND domain IS NOT NULL AND email != 'admin@postore.app'"
       );
-      
+
       /* ── SNEAKY BILLING - accounts with suspicious patterns ── */
       const [sneakyBilling] = await pool.query<BillingRow[]>(`
         SELECT
@@ -283,7 +262,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         ORDER BY failed_transactions DESC
         LIMIT 10
       `);
-      
+
       /* ── RECENT LOGS ── */
       const [recentLogs] = await pool.query<LogRow[]>(`
         SELECT n.id, n.admin_id, n.type, n.title, n.message, n.created_at,
@@ -542,39 +521,82 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: true, message: "User deactivated — login blocked" });
     }
 
+    /* ── DELETE ADMIN ──
+       This is the action your Users tab actually calls (runAdminAction("delete_admin", ...)).
+       Deletes all related rows in FK-safe order, then the user row itself. ── */
     if (action === "delete_admin") {
-  const [rows] = await pool.query<UserRow[]>(
-    "SELECT id, domain FROM users WHERE id = ? AND email != 'admin@postore.app' LIMIT 1",
-    [userId]
-  );
-  if (rows.length === 0) return NextResponse.json({ error: "User not found" }, { status: 404 });
-  const userDomain = rows[0].domain;
+      if (!targetId) return NextResponse.json({ error: "Missing user id" }, { status: 400 });
 
-  await pool.query("DELETE FROM staff               WHERE admin_id = ?", [userId]);
-  await pool.query("DELETE FROM orders              WHERE admin_id = ?", [userId]);
-  await pool.query("DELETE FROM notifications       WHERE admin_id = ?", [userId]);
-  await pool.query("DELETE FROM products            WHERE admin_id = ?", [userId]);
-  await pool.query("DELETE FROM customers           WHERE admin_id = ?", [userId]);
-  await pool.query("DELETE FROM stock_movements     WHERE admin_id = ?", [userId]);
-  await pool.query("DELETE FROM settings            WHERE admin_id = ?", [userId]);
-  await pool.query("DELETE FROM appointments        WHERE admin_id = ?", [userId]);
-  await pool.query("DELETE FROM services            WHERE admin_id = ?", [userId]);
-  await pool.query("DELETE FROM suppliers           WHERE admin_id = ?", [userId]);
-  await pool.query("DELETE FROM menu_items          WHERE admin_id = ?", [userId]);
-  await pool.query("DELETE FROM prescriptions       WHERE admin_id = ?", [userId]);
-  await pool.query("DELETE FROM price_tiers         WHERE admin_id = ?", [userId]);
-  await pool.query("DELETE FROM mpesa_transactions  WHERE user_id  = ?", [userId]);
-  await pool.query("DELETE FROM subscriptions       WHERE user_id  = ?", [userId]);
-  await pool.query("DELETE FROM password_resets     WHERE user_id  = ?", [userId]);
-  if (userDomain) {
-    try { await pool.query("DELETE FROM site_analytics WHERE domain = ?", [userDomain]); }
-    catch { /* may not exist */ }
-  }
-  await pool.query(
-    "DELETE FROM users WHERE id = ? AND email != 'admin@postore.app'",
-    [userId]
-  );
-  return NextResponse.json({ success: true, message: "Admin and all related data deleted" });
+      const [rows] = await pool.query<UserRow[]>(
+        "SELECT id, domain FROM users WHERE id = ? AND email != 'admin@postore.app' LIMIT 1",
+        [targetId]
+      );
+      if (rows.length === 0) return NextResponse.json({ error: "Admin not found" }, { status: 404 });
+      const userDomain = rows[0].domain;
+
+      // Delete in FK-safe order using your exact table names
+      await pool.query("DELETE FROM staff               WHERE admin_id = ?", [targetId]);
+      await pool.query("DELETE FROM orders              WHERE admin_id = ?", [targetId]);
+      await pool.query("DELETE FROM notifications       WHERE admin_id = ?", [targetId]);
+      await pool.query("DELETE FROM products            WHERE admin_id = ?", [targetId]);
+      await pool.query("DELETE FROM customers           WHERE admin_id = ?", [targetId]);
+      await pool.query("DELETE FROM stock_movements     WHERE admin_id = ?", [targetId]);
+      await pool.query("DELETE FROM settings            WHERE admin_id = ?", [targetId]);
+      await pool.query("DELETE FROM appointments        WHERE admin_id = ?", [targetId]);
+      await pool.query("DELETE FROM services            WHERE admin_id = ?", [targetId]);
+      await pool.query("DELETE FROM suppliers           WHERE admin_id = ?", [targetId]);
+      await pool.query("DELETE FROM menu_items          WHERE admin_id = ?", [targetId]);
+      await pool.query("DELETE FROM prescriptions       WHERE admin_id = ?", [targetId]);
+      await pool.query("DELETE FROM price_tiers         WHERE admin_id = ?", [targetId]);
+      await pool.query("DELETE FROM mpesa_transactions  WHERE user_id  = ?", [targetId]);
+      await pool.query("DELETE FROM subscriptions       WHERE user_id  = ?", [targetId]);
+      await pool.query("DELETE FROM password_resets     WHERE user_id  = ?", [targetId]);
+      if (userDomain) {
+        try { await pool.query("DELETE FROM site_analytics WHERE domain = ?", [userDomain]); }
+        catch { /* may not exist */ }
+      }
+      await pool.query(
+        "DELETE FROM users WHERE id = ? AND email != 'admin@postore.app'",
+        [targetId]
+      );
+
+      return NextResponse.json({ success: true, message: "Admin and all related data deleted" });
+    }
+
+    /* ── Legacy alias, kept in case anything else still calls "delete_user" ── */
+    if (action === "delete_user") {
+      const [rows] = await pool.query<UserRow[]>(
+        "SELECT id, domain FROM users WHERE id = ? AND email != 'admin@postore.app' LIMIT 1",
+        [userId]
+      );
+      if (rows.length === 0) return NextResponse.json({ error: "User not found" }, { status: 404 });
+      const userDomain = rows[0].domain;
+
+      await pool.query("DELETE FROM staff               WHERE admin_id = ?", [userId]);
+      await pool.query("DELETE FROM orders              WHERE admin_id = ?", [userId]);
+      await pool.query("DELETE FROM notifications       WHERE admin_id = ?", [userId]);
+      await pool.query("DELETE FROM products            WHERE admin_id = ?", [userId]);
+      await pool.query("DELETE FROM customers           WHERE admin_id = ?", [userId]);
+      await pool.query("DELETE FROM stock_movements     WHERE admin_id = ?", [userId]);
+      await pool.query("DELETE FROM settings            WHERE admin_id = ?", [userId]);
+      await pool.query("DELETE FROM appointments        WHERE admin_id = ?", [userId]);
+      await pool.query("DELETE FROM services            WHERE admin_id = ?", [userId]);
+      await pool.query("DELETE FROM suppliers           WHERE admin_id = ?", [userId]);
+      await pool.query("DELETE FROM menu_items          WHERE admin_id = ?", [userId]);
+      await pool.query("DELETE FROM prescriptions       WHERE admin_id = ?", [userId]);
+      await pool.query("DELETE FROM price_tiers         WHERE admin_id = ?", [userId]);
+      await pool.query("DELETE FROM mpesa_transactions  WHERE user_id  = ?", [userId]);
+      await pool.query("DELETE FROM subscriptions       WHERE user_id  = ?", [userId]);
+      await pool.query("DELETE FROM password_resets     WHERE user_id  = ?", [userId]);
+      if (userDomain) {
+        try { await pool.query("DELETE FROM site_analytics WHERE domain = ?", [userDomain]); }
+        catch { /* may not exist */ }
+      }
+      await pool.query(
+        "DELETE FROM users WHERE id = ? AND email != 'admin@postore.app'",
+        [userId]
+      );
+      return NextResponse.json({ success: true, message: "User and all related data deleted" });
     }
 
     if (action === "delete_domain") {
@@ -586,7 +608,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         [userId]
       );
 
-      // Remove Nginx virtual-host configs
+      // Remove Nginx virtual-host configs — only relevant for domains that got an
+      // explicit per-subdomain file. Domains served purely by the wildcard block
+      // (server_name *.upendoapps.com) have no dedicated file to remove, so these
+      // unlink calls simply no-op for them.
       const configPaths = [
         `/etc/nginx/sites-enabled/${domain}.upendoapps.com`,
         `/etc/nginx/sites-available/${domain}.upendoapps.com`,
@@ -718,14 +743,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (action === "add_super_admin") {
       const email = body?.email;
       if (!email) return NextResponse.json({ error: "Missing email" }, { status: 400 });
-      
+
       const [rows] = await pool.query<UserRow[]>(
         "SELECT id, role FROM users WHERE email = ? LIMIT 1",
         [email]
       );
       if (rows.length === 0) return NextResponse.json({ error: "User not found" }, { status: 404 });
       if (rows[0].role !== "admin") return NextResponse.json({ error: "Only admin accounts can be super admins" }, { status: 400 });
-      
+
       await pool.query("UPDATE users SET is_super_admin = TRUE WHERE email = ?", [email]);
       return NextResponse.json({ success: true, message: `${email} is now a super admin` });
     }
@@ -734,80 +759,89 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       const email = body?.email;
       if (!email) return NextResponse.json({ error: "Missing email" }, { status: 400 });
       if (email === "admin@postore.app") return NextResponse.json({ error: "Cannot remove super admin status from the default super admin" }, { status: 400 });
-      
+
       const [rows] = await pool.query<UserRow[]>(
         "SELECT id FROM users WHERE email = ? LIMIT 1",
         [email]
       );
       if (rows.length === 0) return NextResponse.json({ error: "User not found" }, { status: 404 });
-      
+
       await pool.query("UPDATE users SET is_super_admin = FALSE WHERE email = ?", [email]);
       return NextResponse.json({ success: true, message: `${email} is no longer a super admin` });
     }
 
+    /* ── CREATE ADMIN ──
+       No shell-out / subdomain script needed: Nginx already has a wildcard
+       server block (server_name *.upendoapps.com) that routes every subdomain
+       — including brand new ones — straight to this app on port 3000, and
+       Cloudflare's wildcard DNS + orange-cloud proxy already cover DNS + SSL.
+       So we just build the URL and mark the account active immediately,
+       skipping payment entirely since this is created directly by a super admin. ── */
     if (action === "create_admin") {
-  const full_name = body?.full_name;
-  const email = body?.email;
-  const password = body?.password;
-  const store_name = body?.store_name;
-  const domain = body?.domain;
-  const pos_type = body?.pos_type;
+      const full_name = body?.full_name;
+      const email = body?.email;
+      const password = body?.password;
+      const store_name = body?.store_name;
+      const domain = body?.domain;
+      const pos_type = body?.pos_type;
 
-  if (!full_name || !email || !password || !store_name || !domain) {
-    return NextResponse.json({ error: "Missing required fields: full_name, email, password, store_name, domain" }, { status: 400 });
-  }
-  if (password.length < 6) {
-    return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
-  }
-  if (!/^[a-z0-9-]{2,50}$/.test(domain)) {
-    return NextResponse.json({ error: "Invalid domain — only lowercase letters, numbers and hyphens" }, { status: 400 });
-  }
+      if (!full_name || !email || !password || !store_name || !domain) {
+        return NextResponse.json({ error: "Missing required fields: full_name, email, password, store_name, domain" }, { status: 400 });
+      }
 
-  const [emailRows] = await pool.query<UserRow[]>(
-    "SELECT id FROM users WHERE email = ? LIMIT 1", [email.toLowerCase().trim()]
-  );
-  if (emailRows.length > 0) {
-    return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
-  }
+      if (password.length < 6) {
+        return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+      }
 
-  const [domainRows] = await pool.query<UserRow[]>(
-    "SELECT id FROM users WHERE domain = ? LIMIT 1", [domain]
-  );
-  if (domainRows.length > 0) {
-    return NextResponse.json({ error: "That store domain is already taken" }, { status: 409 });
-  }
+      if (!/^[a-z0-9-]{2,50}$/.test(domain)) {
+        return NextResponse.json({ error: "Invalid domain — only lowercase letters, numbers and hyphens" }, { status: 400 });
+      }
 
-  // 🔑 actually provision the subdomain, same as the public signup flow
-  const cpanel = await createSubdomain(domain);
-  const subdomain_url = cpanel.url ?? null;
-  const subdomain_status = cpanel.success ? "active" : "pending";
-  if (!cpanel.success) {
-    console.warn(`[SuperAdmin] Subdomain failed for "${domain}": ${cpanel.error}. Account created anyway.`);
-  }
+      // Check email uniqueness
+      const [emailRows] = await pool.query<UserRow[]>(
+        "SELECT id FROM users WHERE email = ? LIMIT 1",
+        [email.toLowerCase().trim()]
+      );
+      if (emailRows.length > 0) {
+        return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
+      }
 
-  const id = randomUUID();
-  const hashed = await bcrypt.hash(password, 10);
+      // Check domain uniqueness
+      const [domainRows] = await pool.query<UserRow[]>(
+        "SELECT id FROM users WHERE domain = ? LIMIT 1",
+        [domain]
+      );
+      if (domainRows.length > 0) {
+        return NextResponse.json({ error: "That store domain is already taken" }, { status: 409 });
+      }
 
-  await pool.query(
-    `INSERT INTO users (id, full_name, email, password, role, is_super_admin, store_name, domain, subdomain_url, pos_type, subdomain_status)
-     VALUES (?, ?, ?, ?, 'admin', FALSE, ?, ?, ?, ?, ?)`,
-    [id, full_name, email.toLowerCase().trim(), hashed, store_name, domain, subdomain_url, pos_type || null, subdomain_status]
-  );
+      // No script needed — the wildcard Nginx block + Cloudflare wildcard DNS
+      // already serve *.upendoapps.com, so the subdomain is live the instant
+      // this row is inserted.
+      const subdomain_url = `https://${domain}.upendoapps.com`;
 
-  // No payment required — created directly by super admin, lifetime/free access
-  await pool.query(
-    `INSERT INTO subscriptions (user_id, plan, status, amount, next_billing_date)
-     VALUES (?, 'starter', 'active', 0, '9999-12-31')`,
-    [id]
-  );
+      const id = randomUUID();
+      const hashed = await bcrypt.hash(password, 10);
 
-  return NextResponse.json({
-    success: true,
-    message: cpanel.success
-      ? `Admin "${full_name}" created with email ${email} — subdomain live at ${subdomain_url}`
-      : `Admin "${full_name}" created, but subdomain provisioning failed (${cpanel.error}). Status set to pending.`,
-    admin_id: id,
-  });
+      await pool.query(
+        `INSERT INTO users (id, full_name, email, password, role, is_super_admin, store_name, domain, subdomain_url, pos_type, subdomain_status)
+         VALUES (?, ?, ?, ?, 'admin', FALSE, ?, ?, ?, ?, 'active')`,
+        [id, full_name, email.toLowerCase().trim(), hashed, store_name, domain, subdomain_url, pos_type || null]
+      );
+
+      // Created directly by a super admin — no payment required. Grant a free
+      // lifetime "starter" subscription so nothing downstream blocks on billing.
+      await pool.query(
+        `INSERT INTO subscriptions (user_id, plan, status, amount, next_billing_date)
+         VALUES (?, 'starter', 'active', 0, '9999-12-31')`,
+        [id]
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: `Admin "${full_name}" created — live at ${subdomain_url}`,
+        admin_id: id
+      });
     }
 
     if (action === "create_staff") {
@@ -852,8 +886,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         [staffId, full_name, email.toLowerCase().trim(), hashed, admin_id]
       );
 
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         message: `Staff member "${full_name}" created for admin ${admin_id}`,
         staff_id: staffId
       });
