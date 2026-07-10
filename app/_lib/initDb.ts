@@ -479,6 +479,33 @@ export async function initDb(): Promise<void> {
   `);
   console.log("✅ Table: discounts");
 
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS app_update_state (
+      id             INT           NOT NULL PRIMARY KEY DEFAULT 1,
+      is_critical    TINYINT(1)    NOT NULL DEFAULT 0,
+      message        TEXT          NULL,
+      target_version VARCHAR(64)   NULL,
+      updated_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+  await conn.query(`
+    INSERT IGNORE INTO app_update_state (id, is_critical, message, target_version)
+    VALUES (1, 0, NULL, NULL)
+  `);
+  console.log("✅ Table: app_update_state");
+
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS app_update_dismissals (
+      id           INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      user_id      CHAR(36)     NOT NULL,
+      version      VARCHAR(64)  NOT NULL,
+      dismissed_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_user_version (user_id, version),
+      INDEX idx_user_id (user_id)
+    )
+  `);
+  console.log("✅ Table: app_update_dismissals");
+
   
   // ── SAFE MIGRATIONS (adds columns to existing tables without breaking them) ──
 

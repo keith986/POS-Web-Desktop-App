@@ -864,6 +864,13 @@ export default function SuperAdminPage() {
   // Only the default super admin account may add/remove super admins, delete staff, or manage lifetime plans
   const isPrimarySuperAdmin = currentUser?.email === "admin@postore.app";
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
+
+  /* ── "Update available" notification ──
+     loadedVersionRef captures the build version this page mounted with (the
+     baseline). If a later poll reports a different version, new code has been
+     deployed since this session started. */
+  const [updateBanner, setUpdateBanner] = useState<{ version: string; message: string | null } | null>(null);
+  const loadedVersionRef = useRef<string | null>(null);
   const profilePicInputRef = useRef<HTMLInputElement>(null);
 
   /* ── Notification bell popover ── */
@@ -1009,6 +1016,76 @@ export default function SuperAdminPage() {
   const flash = (text: string, type: "success" | "error" | "info" = "info") => {
     setNotice({ text, type });
     window.setTimeout(() => setNotice(null), 4500);
+  };
+
+  /* ── "Update available" polling ──
+     Checks the server's current build version. Critical updates auto-reload
+     (once per tab, guarded via sessionStorage). Non-critical updates show a
+     dismissible banner; the dismissal is stored server-side per user, so it
+     stays dismissed across refreshes, logouts, and other devices/browsers. */
+  const checkForUpdate = useCallback(async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      const res = await fetch("/api/system/version", {
+        headers: { Authorization: `Bearer ${user?.id}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json() as { version: string; isCritical: boolean; message: string | null; dismissed: boolean };
+
+      if (loadedVersionRef.current === null) {
+        // First check after mount — this is the version we're currently running.
+        loadedVersionRef.current = data.version;
+        return;
+      }
+
+      if (data.version === loadedVersionRef.current) {
+        // Already on the latest version (e.g. after a refresh).
+        setUpdateBanner(null);
+        return;
+      }
+
+      if (data.isCritical) {
+        const CRITICAL_KEY = "app_critical_reload_version";
+        if (sessionStorage.getItem(CRITICAL_KEY) !== data.version) {
+          sessionStorage.setItem(CRITICAL_KEY, data.version);
+          window.location.reload();
+        }
+        return;
+      }
+
+      if (!data.dismissed) {
+        setUpdateBanner({ version: data.version, message: data.message });
+      } else {
+        setUpdateBanner(null);
+      }
+    } catch {
+      /* silent — a failed version check shouldn't disrupt the dashboard */
+    }
+  }, []);
+
+  useEffect(() => {
+    checkForUpdate();
+    const interval = window.setInterval(checkForUpdate, 45000);
+    return () => window.clearInterval(interval);
+  }, [checkForUpdate]);
+
+  const dismissUpdateBanner = async () => {
+    if (!updateBanner) return;
+    setUpdateBanner(null);
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      await fetch("/api/system/version", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${user?.id}` },
+        body: JSON.stringify({ action: "dismiss" }),
+      });
+    } catch {
+      /* if this fails the banner will simply reappear on next poll — acceptable */
+    }
+  };
+
+  const applyUpdate = () => {
+    window.location.reload();
   };
 
   const runAdminAction = async (action: string, userId?: string, extra?: Record<string, unknown>) => {
@@ -2902,6 +2979,34 @@ const openCreateStaffModal = async () => {
           )}
 
           <AdminDetailPanel admin={panelAdmin} isStaff={panelIsStaff} isPrimarySuperAdmin={isPrimarySuperAdmin} onClose={() => setPanelAdmin(null)} onMessage={messageAdmin} onReset={openResetModal} onToggle={toggleAccount} onGrant={openGrantSuperadminModal} onRevoke={openRemoveSuperadminModal} onDelete={panelIsStaff ? openDeleteStaffModal : openDeleteAdminModal} />
+
+          {updateBanner && (
+            <div style={{
+              position: "fixed", bottom: 20, right: 20, zIndex: 7000,
+              width: 340, maxWidth: "90vw", background: "var(--card)", border: "1px solid var(--border)",
+              borderRadius: 14, padding: "16px 18px", boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
+              display: "flex", flexDirection: "column", gap: 10,
+            }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>✨</span>
+                  <span style={{ fontWeight: 700, fontSize: 13.5, color: "var(--ink)" }}>Update available</span>
+                </div>
+                <button
+                  onClick={dismissUpdateBanner}
+                  aria-label="Dismiss"
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 14, lineHeight: 1, padding: 2 }}
+                >✕</button>
+              </div>
+              <div style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.5 }}>
+                {updateBanner.message || "A new version of this dashboard is ready. Refresh to get the latest features and fixes."}
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button onClick={dismissUpdateBanner} style={{ padding: "8px 14px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", fontFamily: "inherit", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Later</button>
+                <button onClick={applyUpdate} style={{ padding: "8px 14px", borderRadius: 9, border: "none", background: "var(--accent)", color: "var(--accent-text)", fontFamily: "inherit", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Refresh now</button>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>
