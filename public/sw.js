@@ -16,8 +16,9 @@ const CACHE_NAME = "staff-app-v5";
 
 self.addEventListener("install", (event) => {
   // Deliberately NOT calling self.skipWaiting() here.
-  // That omission is what keeps this new version parked in
+  // That omission is what keeps this new version parked in   
   // "waiting" instead of taking over the page immediately.
+  
   event.waitUntil(caches.open(CACHE_NAME));
 });
 
