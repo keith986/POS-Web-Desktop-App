@@ -45,8 +45,8 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.4.0",
-    date: "2026-07-05",
+    version: "1.5.0",
+    date: "2026-07-10",
     type: "feature",
     title: "Update Notification",
     description:
