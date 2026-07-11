@@ -1,7 +1,7 @@
 "use client";
 
 import { StoreProvider } from "@/app/_lib/StoreContext";
-//import { ThemeProvider } from "@/app/_lib/ThemeContext";
+import { ThemeProvider } from "@/app/_lib/ThemeContext";
 import Sidebar from "./Sidebar";
 import IdleTimeoutWarning from "../components/IdleTimeoutWarning";
 
@@ -431,7 +431,7 @@ const css = `
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
  
   return (
-  //  <ThemeProvider>
+    <ThemeProvider>
       <StoreProvider>
         <IdleTimeoutWarning />
         <style>{css}</style>
@@ -440,6 +440,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {children}
         </div>
       </StoreProvider>
-  //  </ThemeProvider>
+    </ThemeProvider>
   );
 }

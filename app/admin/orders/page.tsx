@@ -65,30 +65,30 @@ function getStoredUser(): StoredUser | null {
 
 /* ── Status config ── */
 const STATUS_CFG: Record<OrderStatus, { bg: string; color: string; border: string; label: string }> = {
-  pending:    { bg: "#fffbeb", color: "#d97706", border: "#fde68a", label: "Pending"    },
-  processing: { bg: "#eff6ff", color: "#2563eb", border: "#bfdbfe", label: "Processing" },
-  completed:  { bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0", label: "Completed"  },
-  refunded:   { bg: "#fef2f2", color: "#dc2626", border: "#fecaca", label: "Refunded"   },
-  cancelled:  { bg: "#f5f4f0", color: "#9a9a8e", border: "#e2e0d8", label: "Cancelled"  },
+  pending:    { bg: "var(--warn-bg)", color: "var(--warn)", border: "var(--warn)", label: "Pending"    },
+  processing: { bg: "var(--info-bg)", color: "var(--info)", border: "var(--info)", label: "Processing" },
+  completed:  { bg: "var(--ok-bg)", color: "var(--ok)", border: "var(--ok)", label: "Completed"  },
+  refunded:   { bg: "var(--accent-bg)", color: "var(--accent)", border: "var(--accent)", label: "Refunded"   },
+  cancelled:  { bg: "var(--bg)", color: "var(--muted)", border: "var(--border)", label: "Cancelled"  },
 };
 
 const PAYMENT_CFG: Record<string, { bg: string; color: string; border: string }> = {
-  paid:     { bg: "#f0fdf4", color: "#16a34a", border: "#bbf7d0" },
-  pending:  { bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
-  refunded: { bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+  paid:     { bg: "var(--ok-bg)", color: "var(--ok)", border: "var(--ok)" },
+  pending:  { bg: "var(--warn-bg)", color: "var(--warn)", border: "var(--warn)" },
+  refunded: { bg: "var(--accent-bg)", color: "var(--accent)", border: "var(--accent)" },
 };
 
 /* ── Shared styles ── */
 const fieldStyle: React.CSSProperties = {
-  width: "100%", background: "#f5f4f0",
-  border: "1px solid #c8c6bc", borderRadius: 8,
-  padding: "9px 12px", color: "#141410",
+  width: "100%", background: "var(--bg)",
+  border: "1px solid var(--border2)", borderRadius: 8,
+  padding: "9px 12px", color: "var(--ink)",
   fontFamily: "inherit", fontSize: 14, outline: "none",
 };
 const labelStyle: React.CSSProperties = {
   display: "block", fontSize: 11, fontWeight: 500,
   letterSpacing: "0.5px", textTransform: "uppercase",
-  color: "#4a4a40", marginBottom: 5,
+  color: "var(--ink2)", marginBottom: 5,
 };
 
 /* ── Toast ── */
@@ -96,8 +96,8 @@ function Toast({ msg, type }: { msg: string; type: "success" | "error" }) {
   return (
     <div style={{
       position: "fixed", bottom: "2rem", right: "2rem",
-      background: type === "error" ? "#dc2626" : "#141410",
-      color: "#fff", padding: "0.85rem 1.25rem", borderRadius: 10,
+      background: type === "error" ? "var(--accent)" : "var(--ink)",
+      color: "var(--surface)", padding: "0.85rem 1.25rem", borderRadius: 10,
       fontSize: 13, display: "flex", alignItems: "center", gap: 10,
       boxShadow: "0 8px 30px rgba(0,0,0,0.2)", animation: "toastIn 0.3s ease", zIndex: 1100,
     }}>
@@ -121,18 +121,18 @@ function ConfirmModal({ state, onCancel }: { state: ConfirmState; onCancel: () =
       <div onClick={onCancel} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 1000 }} />
       <div style={{
         position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
-        background: "#fff", borderRadius: 14, padding: "1.75rem",
+        background: "var(--surface)", borderRadius: 14, padding: "1.75rem",
         width: "100%", maxWidth: 400, zIndex: 1001,
         boxShadow: "0 24px 60px rgba(0,0,0,0.18)", animation: "slideUp 0.2s ease",
       }}>
-        <div style={{ width: 44, height: 44, borderRadius: "50%", background: state.danger ? "#fef2f2" : "#f5f4f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: "1rem" }}>
+        <div style={{ width: 44, height: 44, borderRadius: "50%", background: state.danger ? "var(--accent-bg)" : "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: "1rem" }}>
           {state.danger ? <IconWarning /> : <IconPackage />}
         </div>
         <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>{state.title}</div>
-        <div style={{ fontSize: 13, color: "#9a9a8e", lineHeight: 1.6, marginBottom: "1.5rem" }}>{state.message}</div>
+        <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: "1.5rem" }}>{state.message}</div>
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button onClick={onCancel} style={{ padding: "8px 18px", background: "#fff", color: "#4a4a40", border: "1px solid #c8c6bc", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
-          <button onClick={() => { state.onConfirm(); onCancel(); }} style={{ padding: "8px 18px", background: state.danger ? "#dc2626" : "#141410", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={onCancel} style={{ padding: "8px 18px", background: "var(--surface)", color: "var(--ink2)", border: "1px solid var(--border2)", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+          <button onClick={() => { state.onConfirm(); onCancel(); }} style={{ padding: "8px 18px", background: state.danger ? "var(--accent)" : "var(--ink)", color: "var(--surface)", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}>
             {state.danger ? "Yes, proceed" : "Confirm"}
           </button>
         </div>
@@ -145,8 +145,8 @@ function ConfirmModal({ state, onCancel }: { state: ConfirmState; onCancel: () =
 /* ── Spinner ── */
 function Spinner() {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "3rem", color: "#9a9a8e", fontSize: 13, gap: 10 }}>
-      <div style={{ width: 18, height: 18, border: "2px solid #e2e0d8", borderTopColor: "#141410", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "3rem", color: "var(--muted)", fontSize: 13, gap: 10 }}>
+      <div style={{ width: 18, height: 18, border: "2px solid var(--border)", borderTopColor: "var(--ink)", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
       Loading orders…
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
@@ -253,18 +253,18 @@ function OrderPanel({
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.25)", zIndex: 900 }} />
       <div style={{
         position: "fixed", top: 0, right: 0, bottom: 0, width: "100%", maxWidth: 480,
-        background: "#fff", zIndex: 901, boxShadow: "-8px 0 40px rgba(0,0,0,0.12)",
+        background: "var(--surface)", zIndex: 901, boxShadow: "-8px 0 40px rgba(0,0,0,0.12)",
         display: "flex", flexDirection: "column", animation: "panelIn 0.25s ease",
       }}>
         <style>{`@keyframes panelIn{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
 
         {/* Header */}
-        <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid #e2e0d8", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+        <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 500 }}>Order {order.order_number}</div>
-            <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 2 }}>{formatDateTime(order.created_at)}</div>
+            <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{formatDateTime(order.created_at)}</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: "#9a9a8e", lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: "var(--muted)", lineHeight: 1 }}>×</button>
         </div>
 
         <div style={{ flex: 1, overflowY: "auto", padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -278,22 +278,22 @@ function OrderPanel({
           </div>
 
           {/* Customer */}
-          <div style={{ background: "#f5f4f0", borderRadius: 10, padding: "1rem" }}>
-            <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Customer</div>
+          <div style={{ background: "var(--bg)", borderRadius: 10, padding: "1rem" }}>
+            <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>Customer</div>
             <div style={{ fontWeight: 500, fontSize: 14 }}>{order.customer_name}</div>
-            <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 2 }}>{order.customer_email}</div>
-            {order.staff_name && <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 2 }}>Served by: {order.staff_name}</div>}
+            <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{order.customer_email}</div>
+            {order.staff_name && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Served by: {order.staff_name}</div>}
           </div>
 
           {/* Items */}
           <div>
-            <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>Items</div>
-            <div style={{ border: "1px solid #e2e0d8", borderRadius: 10, overflow: "hidden" }}>
+            <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 10 }}>Items</div>
+            <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
               {order.items.map((item, i) => (
-                <div key={item.id || i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderBottom: i < order.items.length - 1 ? "1px solid #e2e0d8" : "none" }}>
+                <div key={item.id || i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderBottom: i < order.items.length - 1 ? "1px solid var(--border)" : "none" }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 500 }}>{item.name || item.product_name}</div>
-                    <div style={{ fontSize: 11, color: "#9a9a8e" }}>×{item.qty || item.quantity} @ {formatCurrency(item.price ?? item.unit_price ?? 0)}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted)" }}>×{item.qty || item.quantity} @ {formatCurrency(item.price ?? item.unit_price ?? 0)}</div>
                   </div>
                   <div style={{ fontWeight: 500, fontSize: 13 }}>{formatCurrency((item.price ?? item.unit_price ?? 0) * (item.qty ?? item.quantity ?? 0))}</div>
                 </div>
@@ -302,12 +302,12 @@ function OrderPanel({
           </div>
 
           {/* Totals */}
-          <div style={{ border: "1px solid #e2e0d8", borderRadius: 10, overflow: "hidden" }}>
+          <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
             {[
               { label: "Subtotal", value: formatCurrency(order.subtotal) },
               { label: "Tax",      value: formatCurrency(order.tax) },
             ].map(r => (
-              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.65rem 1rem", borderBottom: "1px solid #e2e0d8", fontSize: 13, color: "#4a4a40" }}>
+              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.65rem 1rem", borderBottom: "1px solid var(--border)", fontSize: 13, color: "var(--ink2)" }}>
                 <span>{r.label}</span><span>{r.value}</span>
               </div>
             ))}
@@ -317,16 +317,16 @@ function OrderPanel({
           </div>
 
           {/* Payment method */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#4a4a40" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", color: "#4a4a40" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--ink2)" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", color: "var(--ink2)" }}>
               {PAYMENT_METHOD_SVG[order.payment_method]}
             </span>
-            Paid via <strong style={{ color: "#141410" }}>{order.payment_method.charAt(0).toUpperCase() + order.payment_method.slice(1)}</strong>
+            Paid via <strong style={{ color: "var(--ink)" }}>{order.payment_method.charAt(0).toUpperCase() + order.payment_method.slice(1)}</strong>
           </div>
 
           {/* Note */}
           {order.note && (
-            <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 8, padding: "0.75rem 1rem", fontSize: 12, color: "#92400e" }}>
+            <div style={{ background: "var(--warn-bg)", border: "1px solid var(--warn)", borderRadius: 8, padding: "0.75rem 1rem", fontSize: 12, color: "var(--warn)" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                 <IconNote /> {order.note}
               </span>
@@ -334,15 +334,15 @@ function OrderPanel({
           )}
 
           {/* Status actions */}
-          <div style={{ borderTop: "1px solid #e2e0d8", paddingTop: "1rem", display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Update Status</div>
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "1rem", display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Update Status</div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {canAdvance && nextStatus && (
                 <button
                   onClick={() => onUpdateStatus(nextStatus)}
                   disabled={updating}
-                  style={{ padding: "8px 16px", background: "#141410", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: updating ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: updating ? 0.6 : 1 }}
+                  style={{ padding: "8px 16px", background: "var(--ink)", color: "var(--surface)", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: updating ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: updating ? 0.6 : 1 }}
                 >
                   {updating ? "Updating…" : `Mark as ${STATUS_CFG[nextStatus].label}`}
                 </button>
@@ -352,7 +352,7 @@ function OrderPanel({
                 <button
                   onClick={() => onUpdateStatus("cancelled")}
                   disabled={updating}
-                  style={{ padding: "8px 16px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 8, fontSize: 13, cursor: updating ? "not-allowed" : "pointer", fontFamily: "inherit" }}
+                  style={{ padding: "8px 16px", background: "var(--accent-bg)", color: "var(--accent)", border: "1px solid var(--accent)", borderRadius: 8, fontSize: 13, cursor: updating ? "not-allowed" : "pointer", fontFamily: "inherit" }}
                 >
                   Cancel Order
                 </button>
@@ -362,7 +362,7 @@ function OrderPanel({
                 <button
                   onClick={() => onUpdateStatus("refunded")}
                   disabled={updating}
-                  style={{ padding: "8px 16px", background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", borderRadius: 8, fontSize: 13, cursor: updating ? "not-allowed" : "pointer", fontFamily: "inherit" }}
+                  style={{ padding: "8px 16px", background: "var(--accent-bg)", color: "var(--accent)", border: "1px solid var(--accent)", borderRadius: 8, fontSize: 13, cursor: updating ? "not-allowed" : "pointer", fontFamily: "inherit" }}
                 >
                   Issue Refund
                 </button>
@@ -370,7 +370,7 @@ function OrderPanel({
             </div>
 
             {(order.status === "completed" || order.status === "refunded" || order.status === "cancelled") && (
-              <div style={{ fontSize: 12, color: "#9a9a8e", fontStyle: "italic" }}>
+              <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>
                 This order is {order.status} — no further status changes available.
               </div>
             )}
@@ -502,13 +502,13 @@ export default function AdminOrdersPage() {
             { key: "status",          label: "Status" },
             { key: "created_at",      label: "Date",    format: v => new Date(v as string).toLocaleString() },
           ])}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "#fff", color: "#141410", border: "1px solid #c8c6bc", borderRadius: 7, fontFamily: "inherit", fontSize: 13, cursor: "pointer" }}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border2)", borderRadius: 7, fontFamily: "inherit", fontSize: 13, cursor: "pointer" }}
         >
           <IconDownload /> Export CSV
         </button>
         <button
           onClick={fetchOrders}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "#fff", color: "#141410", border: "1px solid #c8c6bc", borderRadius: 7, fontFamily: "inherit", fontSize: 13, cursor: "pointer" }}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border2)", borderRadius: 7, fontFamily: "inherit", fontSize: 13, cursor: "pointer" }}
         >
           <IconRefresh /> Refresh
         </button>
@@ -524,33 +524,33 @@ export default function AdminOrdersPage() {
             { label: "Pending",         value: pendingCount,                 sub: "Need attention", alert: pendingCount > 0 },
             { label: "Refunded",        value: formatCurrency(refundedTotal),sub: "Total refunded", alert: refundedTotal > 0 },
           ].map(s => (
-            <div key={s.label} style={{ background: "#fff", border: `1px solid ${s.alert ? "#fde68a" : "#e2e0d8"}`, borderRadius: 12, padding: "1.1rem 1.25rem", position: "relative" }}>
-              {s.alert && <div style={{ position: "absolute", top: 10, right: 10, width: 8, height: 8, borderRadius: "50%", background: "#d97706" }} />}
-              <div style={{ fontSize: 11, color: "#9a9a8e", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>{s.label}</div>
-              <div style={{ fontSize: 22, fontWeight: 500, letterSpacing: "-0.5px", color: s.alert ? "#d97706" : "#141410" }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: "#9a9a8e", marginTop: 3 }}>{s.sub}</div>
+            <div key={s.label} style={{ background: "var(--surface)", border: `1px solid ${s.alert ? "var(--warn)" : "var(--border)"}`, borderRadius: 12, padding: "1.1rem 1.25rem", position: "relative" }}>
+              {s.alert && <div style={{ position: "absolute", top: 10, right: 10, width: 8, height: 8, borderRadius: "50%", background: "var(--warn)" }} />}
+              <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>{s.label}</div>
+              <div style={{ fontSize: 22, fontWeight: 500, letterSpacing: "-0.5px", color: s.alert ? "var(--warn)" : "var(--ink)" }}>{s.value}</div>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 3 }}>{s.sub}</div>
             </div>
           ))}
         </div>
 
         {/* Orders table card */}
-        <div style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
 
           {/* Toolbar */}
-          <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #e2e0d8", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
 
             {/* Search */}
-            <div style={{ flex: 1, minWidth: 200, display: "flex", alignItems: "center", gap: 8, background: "#f5f4f0", border: "1px solid #c8c6bc", borderRadius: 8, padding: "0 10px" }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9a9a8e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div style={{ flex: 1, minWidth: 200, display: "flex", alignItems: "center", gap: 8, background: "var(--bg)", border: "1px solid var(--border2)", borderRadius: 8, padding: "0 10px" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
               </svg>
               <input
-                style={{ flex: 1, border: "none", background: "transparent", fontFamily: "inherit", fontSize: 13, color: "#141410", outline: "none", padding: "7px 0" }}
+                style={{ flex: 1, border: "none", background: "transparent", fontFamily: "inherit", fontSize: 13, color: "var(--ink)", outline: "none", padding: "7px 0" }}
                 placeholder="Search order #, customer name or email…"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
-              {search && <button onClick={() => setSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9a9a8e", fontSize: 16, lineHeight: 1 }}>×</button>}
+              {search && <button onClick={() => setSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 16, lineHeight: 1 }}>×</button>}
             </div>
 
             {/* Status filter */}
@@ -558,9 +558,9 @@ export default function AdminOrdersPage() {
               {(["all", "pending", "processing", "completed", "refunded", "cancelled"] as const).map(s => (
                 <button key={s} onClick={() => setStatusFilter(s)} style={{
                   padding: "5px 10px", borderRadius: 7, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
-                  background: statusFilter === s ? "#141410" : "#f5f4f0",
-                  color:      statusFilter === s ? "#fff"     : "#4a4a40",
-                  border:     statusFilter === s ? "1px solid #141410" : "1px solid #c8c6bc",
+                  background: statusFilter === s ? "var(--ink)" : "var(--bg)",
+                  color:      statusFilter === s ? "var(--surface)"     : "var(--ink2)",
+                  border:     statusFilter === s ? "1px solid var(--ink)" : "1px solid var(--border2)",
                   fontWeight: statusFilter === s ? 500 : 400, transition: "all 0.15s",
                 }}>
                   {s === "all" ? "All" : STATUS_CFG[s as OrderStatus].label}
@@ -573,9 +573,9 @@ export default function AdminOrdersPage() {
               {(["all", "card", "cash", "mobile"] as const).map(m => (
                 <button key={m} onClick={() => setMethodFilter(m)} style={{
                   padding: "5px 10px", borderRadius: 7, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
-                  background: methodFilter === m ? "#141410" : "#f5f4f0",
-                  color:      methodFilter === m ? "#fff"     : "#4a4a40",
-                  border:     methodFilter === m ? "1px solid #141410" : "1px solid #c8c6bc",
+                  background: methodFilter === m ? "var(--ink)" : "var(--bg)",
+                  color:      methodFilter === m ? "var(--surface)"     : "var(--ink2)",
+                  border:     methodFilter === m ? "1px solid var(--ink)" : "1px solid var(--border2)",
                   transition: "all 0.15s",
                 }}>
                   {m === "all" ? "All Methods" : (
@@ -590,7 +590,7 @@ export default function AdminOrdersPage() {
 
           {/* Table */}
           {fetching ? <Spinner /> : filtered.length === 0 ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>
+            <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
               {search || statusFilter !== "all" || methodFilter !== "all"
                 ? "No orders match your filters."
                 : "No orders yet."}
@@ -600,7 +600,7 @@ export default function AdminOrdersPage() {
               <thead>
                 <tr>
                   {["Order", "Customer", "Items", "Total", "Payment", "Status", "Date", "Actions"].map(h => (
-                    <th key={h} style={{ textAlign: "left", padding: "0.6rem 1.25rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "#9a9a8e", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", whiteSpace: "nowrap" }}>
+                    <th key={h} style={{ textAlign: "left", padding: "0.6rem 1.25rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "var(--muted)", borderBottom: "1px solid var(--border)", background: "var(--bg)", whiteSpace: "nowrap" }}>
                       {h}
                     </th>
                   ))}
@@ -609,43 +609,43 @@ export default function AdminOrdersPage() {
               <tbody>
                 {filtered.map(o => (
                   <tr key={o.id}
-                    style={{ borderBottom: "1px solid #e2e0d8", cursor: "pointer" }}
+                    style={{ borderBottom: "1px solid var(--border)", cursor: "pointer" }}
                     onClick={() => { setSelected(o); setPanelOpen(true); }}
-                    onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = "#fafaf8"}
+                    onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = "var(--bg)"}
                     onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = ""}
                   >
                     {/* Order # */}
                     <td style={{ padding: "0.85rem 1.25rem" }}>
-                      <div style={{ fontWeight: 600, color: "#141410", fontFamily: "monospace", fontSize: 12 }}>{o.order_number}</div>
+                      <div style={{ fontWeight: 600, color: "var(--ink)", fontFamily: "monospace", fontSize: 12 }}>{o.order_number}</div>
                     </td>
 
                     {/* Customer */}
                     <td style={{ padding: "0.85rem 1.25rem" }}>
-                      <div style={{ fontWeight: 500, color: "#141410" }}>{o.customer_name}</div>
-                      <div style={{ fontSize: 11, color: "#9a9a8e", marginTop: 1 }}>{o.customer_email}</div>
+                      <div style={{ fontWeight: 500, color: "var(--ink)" }}>{o.customer_name}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{o.customer_email}</div>
                     </td>
 
                     {/* Items summary */}
-                    <td style={{ padding: "0.85rem 1.25rem", color: "#4a4a40", maxWidth: 160 }}>
+                    <td style={{ padding: "0.85rem 1.25rem", color: "var(--ink2)", maxWidth: 160 }}>
                       <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {Array.isArray(o.items)
                           ? o.items.map(i => `${i.name || i.product_name} ×${i.qty || i.quantity}`).join(", ")
                           : "—"}
                       </div>
-                      <div style={{ fontSize: 11, color: "#9a9a8e", marginTop: 1 }}>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>
                         {Array.isArray(o.items) ? `${o.items.length} item${o.items.length !== 1 ? "s" : ""}` : ""}
                       </div>
                     </td>
 
                     {/* Total */}
-                    <td style={{ padding: "0.85rem 1.25rem", fontWeight: 600, color: "#141410" }}>
+                    <td style={{ padding: "0.85rem 1.25rem", fontWeight: 600, color: "var(--ink)" }}>
                       {formatCurrency(o.total)}
                     </td>
 
                     {/* Payment */}
                     <td style={{ padding: "0.85rem 1.25rem" }}>
                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <span style={{ fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5, color: "#4a4a40" }}>
+                        <span style={{ fontSize: 12, display: "inline-flex", alignItems: "center", gap: 5, color: "var(--ink2)" }}>
                           {PAYMENT_METHOD_SVG[o.payment_method]}
                           {o.payment_method.charAt(0).toUpperCase() + o.payment_method.slice(1)}
                         </span>
@@ -661,7 +661,7 @@ export default function AdminOrdersPage() {
                     </td>
 
                     {/* Date */}
-                    <td style={{ padding: "0.85rem 1.25rem", color: "#4a4a40", whiteSpace: "nowrap", fontSize: 12 }}>
+                    <td style={{ padding: "0.85rem 1.25rem", color: "var(--ink2)", whiteSpace: "nowrap", fontSize: 12 }}>
                       {formatDate(o.created_at)}
                     </td>
 
@@ -670,14 +670,14 @@ export default function AdminOrdersPage() {
                       <div style={{ display: "flex", gap: 6 }}>
                         <button
                           onClick={() => { setSelected(o); setPanelOpen(true); }}
-                          style={{ padding: "5px 10px", background: "#f5f4f0", border: "1px solid #c8c6bc", borderRadius: 6, fontSize: 12, color: "#141410", cursor: "pointer", fontFamily: "inherit" }}
+                          style={{ padding: "5px 10px", background: "var(--bg)", border: "1px solid var(--border2)", borderRadius: 6, fontSize: 12, color: "var(--ink)", cursor: "pointer", fontFamily: "inherit" }}
                         >
                           View
                         </button>
                         {o.status === "pending" && (
                           <button
                             onClick={() => handleUpdateStatus(o, "processing")}
-                            style={{ padding: "5px 10px", background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 6, fontSize: 12, color: "#2563eb", cursor: "pointer", fontFamily: "inherit" }}
+                            style={{ padding: "5px 10px", background: "var(--info-bg)", border: "1px solid var(--info)", borderRadius: 6, fontSize: 12, color: "var(--info)", cursor: "pointer", fontFamily: "inherit" }}
                           >
                             Process
                           </button>
@@ -685,7 +685,7 @@ export default function AdminOrdersPage() {
                         {o.status === "processing" && (
                           <button
                             onClick={() => handleUpdateStatus(o, "completed")}
-                            style={{ padding: "5px 10px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 6, fontSize: 12, color: "#16a34a", cursor: "pointer", fontFamily: "inherit" }}
+                            style={{ padding: "5px 10px", background: "var(--ok-bg)", border: "1px solid var(--ok)", borderRadius: 6, fontSize: 12, color: "var(--ok)", cursor: "pointer", fontFamily: "inherit" }}
                           >
                             Complete
                           </button>
@@ -700,9 +700,9 @@ export default function AdminOrdersPage() {
 
           {/* Footer */}
           {!fetching && filtered.length > 0 && (
-            <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid #e2e0d8", fontSize: 12, color: "#9a9a8e", display: "flex", justifyContent: "space-between" }}>
+            <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid var(--border)", fontSize: 12, color: "var(--muted)", display: "flex", justifyContent: "space-between" }}>
               <span>Showing {filtered.length} of {orders.length} order{orders.length !== 1 ? "s" : ""}</span>
-              <span>Filtered total: <strong style={{ color: "#141410" }}>{formatCurrency(filtered.filter(o => o.payment_status === "paid").reduce((s, o) => s + o.total, 0))}</strong></span>
+              <span>Filtered total: <strong style={{ color: "var(--ink)" }}>{formatCurrency(filtered.filter(o => o.payment_status === "paid").reduce((s, o) => s + o.total, 0))}</strong></span>
             </div>
           )}
         </div>
