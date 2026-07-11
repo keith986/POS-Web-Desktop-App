@@ -14,6 +14,38 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "pos-theme";
 
+/**
+ * Safety-net CSS for legacy/un-migrated pages.
+ * ─────────────────────────────────────────
+ * Many existing pages hardcode card/panel backgrounds (e.g. `background: "#fff"`)
+ * but leave text color unset, relying on inheritance from <body>. Body's
+ * default color is `var(--ink)`, which intentionally FLIPS in dark mode
+ * (dark text → light text) for pages that have been fully migrated to theme
+ * variables (background + color both flip together, e.g. the Orders and
+ * Dashboard pages). On pages that haven't been migrated yet, that same flip
+ * turns text near-white while its hardcoded white background stays put —
+ * producing exactly the washed-out, low-contrast numbers seen on the
+ * dashboard before it was fixed.
+ *
+ * This rule targets ONLY inline-styled elements that don't declare their own
+ * `color` — i.e. text relying on inheritance — and pins them to a color that
+ * reads fine against the light, hardcoded backgrounds still used throughout
+ * the app. It intentionally does NOT touch:
+ *   - Elements that set their own inline `color` (already explicit, left alone)
+ *   - Class-based styling with no inline `style` attribute (e.g. `.product-name`)
+ *   - The sidebar (every sidebar element sets its own color explicitly)
+ *
+ * It's a stopgap, not a substitute for migrating each page to paired
+ * background+color theme variables — but it stops untouched pages from
+ * becoming unreadable the moment dark mode is turned on.
+ */
+const THEME_SAFETY_CSS = `
+  .main [style]:not([style*="color:"]),
+  .card [style]:not([style*="color:"]) {
+    color: #141410;
+  }
+`;
+
 function getInitialTheme(): Theme {
   if (typeof window === "undefined") return "light";
   try {
@@ -63,6 +95,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+      <style>{THEME_SAFETY_CSS}</style>
       {children}
     </ThemeContext.Provider>
   );
