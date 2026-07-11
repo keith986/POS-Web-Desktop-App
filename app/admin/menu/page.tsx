@@ -573,7 +573,7 @@ export default function AdminMenuPage() {
       <main className="main">
 
         {/* Stat strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.75rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.75rem" }}>
           {[
             { label: "Total Items",   value: stats.total,                       color: "#141410" },
             { label: "Available",     value: stats.available,                   color: "#16a34a" },

@@ -525,7 +525,7 @@ export default function Sidebar() {
     } catch { /* silent */ }
    };
     fetchSupportNew();
-    const s = setInterval(fetchSupportNew, 30000);
+    const s = setInterval(fetchSupportNew, 30000);  
     return () => { clearInterval(t); clearInterval(s); };
   }, [user?.id, fetchPendingCount]);
 

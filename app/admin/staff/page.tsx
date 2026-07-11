@@ -645,7 +645,7 @@ export default function AdminStaffPage() {
         )}
 
         {/* Stat strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
           {[
             { label: "Total Cashiers", value: staff.length,   sub: staffLimit === Infinity ? "Unlimited plan" : `${staffLimit - staff.length} slot${staffLimit - staff.length !== 1 ? "s" : ""} remaining` },
             { label: "Active",         value: activeCount,    sub: "Currently on"    },

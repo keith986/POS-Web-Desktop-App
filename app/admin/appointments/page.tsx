@@ -667,7 +667,7 @@ export default function AdminAppointmentsPage() {
       <main className="main">
 
         {/* Stat strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.75rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.75rem" }}>
           {[
             { label: "Today",      value: stats.today,                     color: "#141410" },
             { label: "Walk-ins",   value: stats.walk_ins,                  color: "#2563eb" },

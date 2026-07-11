@@ -502,7 +502,7 @@ export default function AdminInventoryPage() {
       <main className="main">
 
         {/* Stat strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
           {[
             { label: "Total Products",  value: inventory.length,           sub: "In catalogue",    alert: false },
             { label: "Inventory Value", value: formatCurrency(totalValue),  sub: "At current price", alert: false },

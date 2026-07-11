@@ -99,7 +99,7 @@ const labelStyle: React.CSSProperties = {
   color: "#4a4a40", marginBottom: 5,
 };
 const sectionStyle: React.CSSProperties     = { display: "flex", flexDirection: "column", gap: "1.1rem" };
-const rowStyle: React.CSSProperties         = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" };
+const rowStyle: React.CSSProperties         = { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" };
 const cardStyle: React.CSSProperties        = { background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden" };
 const cardHeaderStyle: React.CSSProperties  = { padding: "1rem 1.25rem", borderBottom: "1px solid #e2e0d8", display: "flex", alignItems: "center", justifyContent: "space-between" };
 const cardBodyStyle: React.CSSProperties    = { padding: "1.25rem" };

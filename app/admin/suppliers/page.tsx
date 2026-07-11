@@ -661,7 +661,7 @@ export default function AdminSuppliersPage() {
       <main className="main">
 
         {/* Stat strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.75rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.75rem" }}>
           {[
             { label: "Total",        value: stats.total,                    color: "#141410" },
             { label: "Active",       value: stats.active,                   color: "#16a34a" },

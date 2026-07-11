@@ -145,7 +145,7 @@ export default function AdminSupportPage() {
       <main className="main">
 
         {/* ── Info strip — mirrors subscription stat cards ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
           {[
             {
               label: "Support Channel",

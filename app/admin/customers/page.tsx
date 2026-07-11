@@ -493,7 +493,7 @@ export default function AdminCustomersPage() {
       <main className="main">
 
         {/* Stat strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
           {[
             { label: "Total Customers", value: customers.length, sub: "Registered"         },
             { label: "Active",          value: activeCount,       sub: "Accounts"           },

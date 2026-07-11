@@ -468,7 +468,7 @@ export default function AdminTablesPage() {
       <main className="main">
 
         {/* Stat strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: "0.75rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "0.75rem" }}>
           {[
             { label: "Total",     value: stats.total,     color: "#141410", alert: false },
             { label: "Available", value: stats.available, color: "#16a34a", alert: false },

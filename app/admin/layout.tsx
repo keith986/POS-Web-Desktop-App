@@ -1,6 +1,7 @@
 "use client";
 
 import { StoreProvider } from "@/app/_lib/StoreContext";
+//import { ThemeProvider } from "@/app/_lib/ThemeContext";
 import Sidebar from "./Sidebar";
 import IdleTimeoutWarning from "../components/IdleTimeoutWarning";
 
@@ -35,7 +36,57 @@ const css = `
     background: var(--bg);
     color: var(--ink);
     min-height: 100vh;
+    transition: background 0.2s ease, color 0.2s ease;
   }
+
+  /* ── DARK MODE ──────────────────────────
+     Applied via <html data-theme="dark">. This themes the shared shell
+     (background, header, sidebar accents, generic .card/.badge/.tbl classes)
+     immediately. Most per-page content (stat cards, tables, forms) uses
+     hardcoded hex colors in inline styles rather than these variables, so it
+     will not repaint yet — that needs the same page-by-page pass we did for
+     responsiveness. ── */
+  html[data-theme="dark"] {
+    --bg:        #16160f;
+    --surface:   #201f18;
+    --ink:       #f2f1ea;
+    --ink2:      #c9c7ba;
+    --muted:     #8a8878;
+    --border:    #32312a;
+    --border2:   #454338;
+    --accent:    #e0693c;
+    --accent-bg: #2a1a14;
+    --ok:        #22c55e;
+    --ok-bg:     #0f2318;
+    --warn:      #f0a729;
+    --warn-bg:   #2b2010;
+    --info:      #3b82f6;
+    --info-bg:   #101d33;
+  }
+  html[data-theme="dark"] .card,
+  html[data-theme="dark"] .stat-card,
+  html[data-theme="dark"] .header {
+    background: var(--surface);
+    border-color: var(--border);
+  }
+  html[data-theme="dark"] .tbl th { background: var(--bg); }
+  html[data-theme="dark"] .tbl tr:hover td { background: var(--bg); }
+
+  /* ── THEME TOGGLE BUTTON ─────────────────────────── */
+  .theme-toggle-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%;
+    padding: 0.55rem 0.85rem;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    color: rgba(255,255,255,0.6);
+    font-family: inherit; font-size: 12px; font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 0.5rem;
+  }
+  .theme-toggle-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
 
   /* ── LAYOUT ─────────────────────────── */
   .shell {
@@ -164,7 +215,9 @@ const css = `
   .main {
     padding: 1.75rem;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex; flex-direction: column; gap: 1.5rem;
+    min-width: 0;
   }
 
   /* ── STAT CARDS ─────────────────────── */
@@ -358,12 +411,15 @@ const css = `
     .stat-card { padding: 1rem; }
     .stat-card-value { font-size: 20px; }
 
-    /* Any raw <table> on a page gets horizontal scroll instead of overflow/crush */
-    table { min-width: 640px; }
-    .tbl-scroll, .card-body:has(> table), .card-body:has(.tbl) {
+    /* Any raw <table> on any page gets its own horizontal scroll instead of
+       overflowing the whole page — catches every page without editing each one */
+    table {
+      display: block;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
+      max-width: 100%;
     }
+    table thead, table tbody { display: table; width: 100%; table-layout: auto; }
   }
 
   @media (max-width: 480px) {
@@ -375,13 +431,15 @@ const css = `
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
  
   return (
-    <StoreProvider>
-      <IdleTimeoutWarning />
-      <style>{css}</style>
-      <div className="shell">
-        <Sidebar />
-        {children}
-      </div>
-    </StoreProvider>
+  //  <ThemeProvider>
+      <StoreProvider>
+        <IdleTimeoutWarning />
+        <style>{css}</style>
+        <div className="shell">
+          <Sidebar />
+          {children}
+        </div>
+      </StoreProvider>
+  //  </ThemeProvider>
   );
 }

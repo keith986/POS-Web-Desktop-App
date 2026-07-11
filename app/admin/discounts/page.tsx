@@ -161,7 +161,7 @@ export default function DiscountsPage() {
       <main className="main">
 
         {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
           {[
             { label: "Total Discounts", value: discounts.length, sub: "Created" },
             { label: "Active",          value: activeCount,       sub: "Running now" },

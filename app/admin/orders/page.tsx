@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useStore } from "@/app/_lib/StoreContext";
+import { exportToCsv } from "@/app/_lib/exportCsv";
 
 /* ── Types ── */
 interface OrderItem {
@@ -153,6 +154,13 @@ function Spinner() {
 }
 
 /* ── SVG Icons ── */
+function IconDownload() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+    </svg>
+  );
+}
 function IconRefresh() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -485,6 +493,20 @@ export default function AdminOrdersPage() {
         <div className="header-title">Orders</div>
         <div className="header-date">{dater}</div>
         <button
+          onClick={() => exportToCsv("orders", filtered, [
+            { key: "order_number",    label: "Order #" },
+            { key: "customer_name",   label: "Customer" },
+            { key: "customer_email",  label: "Email" },
+            { key: "total",           label: "Total",   format: v => formatCurrency(v as number) },
+            { key: "payment_method",  label: "Payment" },
+            { key: "status",          label: "Status" },
+            { key: "created_at",      label: "Date",    format: v => new Date(v as string).toLocaleString() },
+          ])}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "#fff", color: "#141410", border: "1px solid #c8c6bc", borderRadius: 7, fontFamily: "inherit", fontSize: 13, cursor: "pointer" }}
+        >
+          <IconDownload /> Export CSV
+        </button>
+        <button
           onClick={fetchOrders}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "#fff", color: "#141410", border: "1px solid #c8c6bc", borderRadius: 7, fontFamily: "inherit", fontSize: 13, cursor: "pointer" }}
         >
@@ -495,7 +517,7 @@ export default function AdminOrdersPage() {
       <main className="main">
 
         {/* Stat strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1rem" }}>
           {[
             { label: "Total Revenue",   value: formatCurrency(totalRevenue), sub: "Paid orders",    alert: false },
             { label: "Total Orders",    value: orders.length,                sub: "All time",       alert: false },

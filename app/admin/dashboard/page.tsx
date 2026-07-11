@@ -562,7 +562,7 @@ if (!checked) return (
         ) : !data ? null : (<>
 
           {/* ── Stat cards ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
             {[
               { label: "Today's Revenue", value: usd(data.revenue_today),  change: usd(data.revenue_week) + " this week", up: true,                          icon: <IconRevenue  />, color: "#d4522a", bg: "#fff4f0" },
               { label: "Orders Today",    value: data.orders_today,         change: `${data.orders_pending} pending`,      up: data.orders_pending === 0,     icon: <IconOrders   />, color: "#2563eb", bg: "#eff6ff" },
@@ -595,7 +595,7 @@ if (!checked) return (
           </div>
 
           {/* ── Secondary stats + Promotional Ad ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
             {[
               { label: "Total Customers", value: data.total_customers,  icon: <IconCustomers />, color: "#16a34a", bg: "#f0fdf4" },
               { label: "Low Stock Items", value: data.low_stock_count,   icon: <IconBox       />, color: data.low_stock_count > 0 ? "#d97706" : "#9a9a8e", bg: data.low_stock_count > 0 ? "#fffbeb" : "#f5f4f0" },
@@ -614,8 +614,8 @@ if (!checked) return (
           </div>
 
           {/* ── Weekly chart + Payment methods ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1rem" }}>
-            <div style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1rem" }}>
+            <div style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden", minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1rem 1.25rem", borderBottom: "1px solid #e2e0d8" }}>
                 <span style={{ fontSize: 13, fontWeight: 500 }}>Weekly Revenue</span>
                 <span style={{ fontSize: 12, color: "#9a9a8e" }}>{usd(data.revenue_week)} total</span>
@@ -654,8 +654,8 @@ if (!checked) return (
           </div>
 
           {/* ── Recent orders + Activity ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-            <div style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1rem" }}>
+            <div style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden", minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1rem 1.25rem", borderBottom: "1px solid #e2e0d8" }}>
                 <span style={{ fontSize: 13, fontWeight: 500 }}>Recent Orders</span>
                 <Link href="/admin/orders" style={{ fontSize: 12, color: "#d4522a", textDecoration: "none" }}>View all</Link>

@@ -265,7 +265,7 @@ export default function SubscriptionPage() {
         {!loading && !fetchError && (
           <>
             {/* Stat strip */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
               {[
                 {
                   label: "Status",
