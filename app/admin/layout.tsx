@@ -305,14 +305,70 @@ const css = `
   .legend-label { flex: 1; color: var(--ink2); }
   .legend-pct { font-weight: 500; color: var(--ink); }
 
+  /* ── MOBILE MENU BUTTON (hidden on desktop) ─────────────────────── */
+  .mobile-menu-btn {
+    display: none;
+    position: fixed;
+    top: 12px; left: 12px;
+    z-index: 1001;
+    width: 40px; height: 40px;
+    align-items: center; justify-content: center;
+    background: var(--ink); color: #fff;
+    border: none; border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .sidebar-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 998;
+  }
+
   @media (max-width: 1100px) {
     .stat-grid { grid-template-columns: repeat(2,1fr); }
     .three-col { grid-template-columns: 1fr; }
+    .two-col { grid-template-columns: 1fr; }
   }
+
   @media (max-width: 800px) {
-    :root { --sidebar-w: 0px; }
-    .sidebar { display: none; }
-    .shell { grid-template-columns: 1fr; }
+    .shell { grid-template-columns: 1fr; grid-template-rows: var(--header-h) 1fr; }
+
+    .mobile-menu-btn { display: flex; }
+    .sidebar-backdrop { display: block; }
+
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: min(280px, 84vw);
+      height: 100vh;
+      transform: translateX(-100%);
+      transition: transform 0.22s ease;
+      z-index: 999;
+      grid-row: auto;
+    }
+    .sidebar.open { transform: translateX(0); }
+
+    .header { padding-left: 60px; }
+    .header-title { font-size: 14px; }
+    .header-date { display: none; }
+
+    .main { padding: 1rem; gap: 1rem; }
+    .stat-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .stat-card { padding: 1rem; }
+    .stat-card-value { font-size: 20px; }
+
+    /* Any raw <table> on a page gets horizontal scroll instead of overflow/crush */
+    table { min-width: 640px; }
+    .tbl-scroll, .card-body:has(> table), .card-body:has(.tbl) {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .stat-grid { grid-template-columns: 1fr; }
+    .header { padding: 0 1rem 0 56px; }
   }
 `;
 

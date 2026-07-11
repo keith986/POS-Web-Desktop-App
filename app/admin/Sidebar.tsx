@@ -467,6 +467,7 @@ export default function Sidebar() {
   const [switcherOpen,  setSwitcherOpen]  = useState(false);
   const [switching,     setSwitching]     = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
+  const [mobileOpen,    setMobileOpen]    = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -548,6 +549,8 @@ export default function Sidebar() {
     finally { setSwitching(false); }
   };
 
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
+
   const isActive = useCallback((href: string) =>
     href === "/admin/dashboard"
       ? pathname === href || pathname === "/admin"
@@ -606,7 +609,19 @@ export default function Sidebar() {
         </>
       )}
 
-      <aside className="sidebar">
+      <button
+        className="mobile-menu-btn"
+        aria-label={mobileOpen ? "Close menu" : "Open menu"}
+        onClick={() => setMobileOpen(o => !o)}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {mobileOpen ? <path d="M18 6L6 18M6 6l12 12" /> : <path d="M3 6h18M3 12h18M3 18h18" />}
+        </svg>
+      </button>
+
+      {mobileOpen && <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />}
+
+      <aside className={`sidebar${mobileOpen ? " open" : ""}`}>
         <div className="sidebar-logo" style={{ cursor: "pointer" }} onClick={() => setSwitcherOpen(true)}>
           <div className="sidebar-logo-mark">{user.store_name?.charAt(0).toUpperCase() ?? "P"}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
