@@ -519,9 +519,9 @@ export default function Sidebar() {
     const res = await fetch(`/api/support?admin_id=${user.id}`);
     const body = await res.json() as SupportMessage[];
      if (Array.isArray(body)) {
-     const hasNew = body.some(m => m.is_new === true);
-     setSupportNew(hasNew);
-    }
+      const hasNew = body.some(m => m.is_new === true);
+      setSupportNew(hasNew);
+     }
     } catch { /* silent */ }
    };
     fetchSupportNew();
