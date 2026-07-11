@@ -42,6 +42,11 @@ const POS_LIMIT: Record<PlanId, number> = {
   starter: 1, pro: 2, enterprise: 5,
 };
 
+interface SupportMessage {
+  is_new?: boolean;
+  // ...other fields you use elsewhere, e.g. id, admin_id, message, created_at
+}
+
 type NavItem    = { href: string; icon: string; label: string };
 type NavSection = { title: string; items: NavItem[] };
 
@@ -509,16 +514,16 @@ export default function Sidebar() {
     fetchPendingCount(user.id);
     const t = setInterval(() => fetchPendingCount(user.id), 60000);
     // check support new messages for this admin
-    const fetchSupportNew = async () => {
-      try {
-        const res = await fetch(`/api/support?admin_id=${user.id}`);
-        const body = await res.json();
-        if (Array.isArray(body)) {
-          const hasNew = body.some((m: any) => m.is_new === true);
-          setSupportNew(hasNew);
-        }
-      } catch { /* silent */ }
-    };
+   const fetchSupportNew = async () => {
+    try {
+    const res = await fetch(`/api/support?admin_id=${user.id}`);
+    const body = await res.json() as SupportMessage[];
+     if (Array.isArray(body)) {
+     const hasNew = body.some(m => m.is_new === true);
+     setSupportNew(hasNew);
+    }
+    } catch { /* silent */ }
+   };
     fetchSupportNew();
     const s = setInterval(fetchSupportNew, 30000);
     return () => { clearInterval(t); clearInterval(s); };
