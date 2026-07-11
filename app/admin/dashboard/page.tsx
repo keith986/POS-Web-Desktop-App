@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useStore } from "@/app/_lib/StoreContext";
+import { HeaderThemeToggle } from "@/app/_lib/ThemeContext";
 import WeeklyRevenueChart from "@/app/admin/WeeklyRevenueChart";
 import Link from "next/link";
 
@@ -13,6 +14,11 @@ interface Notification {
   message: string;
   time:    string;
   read:    boolean;
+}
+
+interface SupportConversation {
+  admin_id?:      string;
+  unread_count?:  number;
 }
 
 interface DashboardData {
@@ -415,7 +421,7 @@ export default function AdminDashboard() {
   const [fetching,  setFetching] = useState(true);
   const [error,     setError]    = useState<string | null>(null);
   const [supportUnread, setSupportUnread] = useState(0);
- 
+
 
 useEffect(() => {
   const params = new URLSearchParams(window.location.search);
@@ -469,7 +475,10 @@ useEffect(() => {
         const res = await fetch(`/api/support?super_admin=1`, { headers: { Authorization: `Bearer ${adminUser.id}` } });
         const body = await res.json();
         if (Array.isArray(body)) {
-          const total = body.reduce((s: number, c: any) => s + (Number(c.unread_count || 0)), 0);
+          const total = (body as SupportConversation[]).reduce(
+            (s: number, c: SupportConversation) => s + (Number(c.unread_count || 0)),
+            0
+          );
           setSupportUnread(total);
         }
       } catch { /* ignore */ }
@@ -537,6 +546,8 @@ if (!checked) return (
           <IconDownload />
         </Link>
 
+        <HeaderThemeToggle />
+
         {/* ── Notification Bell ── stable shell prevents layout shift ── */}
         <div style={{ width: 36, height: 36, flexShrink: 0 }}>
           {adminUser?.id && <NotificationBell adminId={adminUser.id} />}
@@ -548,7 +559,8 @@ if (!checked) return (
         {supportUnread > 0 && (
           <div style={{ marginBottom: "1rem", padding: "0.85rem 1rem", borderRadius: 12, background: "#fff7ed", border: "1px solid #ffedd5", color: "#92400e", display: "flex", alignItems: "center", gap: 10 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#92400e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            You have {supportUnread} new support message{supportUnread !== 1 ? "s" : ""}. <a href="/admin/support" style={{ marginLeft: 8, color: "#92400e", fontWeight: 700 }}>Open Support</a>
+            You have {supportUnread} new support message{supportUnread !== 1 ? "s" : ""}.
+            <Link href="/admin/support" style={{ marginLeft: 8, color: "#92400e", fontWeight: 700 }}>Open Support</Link>
           </div>
         )}
 
