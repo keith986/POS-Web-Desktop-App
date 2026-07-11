@@ -28,6 +28,12 @@ const css = `
     --info-bg:   #eff6ff;
     --sidebar-w: 220px;
     --header-h:  60px;
+
+    /* The sidebar is always dark (its own text/borders are hardcoded white
+       rgba() values), so it gets a dedicated variable instead of reusing
+       --ink — --ink flips light in dark mode and would otherwise turn the
+       sidebar background near-white while its text stayed white. */
+    --sidebar-bg: #141410;
   }
 
   html, body { height: 100%; }
@@ -62,6 +68,8 @@ const css = `
     --warn-bg:   #2b2010;
     --info:      #3b82f6;
     --info-bg:   #101d33;
+    /* --sidebar-bg intentionally NOT overridden — the sidebar stays the same
+       dark shade in both themes. */
   }
   html[data-theme="dark"] .card,
   html[data-theme="dark"] .stat-card,
@@ -99,7 +107,7 @@ const css = `
   /* ── SIDEBAR ─────────────────────────── */
   .sidebar {
     grid-row: 1 / 3;
-    background: var(--ink);
+    background: var(--sidebar-bg);
     color: #fff;
     display: flex;
     flex-direction: column;
@@ -366,7 +374,7 @@ const css = `
     z-index: 1001;
     width: 40px; height: 40px;
     align-items: center; justify-content: center;
-    background: var(--ink); color: #fff;
+    background: var(--sidebar-bg); color: #fff;
     border: none; border-radius: 8px;
     cursor: pointer;
     box-shadow: 0 2px 8px rgba(0,0,0,0.25);

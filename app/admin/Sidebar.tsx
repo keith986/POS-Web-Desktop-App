@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { isRouteLocked, requiredPlan, planLabel } from "@/app/_lib/pricing";
 import { usePlan } from "@/app/_lib/usePlan";
+import { ThemeToggle } from "@/app/_lib/ThemeContext";
 import type { PlanId, PosType } from "@/app/_lib/pricing";
 
 const ALWAYS_ACCESSIBLE = new Set(["/admin/dashboard", "/admin/subscription"]);
@@ -685,6 +686,8 @@ export default function Sidebar() {
         </div>
 
         <div className="sidebar-footer">
+          <ThemeToggle />
+
           <Link href="/admin/subscription" style={{
             display: "flex", alignItems: "center", gap: 8, padding: "0.5rem 0.85rem", marginBottom: "0.5rem",
             background: subscriptionExpired ? "rgba(220,38,38,0.1)" : "rgba(234,88,12,0.08)",
