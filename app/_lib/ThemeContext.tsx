@@ -42,7 +42,7 @@ const STORAGE_KEY = "pos-theme";
 const THEME_SAFETY_CSS = `
   .main [style]:not([style*="color:"]),
   .card [style]:not([style*="color:"]) {
-    color: #141410;
+    color: #767674;
   }
 `;
 
