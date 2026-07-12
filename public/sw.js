@@ -3,8 +3,8 @@
 // Freezes BOTH the admin console and the staff app on whatever version
 // was active when this service worker last activated. New deployments
 // install in the background but never take over the page until the
-// person clicks "Update now" — or, for a change flagged critical, the
-// 30-second auto-apply countdown finishes. Wired up in
+// person clicks "Update now" — no exceptions, not even for updates
+// flagged critical; those just can't be dismissed. Wired up in
 // app/_lib/appUpdates/useAppUpdates.ts, used by both
 // app/admin/layout.tsx and app/staff/dashboard/page.tsx.
 //
@@ -21,7 +21,7 @@
 // exactly, they're just two manual steps that happen together.
 // -----------------------------------------------------------------
 
-const CACHE_NAME = "app-v10";
+const CACHE_NAME = "app-v9";
 
 self.addEventListener("install", (event) => {
   // Deliberately NOT calling self.skipWaiting() here.

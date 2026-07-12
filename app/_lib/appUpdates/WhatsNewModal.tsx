@@ -12,10 +12,6 @@ interface WhatsNewModalProps {
    *  critical build (POST /api/system/version { action: "set_critical" }).
    *  Falls back to the changelog entry's own copy when not set. */
   criticalMessage?: string | null;
-  /** Seconds remaining before a critical update applies itself. */
-  autoApplyIn?:    number | null;
-  /** True while the countdown is held because the person is busy. */
-  autoApplyPaused?: boolean;
 }
 
 /* ─── Per-type badge styling + icon ─────────────────────────── */
@@ -52,15 +48,6 @@ function IcoAlert() {
       <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
       <line x1="12" y1="9" x2="12" y2="13" />
       <line x1="12" y1="17" x2="12.01" y2="17" />
-    </svg>
-  );
-}
-
-function IcoPause() {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-      <rect x="6" y="4" width="4" height="16" rx="1" />
-      <rect x="14" y="4" width="4" height="16" rx="1" />
     </svg>
   );
 }
@@ -172,19 +159,11 @@ const css = `
   .wn-btn-update:hover  { filter: brightness(1.08); }
   .wn-btn-update:active { transform: scale(0.98); }
   .wn-btn-update.critical { background: #dc2626; }
-
-  .wn-countdown {
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-    text-align: center; font-size: 11.5px; color: var(--muted, #9a9a8e);
-  }
-  .wn-countdown b { color: #dc2626; }
-  .wn-countdown.paused { color: #b45309; }
-  .wn-countdown.paused b { color: #b45309; }
 `;
 
 export default function WhatsNewModal({
   open, entries, onUpdate, onIgnore,
-  isCritical = false, criticalMessage = null, autoApplyIn = null, autoApplyPaused = false,
+  isCritical = false, criticalMessage = null,
 }: WhatsNewModalProps) {
   if (!open || entries.length === 0) return null;
 
@@ -213,9 +192,7 @@ export default function WhatsNewModal({
             {isCritical
               ? criticalMessage
                 ? criticalMessage
-                : autoApplyPaused
-                  ? "This fixes something important. It'll apply itself as soon as you finish what you're doing — no rush."
-                  : "This fixes something important and will be applied automatically — you don't need to do anything."
+                : "This fixes something important. Please click Update now as soon as you can."
               : "Here\u2019s what changed on your dashboard. Update now, or keep working and update later from the button in the header."}
           </div>
         </div>
@@ -244,24 +221,11 @@ export default function WhatsNewModal({
 
         <div className="wn-actions">
           {isCritical ? (
-            <>
-              <div className="wn-actions-row">
-                <button className="wn-btn-update critical" onClick={onUpdate} style={{ flex: 1 }}>
-                  Update now
-                </button>
-              </div>
-              {autoApplyIn !== null && (
-                autoApplyPaused ? (
-                  <div className="wn-countdown paused">
-                    <IcoPause /> Paused — waiting until you&apos;re free
-                  </div>
-                ) : (
-                  <div className="wn-countdown">
-                    Applying automatically in <b>{autoApplyIn}s</b>
-                  </div>
-                )
-              )}
-            </>
+            <div className="wn-actions-row">
+              <button className="wn-btn-update critical" onClick={onUpdate} style={{ flex: 1 }}>
+                Update now
+              </button>
+            </div>
           ) : (
             <div className="wn-actions-row">
               <button className="wn-btn-ignore" onClick={onIgnore}>Ignore for now</button>

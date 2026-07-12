@@ -295,7 +295,7 @@ export default function StaffDashboard() {
   // Don't let a critical update reload the page out from under an
   // in-progress sale or an open payment modal — the countdown pauses
   // (but keeps checking) until both are clear.
-  const { pendingEntries, showModal, updateAvailable, isCritical, criticalMessage, autoApplyIn, autoApplyPaused, applyUpdate, ignoreUpdate, reopenModal } =
+  const { pendingEntries, showModal, updateAvailable, isCritical, criticalMessage, applyUpdate, ignoreUpdate, reopenModal } =
     useAppUpdates(staff?.id ?? null, payModalOpen || cart.length > 0);
 
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
@@ -1062,8 +1062,6 @@ export default function StaffDashboard() {
          onIgnore={ignoreUpdate}
          isCritical={isCritical}
          criticalMessage={criticalMessage}
-         autoApplyIn={autoApplyIn}
-         autoApplyPaused={autoApplyPaused}
         />
 
       <ProductViewModal product={viewProduct} currency={settings.currency} onClose={() => setViewProduct(null)} />

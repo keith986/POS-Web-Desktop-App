@@ -52,9 +52,8 @@ interface StoredAccount {
  * @param role Only activate for accounts with this role, so mounting
  * it in a shared layout doesn't accidentally fire for someone else's
  * session data still sitting in localStorage.
- * @param isBusy Same meaning as in useAppUpdates — pass true while an
- * unsaved form/modal is open on the current page so a critical update
- * doesn't reload out from under it.
+ * @param isBusy Unused — kept for API symmetry with useAppUpdates,
+ * where nothing auto-applies anymore so "busy" has nothing to pause.
  */
 export default function AppUpdateGate({
   role,
@@ -80,7 +79,7 @@ export default function AppUpdateGate({
 
   const {
     pendingEntries, showModal, updateAvailable, isCritical, criticalMessage,
-    autoApplyIn, autoApplyPaused, applyUpdate, ignoreUpdate,
+    applyUpdate, ignoreUpdate,
   } = useAppUpdates(token, isBusy);
 
   return (
@@ -105,8 +104,6 @@ export default function AppUpdateGate({
         onIgnore={ignoreUpdate}
         isCritical={isCritical}
         criticalMessage={criticalMessage}
-        autoApplyIn={autoApplyIn}
-        autoApplyPaused={autoApplyPaused}
       />
     </>
   );

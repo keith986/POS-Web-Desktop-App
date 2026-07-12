@@ -40,11 +40,11 @@ export interface ChangelogEntry {
   /** Why it matters to the person using the dashboard. */
   importance: string;
   /**
-   * Mark true for fixes that can't safely wait for someone to click
-   * "Update" — e.g. a payment bug, a security patch, a data integrity
-   * issue. Critical entries still show the modal (so people know what
-   * happened and why), but the "Ignore" option is hidden and the
-   * update applies itself automatically after a short countdown.
+   * Mark true for fixes that matter enough that people shouldn't be
+   * able to shrug the reminder off — e.g. a payment bug, a security
+   * patch, a data integrity issue. Critical entries show the same
+   * modal, but hide the "Ignore" option; the person still has to
+   * click "Update now" themselves, nothing applies on its own.
    * Leave false/omitted for normal features, improvements, and fixes.
    */
   critical?: boolean;
@@ -56,7 +56,29 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.11.0",
+    version: "1.9.0",
+    date: "2026-07-12",
+    type: "improvement",
+    title: "Critical updates no longer apply themselves",
+    description:
+      "Even fixes flagged critical now wait for someone to click Update now instead of applying automatically after a countdown. Critical still means the reminder can't be dismissed — it just can no longer act on its own.",
+    importance:
+      "Nothing on the dashboard ever changes underneath you without someone choosing it, even for urgent fixes.",
+    critical: false,
+  },
+  {
+    version: "1.8.0",
+    date: "2026-07-12",
+    type: "improvement",
+    title: "Update reminder now keeps nagging until you update",
+    description:
+      "\"Ignore for now\" no longer silences the update reminder for good — it just snoozes it. It pops back up on its own after a few minutes, and again on every refresh or login, until you actually click Update now.",
+    importance:
+      "Nothing updates behind your back, and a pending update can't quietly slip past everyone on the team.",
+    critical: false,
+  },
+  {
+    version: "1.7.0",
     date: "2026-07-12",
     type: "feature",
     title: "Update notifications now available on the admin console too",
@@ -67,7 +89,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     critical: false,
   },
   {
-    version: "1.10.0",
+    version: "1.6.0",
     date: "2026-07-12",
     type: "feature",
     title: "Photo for products are now visible in the product list",
@@ -89,7 +111,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   //     "Prevents unauthorized discounts at the till — all discounts are now tracked centrally by the admin.",
   // },
   //
-  // Example of a CRITICAL entry — applies itself automatically:
+  // Example of a CRITICAL entry — can't be ignored, but still waits
+ // for someone to click "Update now":
   // {
   //   version: "1.2.1",
   //   date: "2026-08-02",
