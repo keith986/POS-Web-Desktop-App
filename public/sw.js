@@ -12,7 +12,7 @@
 // exactly, they're just two manual steps that happen together.
 // -----------------------------------------------------------------
 
-const CACHE_NAME = "staff-app-v5";
+const CACHE_NAME = "staff-app-v6";
 
 self.addEventListener("install", (event) => {
   // Deliberately NOT calling self.skipWaiting() here.

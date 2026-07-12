@@ -15,6 +15,7 @@ interface Product {
   status:      "active" | "inactive";
   admin_id:    string;
   created_at:  string;
+  image?:      string | null;
 }
 
 interface ProductForm {
@@ -24,6 +25,7 @@ interface ProductForm {
   stock:       string;
   sku:         string;
   description: string;
+  image:       string | null;
 }
 
 interface ConfirmState {
@@ -113,6 +115,48 @@ function IconX() {
     </svg>
   );
 }
+function IconEye() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+    </svg>
+  );
+}
+function IconUpload() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9a9a8e" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+  );
+}
+
+/* ── Resize/compress an image file to a small base64 data URI ── */
+function fileToCompressedDataUrl(file: File, maxDim = 640, quality = 0.75): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Could not read file"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Could not read image"));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height);
+          width  = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas not supported"));
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 /* ── Toast ── */
 function Toast({ msg, type }: { msg: string; type: "success" | "error" }) {
@@ -166,6 +210,54 @@ function ConfirmModal({ state, onCancel }: { state: ConfirmState; onCancel: () =
   );
 }
 
+/* ── Product View Modal ── */
+function ProductViewModal({ product, onClose, formatCurrency, formatDate }: {
+  product: Product | null;
+  onClose: () => void;
+  formatCurrency: (n: number) => string;
+  formatDate: (d: string) => string;
+}) {
+  if (!product) return null;
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.35)", zIndex: 1000 }} />
+      <div style={{
+        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+        background: "#fff", borderRadius: 14, width: "100%", maxWidth: 440, zIndex: 1001,
+        boxShadow: "0 24px 60px rgba(0,0,0,0.18)", overflow: "hidden", animation: "slideUp 0.2s ease",
+      }}>
+        <div style={{ height: 220, background: "#fafaf8", borderBottom: "1px solid #e2e0d8", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+          {product.image
+            ? <img src={product.image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <IconTag />}
+          <button onClick={onClose} style={{ position: "absolute", top: 10, right: 10, width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.5)", color: "#fff", fontSize: 16, cursor: "pointer", lineHeight: 1 }}>×</button>
+        </div>
+        <div style={{ padding: "1.5rem" }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#141410", marginBottom: 3 }}>{product.name}</div>
+          <div style={{ fontSize: 12, color: "#9a9a8e", marginBottom: 14 }}>{product.category}{product.sku ? ` · ${product.sku}` : ""}</div>
+          <div style={{ display: "flex", gap: 24, marginBottom: 14 }}>
+            <div>
+              <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.5px", color: "#9a9a8e", marginBottom: 3 }}>Price</div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: "#141410" }}>{formatCurrency(product.price)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.5px", color: "#9a9a8e", marginBottom: 3 }}>Stock</div>
+              <StockBadge stock={product.stock} />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.5px", color: "#9a9a8e", marginBottom: 3 }}>Added</div>
+              <div style={{ fontSize: 13, color: "#4a4a40" }}>{formatDate(product.created_at)}</div>
+            </div>
+          </div>
+          {product.description && (
+            <div style={{ fontSize: 13, color: "#4a4a40", lineHeight: 1.6, paddingTop: 10, borderTop: "1px solid #e2e0d8" }}>{product.description}</div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ── Spinner ── */
 function Spinner() {
   return (
@@ -202,18 +294,39 @@ function ProductPanel({
   onSave:   (form: ProductForm) => void;
   saving:   boolean;
 }) {
-  const blank: ProductForm = { name: "", category: "Other", price: "", stock: "", sku: "", description: "" };
+  const blank: ProductForm = { name: "", category: "Other", price: "", stock: "", sku: "", description: "", image: null };
   const [form, setForm] = useState<ProductForm>(blank);
+  const [imgError, setImgError] = useState("");
+  const [imgLoading, setImgLoading] = useState(false);
 
   useEffect(() => {
     if (open) {
+      setImgError("");
       setForm(mode === "edit" && product
-        ? { name: product.name, category: product.category, price: String(product.price), stock: String(product.stock), sku: product.sku, description: product.description ?? "" }
+        ? { name: product.name, category: product.category, price: String(product.price), stock: String(product.stock), sku: product.sku, description: product.description ?? "", image: product.image ?? null }
         : blank
       );
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode, product]);
+
+  const handleImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return setImgError("Please choose an image file");
+    if (file.size > 8 * 1024 * 1024) return setImgError("Image is too large (max 8MB)");
+    setImgError("");
+    setImgLoading(true);
+    try {
+      const dataUrl = await fileToCompressedDataUrl(file);
+      setForm(f => ({ ...f, image: dataUrl }));
+    } catch {
+      setImgError("Couldn't process that image");
+    } finally {
+      setImgLoading(false);
+    }
+  };
 
   if (!open) return null;
 
@@ -242,6 +355,34 @@ function ProductPanel({
 
         {/* Body */}
         <div style={{ padding: "1.5rem", flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+
+          {/* Image (optional) */}
+          <div>
+            <label style={labelStyle}>Product Photo <span style={{ textTransform: "none", fontWeight: 400 }}>(optional)</span></label>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 72, height: 72, borderRadius: 10, background: "#f5f4f0", border: "1px solid #c8c6bc", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                {imgLoading ? (
+                  <div style={{ width: 16, height: 16, border: "2px solid #e2e0d8", borderTopColor: "#141410", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                ) : form.image ? (
+                  <img src={form.image} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <IconUpload />
+                )}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label style={{ padding: "6px 12px", background: "#f5f4f0", border: "1px solid #c8c6bc", borderRadius: 7, fontSize: 12, color: "#141410", cursor: "pointer", fontFamily: "inherit", width: "fit-content" }}>
+                  {form.image ? "Change photo" : "Upload photo"}
+                  <input type="file" accept="image/*" onChange={handleImagePick} style={{ display: "none" }} />
+                </label>
+                {form.image && (
+                  <button onClick={() => setForm(f => ({ ...f, image: null }))} style={{ padding: "6px 12px", background: "#fff", border: "1px solid #c8c6bc", borderRadius: 7, fontSize: 12, color: "#dc2626", cursor: "pointer", fontFamily: "inherit", width: "fit-content" }}>
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+            {imgError && <div style={{ fontSize: 11, color: "#dc2626", marginTop: 6 }}>{imgError}</div>}
+          </div>
 
           {/* Row: Name + SKU */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8rem" }}>
@@ -320,6 +461,7 @@ export default function AdminProductsPage() {
   const [panelOpen,  setPanelOpen] = useState(false);
   const [panelMode,  setPanelMode] = useState<"add" | "edit">("add");
   const [editTarget, setEditTarget]= useState<Product | null>(null);
+  const [viewTarget, setViewTarget]= useState<Product | null>(null);
   const [toast,      setToast]     = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [confirm,    setConfirm]   = useState<ConfirmState>({ open: false, title: "", message: "", onConfirm: () => {} });
 
@@ -381,6 +523,7 @@ export default function AdminProductsPage() {
               stock:       Number(form.stock),
               sku:         form.sku,
               description: form.description,
+              image:       form.image,
               admin_id:    adminUser.id,
             }),
           });
@@ -473,6 +616,12 @@ export default function AdminProductsPage() {
         product={editTarget}
         onSave={handleSave}
         saving={saving}
+      />
+      <ProductViewModal
+        product={viewTarget}
+        onClose={() => setViewTarget(null)}
+        formatCurrency={formatCurrency}
+        formatDate={formatDate}
       />
 
       {/* ── Header ── */}
@@ -585,8 +734,19 @@ export default function AdminProductsPage() {
                     onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = ""}
                   >
                     <td style={{ padding: "0.85rem 1.25rem" }}>
-                      <div style={{ fontWeight: 500, color: "#141410" }}>{p.name}</div>
-                      {p.sku && <div style={{ fontSize: 11, color: "#9a9a8e", marginTop: 1 }}>{p.sku}</div>}
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div
+                          onClick={() => setViewTarget(p)}
+                          style={{ width: 36, height: 36, borderRadius: 8, background: "#f5f4f0", border: "1px solid #e2e0d8", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0, cursor: "pointer" }}
+                          title="View product"
+                        >
+                          {p.image ? <img src={p.image} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <IconTag />}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 500, color: "#141410" }}>{p.name}</div>
+                          {p.sku && <div style={{ fontSize: 11, color: "#9a9a8e", marginTop: 1 }}>{p.sku}</div>}
+                        </div>
+                      </div>
                     </td>
                     <td style={{ padding: "0.85rem 1.25rem" }}>
                       <span style={{ display: "inline-block", padding: "2px 8px", background: "#f5f4f0", border: "1px solid #e2e0d8", borderRadius: 6, fontSize: 11, color: "#4a4a40" }}>
@@ -610,6 +770,12 @@ export default function AdminProductsPage() {
                     </td>
                     <td style={{ padding: "0.85rem 1.25rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <button
+                          onClick={() => setViewTarget(p)}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 10px", background: "#f5f4f0", border: "1px solid #c8c6bc", borderRadius: 6, fontSize: 12, color: "#141410", cursor: "pointer", fontFamily: "inherit" }}
+                        >
+                          <IconEye /> View
+                        </button>
                         <button
                           onClick={() => { setPanelMode("edit"); setEditTarget(p); setPanelOpen(true); }}
                           style={{ padding: "5px 10px", background: "#f5f4f0", border: "1px solid #c8c6bc", borderRadius: 6, fontSize: 12, color: "#141410", cursor: "pointer", fontFamily: "inherit" }}
@@ -645,8 +811,12 @@ export default function AdminProductsPage() {
                   onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.boxShadow = "none"}
                 >
                   {/* Thumb */}
-                  <div style={{ height: 90, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #e2e0d8", position: "relative" }}>
-                    <IconTag />
+                  <div
+                    onClick={() => setViewTarget(p)}
+                    style={{ height: 90, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #e2e0d8", position: "relative", cursor: "pointer", overflow: "hidden" }}
+                    title="View product"
+                  >
+                    {p.image ? <img src={p.image} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <IconTag />}
                     <div style={{ position: "absolute", top: 8, right: 8 }}>
                       <StockBadge stock={p.stock} />
                     </div>
@@ -657,6 +827,12 @@ export default function AdminProductsPage() {
                     <div style={{ fontSize: 11, color: "#9a9a8e", marginBottom: 6 }}>{p.category}{p.sku ? ` · ${p.sku}` : ""}</div>
                     <div style={{ fontSize: 15, fontWeight: 500, color: "#141410", marginBottom: 10 }}>{formatCurrency(p.price)}</div>
                     <div style={{ display: "flex", gap: 5 }}>
+                      <button
+                        onClick={() => setViewTarget(p)}
+                        style={{ padding: "5px 8px", background: "#f5f4f0", border: "1px solid #c8c6bc", borderRadius: 6, fontSize: 11, color: "#141410", cursor: "pointer", fontFamily: "inherit" }}
+                      >
+                        <IconEye />
+                      </button>
                       <button
                         onClick={() => { setPanelMode("edit"); setEditTarget(p); setPanelOpen(true); }}
                         style={{ flex: 1, padding: "5px 0", background: "#f5f4f0", border: "1px solid #c8c6bc", borderRadius: 6, fontSize: 11, color: "#141410", cursor: "pointer", fontFamily: "inherit" }}

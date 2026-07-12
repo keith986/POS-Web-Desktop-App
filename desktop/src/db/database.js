@@ -66,6 +66,7 @@ const createTables = () => {
       stock       INTEGER DEFAULT 0,
       sku         TEXT,
       emoji       TEXT,
+      image       TEXT,
       is_active   INTEGER DEFAULT 1,
       created_at  TEXT DEFAULT (datetime('now')),
       updated_at  TEXT DEFAULT (datetime('now'))
@@ -141,6 +142,9 @@ const createTables = () => {
   } catch (e) {}
   try {
     db.run("ALTER TABLE orders ADD COLUMN mpesa_receipt TEXT;");
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE products ADD COLUMN image TEXT;");
   } catch (e) {}
   save();
 };

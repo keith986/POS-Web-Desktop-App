@@ -121,6 +121,7 @@ export default function StaffDashboard({ user, onLogout }) {
   const [animating, setAnimating] = useState(false);
   const [taxSettings, setTaxSettings] = useState({ taxName: "VAT", taxRate: 16, taxInclusive: false });
   const [inventoryMode, setInventoryMode] = useState("auto");
+  const [viewingProduct, setViewingProduct] = useState(null);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -303,13 +304,79 @@ export default function StaffDashboard({ user, onLogout }) {
 
           <div className="products-grid">
             {filteredProducts.map(product => (
-              <button key={product.id} className="product-card" onClick={() => addToCart(product)} disabled={product.stock <= 0}>
+              <div
+                key={product.id}
+                className={`product-card ${product.stock <= 0 ? "product-card-disabled" : ""}`}
+                onClick={() => product.stock > 0 && addToCart(product)}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="product-thumb">
+                  {product.image ? (
+                    <img src={product.image} alt={product.name} className="product-thumb-img" />
+                  ) : (
+                    <span>📦</span>
+                  )}
+                  <button
+                    type="button"
+                    className="product-view-btn"
+                    title="View details"
+                    onClick={(e) => { e.stopPropagation(); setViewingProduct(product); }}
+                  >
+                    👁
+                  </button>
+                </div>
                 <div className="product-name">{product.name}</div>
                 <div className="product-price">Ksh {Number(product.price).toLocaleString()}</div>
                 <div className={`product-stock ${product.stock <= 5 ? "low-stock" : ""}`}>{product.stock <= 0 ? "Out of stock" : `${product.stock} left`}</div>
-              </button>
+              </div>
             ))}
           </div>
+
+          {viewingProduct && (
+            <div className="pv-modal-overlay" onClick={() => setViewingProduct(null)}>
+              <div className="pv-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="pv-modal-img">
+                  {viewingProduct.image ? (
+                    <img src={viewingProduct.image} alt={viewingProduct.name} />
+                  ) : (
+                    <span style={{ fontSize: 36 }}>📦</span>
+                  )}
+                </div>
+                <div className="pv-modal-body">
+                  <h2 style={{ margin: "0 0 4px", fontSize: 16 }}>{viewingProduct.name}</h2>
+                  <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 12 }}>
+                    {viewingProduct.category || "Uncategorized"}{viewingProduct.sku ? ` · ${viewingProduct.sku}` : ""}
+                  </div>
+                  <div style={{ display: "flex", gap: 24, marginBottom: viewingProduct.description ? 12 : 0 }}>
+                    <div>
+                      <div style={{ fontSize: 10, textTransform: "uppercase", color: "var(--text-3)", marginBottom: 3 }}>Price</div>
+                      <div className="product-price" style={{ fontSize: 15 }}>Ksh {Number(viewingProduct.price).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, textTransform: "uppercase", color: "var(--text-3)", marginBottom: 3 }}>Stock</div>
+                      <div style={{ fontSize: 15, fontWeight: 600 }}>{viewingProduct.stock} units</div>
+                    </div>
+                  </div>
+                  {viewingProduct.description && (
+                    <div style={{ fontSize: 13, color: "var(--text-2)", lineHeight: 1.5, paddingTop: 10, borderTop: "1px solid var(--border)" }}>
+                      {viewingProduct.description}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+                    <button className="btn-secondary" onClick={() => setViewingProduct(null)}>Close</button>
+                    <button
+                      className="btn-primary"
+                      disabled={viewingProduct.stock <= 0}
+                      onClick={() => { addToCart(viewingProduct); setViewingProduct(null); }}
+                    >
+                      {viewingProduct.stock <= 0 ? "Out of stock" : "Add to sale"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="cart-panel">

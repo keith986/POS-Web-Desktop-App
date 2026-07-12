@@ -1,8 +1,11 @@
 {
-  "version": "1.0.0",
-  "releaseDate": "2026-05-04",
+  "version": "0.5.0",
+  "releaseDate": "2026-07-12",
   "changelog": [
-    "Initial release"
+    "Added new feature: Inventory Management",
+    "Improved performance of the sales module",
+    "Fixed bug in the reporting module",
+    "Now photo for products are visible in the product list"
   ],
   "downloadUrl": "https://github.com/keith986/POS-Web-Desktop-App/raw/refs/heads/main/public/downloads/postore.exe"
 }

@@ -24,14 +24,16 @@ interface StoredStaff {
 }
 
 interface Product {
-  id:       string;
-  name:     string;
-  category: string;
-  price:    number;
-  stock:    number;
-  sku:      string | null;
-  status:   "active" | "inactive";
-  admin_id: string;
+  id:          string;
+  name:        string;
+  category:    string;
+  price:       number;
+  stock:       number;
+  sku:         string | null;
+  status:      "active" | "inactive";
+  admin_id:    string;
+  image?:      string | null;
+  description?: string | null;
 }
 interface CartItem extends Product { qty: number; }
 interface SaleItem  { name: string; quantity: number; price: number; }
@@ -161,6 +163,48 @@ const SearchIcon = () => (
     <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
   </svg>
 );
+const EyeIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+  </svg>
+);
+
+/* ─── Product view modal ──────────────────────────────────────
+   Read-only detail view — shows the product image (if any) plus
+   full details. Opened by clicking a product's thumbnail or its
+   "View" button on the Product Catalogue / sale picker. ─── */
+function ProductViewModal({ product, currency, onClose }: { product: Product | null; currency: string; onClose: () => void }) {
+  if (!product) return null;
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "var(--bg)", borderRadius: 14, width: "100%", maxWidth: 420, overflow: "hidden", boxShadow: "0 24px 60px rgba(0,0,0,0.25)" }}>
+        <div style={{ height: 220, background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+          {product.image
+            ? <img src={product.image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <CategoryIcon category={product.category} size={40} />}
+          <button onClick={onClose} style={{ position: "absolute", top: 10, right: 10, width: 28, height: 28, borderRadius: "50%", border: "none", background: "rgba(0,0,0,0.5)", color: "#fff", fontSize: 16, cursor: "pointer", lineHeight: 1 }}>×</button>
+        </div>
+        <div style={{ padding: "1.25rem" }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>{product.name}</div>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12 }}>{product.category}{product.sku ? ` · ${product.sku}` : ""}</div>
+          <div style={{ display: "flex", gap: 24, marginBottom: product.description ? 14 : 0 }}>
+            <div>
+              <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--muted)", marginBottom: 3 }}>Price</div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: "var(--ink)" }}>{formatCurrency(product.price, currency)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--muted)", marginBottom: 3 }}>Stock</div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: "var(--ink)" }}>{product.stock} units</div>
+            </div>
+          </div>
+          {product.description && (
+            <div style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.5 }}>{product.description}</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ─── Receipt helpers ────────────────────────────────────────── */
 function buildReceiptHtml(opts: {
@@ -231,6 +275,7 @@ export default function StaffDashboard() {
 
   const [activeTab,        setActiveTab]        = useState("Dashboard");
   const [products,         setProducts]         = useState<Product[]>([]);
+  const [viewProduct,      setViewProduct]      = useState<Product | null>(null);
   const [sales,            setSales]            = useState<Sale[]>([]);
   const [discounts,        setDiscounts]        = useState<Discount[]>([]);
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
@@ -777,7 +822,9 @@ export default function StaffDashboard() {
                           return (
                             <div key={p.id} style={{ position: "relative" }}>
                               <button onClick={() => addToCart(p)} style={{ background: quantity > 0 ? "var(--accent-bg)" : "var(--bg)", border: quantity > 0 ? "1.5px solid var(--accent)" : "1px solid var(--border)", borderRadius: 10, padding: "0.75rem", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, transition: "all 0.15s", fontFamily: "'DM Sans', sans-serif", width: "100%" }}>
-                                <CategoryIcon category={p.category} size={22} />
+                                {p.image
+                                  ? <img src={p.image} alt={p.name} style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover" }} />
+                                  : <CategoryIcon category={p.category} size={22} />}
                                 <span style={{ fontSize: 12, fontWeight: 500, color: "var(--ink)", textAlign: "center" }}>{p.name}</span>
                                 <span style={{ fontSize: 12, color: "var(--accent)", fontWeight: 500 }}>{formatCurrency(p.price, settings.currency)}</span>
                               </button>
@@ -920,7 +967,11 @@ export default function StaffDashboard() {
                   <div className="product-grid">
                     {filtered.map(p => (
                       <div className="product-card" key={p.id}>
-                        <div className="product-thumb"><CategoryIcon category={p.category} size={28} /><span className={`${stockClass(p.stock)} product-stock-badge`}>{stockLabel(p.stock)}</span></div>
+                        <div className="product-thumb" onClick={() => setViewProduct(p)} style={{ cursor: "pointer" }} title="View details">
+                          {p.image ? <img src={p.image} alt={p.name} className="product-thumb-img" /> : <CategoryIcon category={p.category} size={28} />}
+                          <span className={`${stockClass(p.stock)} product-stock-badge`}>{stockLabel(p.stock)}</span>
+                          <button className="product-view-btn" onClick={(e) => { e.stopPropagation(); setViewProduct(p); }} title="View details"><EyeIcon /></button>
+                        </div>
                         <div className="product-info">
                           <div className="product-name">{p.name}</div>
                           <div className="product-cat">{p.category}{p.sku ? ` · ${p.sku}` : ""}</div>
@@ -1005,6 +1056,8 @@ export default function StaffDashboard() {
          onUpdate={applyUpdate}
          onIgnore={ignoreUpdate}
         />
+
+      <ProductViewModal product={viewProduct} currency={settings.currency} onClose={() => setViewProduct(null)} />
 
     </>
   );

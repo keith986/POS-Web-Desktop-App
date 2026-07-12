@@ -323,13 +323,24 @@ const staffCss = `
     height: 110px; background: var(--surface);
     display: flex; align-items: center; justify-content: center;
     font-size: 40px; border-bottom: 1px solid var(--border);
-    position: relative;
+    position: relative; overflow: hidden;
+  }
+  .product-thumb-img {
+    width: 100%; height: 100%; object-fit: cover;
   }
   .product-stock-badge {
     position: absolute; top: 8px; right: 8px;
     font-size: 10px; font-weight: 500;
     padding: 2px 7px; border-radius: 100px;
   }
+  .product-view-btn {
+    position: absolute; top: 8px; left: 8px;
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.55); color: #fff; border: none;
+    cursor: pointer; opacity: 0; transition: opacity 0.15s;
+  }
+  .product-thumb:hover .product-view-btn { opacity: 1; }
   .product-info { padding: 0.75rem; }
   .product-name  { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
   .product-cat   { font-size: 11px; color: var(--muted); margin-bottom: 6px; }

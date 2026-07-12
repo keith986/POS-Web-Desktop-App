@@ -5,12 +5,44 @@ export default function Products() {
   const [products, setProducts] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", price: "", stock: "", category: "", sku: "" });
+  const [form, setForm] = useState({ name: "", price: "", stock: "", category: "", sku: "", image: null });
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [approvalReason, setApprovalReason] = useState("");
   const [inventoryMode, setInventoryMode] = useState("auto");
+  const [imgError, setImgError] = useState("");
+  const [viewing, setViewing] = useState(null);
+
+  const handleImagePick = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setImgError("Please choose an image file"); return; }
+    if (file.size > 8 * 1024 * 1024) { setImgError("Image is too large (max 8MB)"); return; }
+    setImgError("");
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();   
+      img.onload = () => {
+        const maxDim = 640;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        setForm((f) => ({ ...f, image: canvas.toDataURL("image/jpeg", 0.75) }));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     loadProducts();
@@ -83,8 +115,8 @@ export default function Products() {
 
           // Save everything except stock (keep old stock until approved)
           result = await window.electronAPI.executeDatabase(
-            "UPDATE products SET name=?, price=?, category=?, sku=?, updated_at=datetime('now') WHERE id=?",
-            [form.name, parseFloat(form.price), form.category, form.sku, editing.id]
+            "UPDATE products SET name=?, price=?, category=?, sku=?, image=?, updated_at=datetime('now') WHERE id=?",
+            [form.name, parseFloat(form.price), form.category, form.sku, form.image, editing.id]
           );
         } else {
           // Auto mode or no stock change: save everything including stock immediately
@@ -106,15 +138,15 @@ export default function Products() {
           }
 
           result = await window.electronAPI.executeDatabase(
-            "UPDATE products SET name=?, price=?, stock=?, category=?, sku=?, updated_at=datetime('now') WHERE id=?",
-            [form.name, parseFloat(form.price), newStock, form.category, form.sku, editing.id]
+            "UPDATE products SET name=?, price=?, stock=?, category=?, sku=?, image=?, updated_at=datetime('now') WHERE id=?",
+            [form.name, parseFloat(form.price), newStock, form.category, form.sku, form.image, editing.id]
           );
         }
       } else {
         // New product — always insert with given stock
         result = await window.electronAPI.executeDatabase(
-          "INSERT INTO products (id, name, price, stock, category, sku) VALUES (?, ?, ?, ?, ?, ?)",
-          [uuidv4(), form.name, parseFloat(form.price), newStock, form.category, form.sku]
+          "INSERT INTO products (id, name, price, stock, category, sku, image) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [uuidv4(), form.name, parseFloat(form.price), newStock, form.category, form.sku, form.image]
         );
       }
 
@@ -126,8 +158,9 @@ export default function Products() {
 
       setShowForm(false);
       setEditing(null);
-      setForm({ name: "", price: "", stock: "", category: "", sku: "" });
+      setForm({ name: "", price: "", stock: "", category: "", sku: "", image: null });
       setApprovalReason("");
+      setImgError("");
       loadProducts();
     } catch (err) {
       console.error("Save error:", err);
@@ -145,8 +178,25 @@ export default function Products() {
       stock: product.stock,
       category: product.category || "",
       sku: product.sku || "",
+      image: product.image || null,
     });
+    setImgError("");
     setShowForm(true);
+  };
+
+  const handleDelete = async (product) => {
+    if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`)) return;
+    const result = await window.electronAPI.executeDatabase(
+      "DELETE FROM products WHERE id = ?",
+      [product.id]
+    );
+    if (result.success) {
+      if (viewing?.id === product.id) setViewing(null);
+      if (editing?.id === product.id) { setShowForm(false); setEditing(null); }
+      await loadProducts();
+    } else {
+      setError(result.error || "Failed to delete product.");
+    }
   };
 
   const filtered = products.filter((p) =>
@@ -164,9 +214,10 @@ export default function Products() {
           onClick={() => {
             setShowForm(true);
             setEditing(null);
-            setForm({ name: "", price: "", stock: "", category: "", sku: "" });
+            setForm({ name: "", price: "", stock: "", category: "", sku: "", image: null });
             setError("");
             setApprovalReason("");
+            setImgError("");
           }}
         >
           + Add Product
@@ -186,6 +237,30 @@ export default function Products() {
           <div className="modal">
             <h2 className="modal-title">{editing ? "Edit Product" : "New Product"}</h2>
             <form onSubmit={handleSave}>
+              <div className="form-group">
+                <label className="form-label">Product Photo (optional)</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 64, height: 64, borderRadius: 8, background: "#f5f4f0", border: "1px solid #c8c6bc", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+                    {form.image ? (
+                      <img src={form.image} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <span style={{ fontSize: 11, color: "#9a9a8e" }}>No photo</span>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label className="btn-secondary" style={{ width: "fit-content", cursor: "pointer" }}>
+                      {form.image ? "Change photo" : "Upload photo"}
+                      <input type="file" accept="image/*" onChange={handleImagePick} style={{ display: "none" }} />
+                    </label>
+                    {form.image && (
+                      <button type="button" className="btn-secondary" style={{ width: "fit-content" }} onClick={() => setForm({ ...form, image: null })}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {imgError && <div className="form-error">{imgError}</div>}
+              </div>
               <div className="form-grid">
                 <div className="form-group">
                   <label className="form-label">Name *</label>
@@ -282,7 +357,7 @@ export default function Products() {
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => { setShowForm(false); setError(""); setApprovalReason(""); }}
+                  onClick={() => { setShowForm(false); setError(""); setApprovalReason(""); setImgError(""); }}
                 >
                   Cancel
                 </button>
@@ -298,6 +373,7 @@ export default function Products() {
       <table className="data-table">
         <thead>
           <tr>
+            <th></th>
             <th>Name</th>
             <th>Price</th>
             <th>Stock</th>
@@ -309,6 +385,19 @@ export default function Products() {
         <tbody>
           {filtered.map((product) => (
             <tr key={product.id}>
+              <td style={{ width: 44 }}>
+                <div
+                  onClick={() => setViewing(product)}
+                  title="View details"
+                  style={{ width: 34, height: 34, borderRadius: 6, background: "#f5f4f0", border: "1px solid #c8c6bc", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", cursor: "pointer" }}
+                >
+                  {product.image ? (
+                    <img src={product.image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <span style={{ fontSize: 14 }}>📦</span>
+                  )}
+                </div>
+              </td>
               <td>{product.name}</td>
               <td>Ksh {Number(product.price).toLocaleString()}</td>
               <td className={product.stock <= 5 ? "low-stock" : ""}>{product.stock}</td>
@@ -319,12 +408,54 @@ export default function Products() {
                 </span>
               </td>
               <td>
+                <button className="action-btn" onClick={() => setViewing(product)}>View</button>
                 <button className="action-btn" onClick={() => handleEdit(product)}>Edit</button>
+                <button className="btn-danger" style={{ padding: "6px 10px" }} onClick={() => handleDelete(product)}>Delete</button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {viewing && (
+        <div className="modal-overlay" onClick={() => setViewing(null)}>
+          <div className="modal" style={{ maxWidth: 380, padding: 0, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ height: 200, background: "#f5f4f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {viewing.image ? (
+                <img src={viewing.image} alt={viewing.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <span style={{ fontSize: 36 }}>📦</span>
+              )}
+            </div>
+            <div style={{ padding: "1.25rem" }}>
+              <h2 className="modal-title" style={{ marginBottom: 4 }}>{viewing.name}</h2>
+              <div style={{ fontSize: 12, color: "#9a9a8e", marginBottom: 12 }}>
+                {viewing.category || "Uncategorized"}{viewing.sku ? ` · ${viewing.sku}` : ""}
+              </div>
+              <div style={{ display: "flex", gap: 24, marginBottom: viewing.description ? 12 : 0 }}>
+                <div>
+                  <div style={{ fontSize: 10, textTransform: "uppercase", color: "#9a9a8e", marginBottom: 3 }}>Price</div>
+                  <div style={{ fontSize: 15, fontWeight: 500 }}>Ksh {Number(viewing.price).toLocaleString()}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, textTransform: "uppercase", color: "#9a9a8e", marginBottom: 3 }}>Stock</div>
+                  <div style={{ fontSize: 15, fontWeight: 500 }}>{viewing.stock} units</div>
+                </div>
+              </div>
+              {viewing.description && (
+                <div style={{ fontSize: 13, color: "#4a4a40", lineHeight: 1.5, paddingTop: 10, borderTop: "1px solid #e2e0d8" }}>
+                  {viewing.description}
+                </div>
+              )}
+              <div className="modal-actions" style={{ marginTop: 16 }}>
+                <button className="btn-secondary" onClick={() => setViewing(null)}>Close</button>
+                <button className="btn-danger" onClick={() => handleDelete(viewing)}>Delete</button>
+                <button className="btn-primary" onClick={() => { setViewing(null); handleEdit(viewing); }}>Edit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

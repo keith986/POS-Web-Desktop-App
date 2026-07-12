@@ -45,14 +45,14 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.5.0",
-    date: "2026-07-10",
+    version: "1.6.0",
+    date: "2026-07-12",
     type: "feature",
-    title: "Update Notification",
+    title: "Photo for products are now visible in the product list",
     description:
-      "The dashboard now tells you when new features or changes are available instead of updating silently in the background.",
+      "Staff can now see product photos directly in the product list, making it easier to identify items at a glance.",
     importance:
-      "You'll never be confused by something that changed without warning. You decide when to refresh.",
+      "Enhances the user experience by providing visual cues for products, reducing errors in product selection.",
     critical : false,
   },
   // Example of a future entry — copy this shape when you ship something new:
