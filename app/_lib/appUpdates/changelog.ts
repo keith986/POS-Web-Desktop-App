@@ -56,7 +56,7 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.7.0",
+    version: "1.9.0",
     date: "2026-07-12",
     type: "feature",
     title: "Update notifications now available on the admin console too",
@@ -67,7 +67,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     critical: false,
   },
   {
-    version: "1.6.0",
+    version: "1.8.0",
     date: "2026-07-12",
     type: "feature",
     title: "Photo for products are now visible in the product list",
