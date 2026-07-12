@@ -1,6 +1,6 @@
 {
   "name": "postore.desktop.app",
-  "version": "0.4.0",
+  "version": "1.6.0",
   "description": "POStore Desktop App - Offline-first POS system",
   "main": "src/main.js",
   "author": "Keith Kelly Baraka - keithkelly986@gmail.com",
