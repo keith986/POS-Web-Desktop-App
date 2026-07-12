@@ -45,7 +45,7 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.8.0",
+    version: "1.10.0",
     date: "2026-07-12",
     type: "feature",
     title: "Photo for products are now visible in the product list",
