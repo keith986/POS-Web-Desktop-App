@@ -1,9 +1,18 @@
 // public/sw.js
 //
-// Freezes the staff app on whatever version was active when this
-// service worker last activated. New deployments install in the
-// background but never take over the page until the staff member
-// clicks "Update now" (wired up in useAppUpdates.ts).
+// Freezes BOTH the admin console and the staff app on whatever version
+// was active when this service worker last activated. New deployments
+// install in the background but never take over the page until the
+// person clicks "Update now" — or, for a change flagged critical, the
+// 30-second auto-apply countdown finishes. Wired up in
+// app/_lib/appUpdates/useAppUpdates.ts, used by both
+// app/admin/layout.tsx and app/staff/dashboard/page.tsx.
+//
+// Whether someone ignored a given build is remembered server-side per
+// account (see app/api/system/version/route.ts + the
+// app_update_dismissals table) — not in this service worker and not in
+// browser storage — so it survives logout/login, refreshes, and
+// cleared cookies.
 //
 // ── WORKFLOW ──────────────────────────────────────────────────
 // Every time you ship a change you want gated behind the update
@@ -12,7 +21,7 @@
 // exactly, they're just two manual steps that happen together.
 // -----------------------------------------------------------------
 
-const CACHE_NAME = "staff-app-v6";
+const CACHE_NAME = "app-v7";
 
 self.addEventListener("install", (event) => {
   // Deliberately NOT calling self.skipWaiting() here.

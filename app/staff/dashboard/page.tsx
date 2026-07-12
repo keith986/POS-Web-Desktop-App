@@ -7,8 +7,8 @@ import StaffSettingsTab from "@/app/staff/component/StaffSettingsTab";
 import StaffSupportTab from "@/app/staff/component/StaffSupportTab";
 import MpesaPaymentModal from "@/app/staff/component/MpesaPaymentModal";
 import { useStaffTheme, buildThemeCss, THEMES } from "@/app/staff/component/theme";
-import { useAppUpdates } from "@/app/staff/component/useAppUpdates";
-import WhatsNewModal from "@/app/staff/component/WhatsNewModal";
+import { useAppUpdates } from "@/app/_lib/appUpdates/useAppUpdates";
+import WhatsNewModal from "@/app/_lib/appUpdates/WhatsNewModal";
 
 
 
@@ -284,7 +284,6 @@ export default function StaffDashboard() {
   const [search,           setSearch]           = useState("");
   const [catFilter,        setCatFilter]        = useState("All");
   const [fetching,         setFetching]         = useState(true);
-  const { pendingEntries, showModal, updateAvailable, applyUpdate, ignoreUpdate, reopenModal } = useAppUpdates();
 
   /*
    * payModalOpen — payment modal is visible
@@ -292,6 +291,12 @@ export default function StaffDashboard() {
    * handlePaymentSuccess, i.e. only after the customer has actually paid.
    */
   const [payModalOpen, setPayModalOpen] = useState(false);
+
+  // Don't let a critical update reload the page out from under an
+  // in-progress sale or an open payment modal — the countdown pauses
+  // (but keeps checking) until both are clear.
+  const { pendingEntries, showModal, updateAvailable, isCritical, criticalMessage, autoApplyIn, autoApplyPaused, applyUpdate, ignoreUpdate, reopenModal } =
+    useAppUpdates(staff?.id ?? null, payModalOpen || cart.length > 0);
 
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
 
@@ -1055,6 +1060,10 @@ export default function StaffDashboard() {
          entries={pendingEntries}
          onUpdate={applyUpdate}
          onIgnore={ignoreUpdate}
+         isCritical={isCritical}
+         criticalMessage={criticalMessage}
+         autoApplyIn={autoApplyIn}
+         autoApplyPaused={autoApplyPaused}
         />
 
       <ProductViewModal product={viewProduct} currency={settings.currency} onClose={() => setViewProduct(null)} />
