@@ -4,60 +4,109 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=Courier+Prime:wght@400;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root { --bg: #f5f4f0; --surface: #ffffff; --ink: #141410; --ink2: #4a4a40; --muted: #9a9a8e; --border: #e2e0d8; --border2: #c8c6bc; --accent: #d4522a; }
+  :root {
+    --cover: #3B2220; --cover2: #2C1917; --gold: #BE9A52;
+    --paper: #FAF6EC; --rule-blue: #B9CBD6; --rule-red: #B23B34;
+    --ink: #241C13; --ink2: #7A6F5C; --stamp: #A63A31;
+  }
   html, body { height: 100%; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); height: 100%; }
-  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(0,0,0,0.032) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.032) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
-  .page-wrap { display: grid; grid-template-columns: 1fr 1fr; height: 100vh; overflow: hidden; position: relative; z-index: 1; }
-  .left { background: var(--surface); border-right: 1px solid var(--border); padding: 2.5rem; display: flex; flex-direction: column; justify-content: space-between; height: 100vh; overflow: hidden; position: relative; }
-  .blob { position: absolute; border-radius: 50%; pointer-events: none; }
-  .blob-a { width: 300px; height: 300px; background: #fde8d8; top: -80px; right: -80px; opacity: 0.55; }
-  .blob-b { width: 220px; height: 220px; background: #d1fae5; bottom: -60px; left: -60px; opacity: 0.45; }
+  body { font-family: 'IBM Plex Sans', sans-serif; background: #EDE6D3; color: var(--ink); height: 100%; }
+  .page-wrap { display: grid; grid-template-columns: 0.82fr 1fr; height: 100vh; overflow: hidden; }
+
+  /* ---------- LEFT: leather cover ---------- */
+  .left {
+    position: relative;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.06), transparent 55%),
+      linear-gradient(160deg, var(--cover), var(--cover2));
+    padding: 2.6rem 2.3rem;
+    display: flex; flex-direction: column; justify-content: space-between;
+    height: 100vh; overflow: hidden;
+  }
+  .blob { display: none; }
   .logo-row { display: flex; align-items: center; gap: 10px; position: relative; z-index: 1; }
-  .logo-mark { width: 34px; height: 34px; background: var(--ink); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 500; }
-  .logo-name { font-weight: 500; font-size: 15px; }
-  .hero { position: relative; z-index: 1; }
-  .hero-eyebrow { font-size: 11px; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
-  .hero-title { font-size: 28px; font-weight: 500; line-height: 1.2; margin-bottom: 12px; }
-  .hero-body { font-size: 13px; color: var(--muted); line-height: 1.65; max-width: 260px; }
-  .stats { display: flex; gap: 1.5rem; position: relative; z-index: 1; }
-  .stat { border-left: 2px solid var(--border); padding-left: 12px; }
-  .stat-num { font-size: 20px; font-weight: 500; }
-  .stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .right { overflow-y: auto; height: 100vh; background: var(--bg); display: flex; align-items: flex-start; justify-content: center; padding: 0 2.5rem; }
-  .form-card { width: 100%; max-width: 340px; padding: 3rem 0; }
-  .form-eyebrow { font-size: 11px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-  .form-title { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
-  .form-sub { font-size: 13px; color: var(--muted); margin-bottom: 1.8rem; line-height: 1.5; }
-  .field { margin-bottom: 14px; }
-  .field-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-  .field label { display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink2); margin-bottom: 5px; }
+  .logo-mark {
+    width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold); font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600;
+  }
+  .logo-name { font-family: 'Courier Prime', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); opacity: 0.85; }
+
+  .hero { position: relative; z-index: 1; margin-top: 1.6rem; }
+  .hero-eyebrow { font-family: 'Courier Prime', monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); opacity: 0.85; margin-bottom: 12px; }
+  .hero-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 32px; line-height: 1.12; margin-bottom: 14px; color: var(--gold); text-shadow: 0 1px 0 rgba(0,0,0,0.3); }
+  .hero-body { font-size: 13px; color: #CBBB9A; line-height: 1.7; max-width: 260px; }
+
+  .stats { display: flex; flex-direction: column; gap: 0; position: relative; z-index: 1; margin-top: 1.4rem; }
+  .stat { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px dashed rgba(190,154,82,0.28); font-family: 'Courier Prime', monospace; }
+  .stat-num { font-size: 13px; font-weight: 700; color: var(--gold); order: 2; }
+  .stat-lbl { font-size: 10.5px; letter-spacing: 0.5px; text-transform: uppercase; color: #B9AB8A; order: 1; }
+
+  .folio { position: relative; z-index: 1; font-family: 'Courier Prime', monospace; font-size: 10.5px; letter-spacing: 1px; color: var(--gold); opacity: 0.65; text-transform: uppercase; margin-top: 1.2rem; }
+
+  /* ---------- RIGHT: ledger paper ---------- */
+  .right {
+    overflow-y: auto; height: 100vh; background: var(--paper);
+    display: flex; align-items: flex-start; justify-content: center; padding: 0 2.5rem;
+    background-image: repeating-linear-gradient(var(--paper) 0px, var(--paper) 33px, var(--rule-blue) 34px, var(--paper) 35px);
+    background-position: 0 12px;
+    position: relative;
+  }
+  .right::before { content: ''; position: absolute; left: 2.4rem; top: 0; bottom: 0; width: 1.5px; background: var(--rule-red); opacity: 0.5; }
+  .form-card { width: 100%; max-width: 360px; padding: 3rem 0 3rem 1rem; position: relative; z-index: 1; }
+  .form-eyebrow { font-family: 'Courier Prime', monospace; font-size: 10.5px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--stamp); margin-bottom: 8px; }
+  .form-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 25px; margin-bottom: 4px; }
+  .form-sub { font-size: 13px; color: var(--ink2); margin-bottom: 1.7rem; line-height: 1.5; }
+
+  .field { margin-bottom: 8px; }
+  .field-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
+  .field label { display: block; font-family: 'Courier Prime', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink2); margin-bottom: 2px; }
   .field-meta label { margin-bottom: 0; }
-  .field input { width: 100%; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 9px 12px; color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
-  .field input::placeholder { color: var(--muted); }
-  .field input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(20,20,16,0.07); }
-  .forgot { font-size: 12px; color: #1e40af; text-decoration: none; }
+  .field input {
+    width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(36,28,19,0.18);
+    padding: 7px 2px 9px; color: var(--ink); font-family: 'IBM Plex Sans', sans-serif; font-size: 14.5px; outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input::placeholder { color: #B6AB92; }
+  .field input:focus { border-bottom: 1px solid var(--stamp); }
+  .forgot { font-size: 11.5px; color: var(--stamp); text-decoration: none; font-weight: 600; }
   .forgot:hover { text-decoration: underline; }
-  .btn-primary { width: 100%; padding: 10px; background: var(--ink); color: #fff; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 6px; transition: background 0.15s, transform 0.1s, box-shadow 0.15s; }
-  .btn-primary:hover { background: #2a2a22; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(20,20,16,0.18); }
-  .btn-primary:active { transform: translateY(0); }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-  .divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; font-size: 12px; color: var(--muted); }
-  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-  .footer-link { text-align: center; margin-top: 1.2rem; font-size: 12px; color: var(--muted); }
-  .footer-link a { color: var(--accent); font-weight: 500; text-decoration: none; }
-  .footer-link a:hover { text-decoration: underline; }
-  .error-box { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 8px; padding: 9px 12px; font-size: 13px; margin-bottom: 14px; display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
-  .warn-box { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 8px; padding: 12px 14px; font-size: 13px; margin-bottom: 14px; line-height: 1.6; }
-  .warn-box a { color: #d97706; font-weight: 600; text-decoration: underline; cursor: pointer; }
-  .splash { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 50; }
-  .splash-logo { width: 44px; height: 44px; background: var(--ink); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; font-weight: 500; }
-  .splash-text { font-size: 14px; color: var(--muted); }
-  .splash-spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--ink); border-radius: 50%; animation: spin 0.7s linear infinite; }
+
+  .btn-primary {
+    display: block; margin: 1.8rem auto 0; width: 176px; height: 64px;
+    border: 2.5px solid var(--stamp); border-radius: 50%; background: transparent; color: var(--stamp);
+    font-family: 'Courier Prime', monospace; font-weight: 700; font-size: 12.5px; letter-spacing: 1.5px;
+    text-transform: uppercase; cursor: pointer; position: relative; transform: rotate(-5deg);
+    transition: transform 0.15s, background 0.15s, color 0.15s;
+  }
+  .btn-primary::before { content: ''; position: absolute; inset: 5px; border: 1px solid var(--stamp); border-radius: 50%; opacity: 0.6; }
+  .btn-primary:hover:not(:disabled) { transform: rotate(0deg); background: var(--stamp); color: var(--paper); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: rotate(-5deg); }
+
+  .divider { display: none; }
+  .footer-link { text-align: center; margin-top: 1.6rem; font-size: 12px; color: var(--ink2); }
+  .footer-link a { color: var(--ink); font-weight: 700; text-decoration: none; border-bottom: 1px solid var(--gold); }
+  .footer-link a:hover { opacity: 0.75; }
+
+  .error-box { background: rgba(162,58,49,0.08); border: 1px solid rgba(162,58,49,0.35); color: var(--stamp); border-radius: 4px; padding: 9px 12px; font-size: 13px; margin-bottom: 14px; display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; font-family: 'IBM Plex Sans', sans-serif; }
+  .warn-box { background: rgba(190,154,82,0.12); border: 1px solid rgba(190,154,82,0.4); color: #6B4F1E; border-radius: 4px; padding: 12px 14px; font-size: 13px; margin-bottom: 14px; line-height: 1.6; }
+  .warn-box a { color: var(--stamp); font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+  .splash { position: fixed; inset: 0; background: var(--cover); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 50; }
+  .splash-logo { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--gold); display: flex; align-items: center; justify-content: center; color: var(--gold); font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; }
+  .splash-text { font-family: 'Courier Prime', monospace; font-size: 12.5px; letter-spacing: 1px; color: #CBBB9A; text-transform: uppercase; }
+  .splash-spinner { width: 20px; height: 20px; border: 2px solid rgba(190,154,82,0.25); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  @media (max-width: 700px) { .page-wrap { grid-template-columns: 1fr; height: auto; overflow: visible; } .left { display: none; } .right { height: auto; padding: 2rem 1.25rem; } .form-card { padding: 2rem 0; } }
+
+  @media (max-width: 700px) {
+    .page-wrap { grid-template-columns: 1fr; height: auto; overflow: visible; }
+    .left { display: none; }
+    .right { height: auto; padding: 2rem 1.25rem; }
+    .right::before { left: 1.2rem; }
+    .form-card { padding: 2rem 0 2rem 0.8rem; }
+  }
 `;
 
 const ROLE_REDIRECT: Record<string, string> = {
@@ -170,7 +219,6 @@ const doRedirect = (user: Record<string, string>) => {
       .then(d => {
         if (d.domain) {
           const updated = { ...user, domain: d.domain };
-          localStorage.setItem("user", JSON.stringify(updated));
           const encoded = encodeURIComponent(JSON.stringify(updated));
           window.location.href = `https://${d.domain}.upendoapps.com/staff/dashboard?session=${encoded}`;
         } else {
@@ -249,28 +297,28 @@ const doRedirect = (user: Record<string, string>) => {
 
         {/* LEFT */}
         <div className="left">
-          <div className="blob blob-a" /><div className="blob blob-b" />
           <div className="logo-row">
             <div className="logo-mark">P</div>
-            <span className="logo-name">POStore</span>
+            <span className="logo-name">Postore — The Ledger</span>
           </div>
           <div className="hero">
-            <p className="hero-eyebrow">Point of sale</p>
+            <p className="hero-eyebrow">Est. for the modern duka</p>
             <h1 className="hero-title">Sell smarter,<br />grow faster.</h1>
             <p className="hero-body">Complete POS for modern retailers. Manage inventory, process payments, and track every transaction in real time.</p>
           </div>
           <div className="stats">
-            <div className="stat"><div className="stat-num">--</div><div className="stat-lbl">Daily transactions</div></div>
-            <div className="stat"><div className="stat-num">--</div><div className="stat-lbl">Uptime SLA</div></div>
-            <div className="stat"><div className="stat-num">--</div><div className="stat-lbl">User rating</div></div>
+            <div className="stat"><span className="stat-lbl">Daily transactions</span><span className="stat-num">--</span></div>
+            <div className="stat"><span className="stat-lbl">Uptime SLA</span><span className="stat-num">--</span></div>
+            <div className="stat"><span className="stat-lbl">User rating</span><span className="stat-num">--</span></div>
           </div>
+          <div className="folio">Folio 01 — Sign In</div>
         </div>
 
         {/* RIGHT */}
         <div className="right">
           <div className="form-card">
             <p className="form-eyebrow">Welcome back</p>
-            <h2 className="form-title">Sign in to your store</h2>
+            <h2 className="form-title">Sign in to your ledger</h2>
             <p className="form-sub">Enter your credentials to access your dashboard.</p>
 
             {error && <div className="error-box"><span>⚠</span><span>{error}</span></div>}
@@ -304,9 +352,9 @@ const doRedirect = (user: Record<string, string>) => {
       type="button"
       onClick={() => setShowPassword(v => !v)}
       style={{
-        position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)",
+        position: "absolute", right: "2px", top: "50%", transform: "translateY(-50%)",
         background: "none", border: "none", cursor: "pointer", padding: "2px",
-        color: "var(--muted)", display: "flex", alignItems: "center",
+        color: "var(--ink2)", display: "flex", alignItems: "center",
       }}
       aria-label={showPassword ? "Hide password" : "Show password"}
     >
@@ -328,12 +376,12 @@ const doRedirect = (user: Record<string, string>) => {
   </div>
 </div>
               <button className="btn-primary" type="submit" disabled={loading}>
-                {loading ? "Signing in…" : "Sign in →"}
+                {loading ? "Signing in…" : "Sign In"}
               </button>
             </form>
 
             <div className="divider" />
-            <p className="footer-link">Don&apos;t have an account? <Link href="/signup">Create one free</Link></p>
+            <p className="footer-link">Don&apos;t have an account? <Link href="/signup">Open an account</Link></p>
           </div>
         </div>
         
