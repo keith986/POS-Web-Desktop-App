@@ -2428,7 +2428,7 @@ const openCreateStaffModal = async () => {
                               <td style={TD}>{Number(r.other || 0).toLocaleString()}</td>
                               <td style={{ ...TD, color: "var(--muted)", fontSize: 12 }}>{r.last_visit ? fmtDateTime(r.last_visit) : "—"}</td>
                               <td style={TD}>
-                                {r.domain && (
+                                {r.domain ? (
                                   <button
                                     onClick={() => copyStoreLink(String(r.domain))}
                                     style={{
@@ -2440,7 +2440,7 @@ const openCreateStaffModal = async () => {
                                   >
                                     {copiedDomain === r.domain ? "Copied ✓" : "Copy Link"}
                                   </button>
-                                )}
+                                ) : null}
                               </td>
                             </tr>
                           ))}
