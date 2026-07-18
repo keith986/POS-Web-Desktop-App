@@ -1,6 +1,6 @@
 {
-  "version": "1.10.0",
-  "releaseDate": "2026-07-12",
+  "version": "1.11.0",
+  "releaseDate": "2026-07-18",
   "changelog": [
     "Added new feature: Inventory Management",
     "Improved performance of the sales module",

@@ -56,14 +56,14 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.9.0",
-    date: "2026-07-12",
+    version: "1.11.0",
+    date: "2026-07-18",
     type: "improvement",
-    title: "Critical updates no longer apply themselves",
+    title: "Login Page has been updated",
     description:
-      "Even fixes flagged critical now wait for someone to click Update now instead of applying automatically after a countdown. Critical still means the reminder can't be dismissed — it just can no longer act on its own.",
+      "The login page has been redesigned to provide a more user-friendly experience, with improved layout and accessibility features.",
     importance:
-      "Nothing on the dashboard ever changes underneath you without someone choosing it, even for urgent fixes.",
+      "Enhance the user experience and accessibility for all staff members.",
     critical: false,
   },
   {

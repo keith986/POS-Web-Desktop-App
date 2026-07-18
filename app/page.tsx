@@ -4,108 +4,123 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=Courier+Prime:wght@400;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --cover: #3B2220; --cover2: #2C1917; --gold: #BE9A52;
-    --paper: #FAF6EC; --rule-blue: #B9CBD6; --rule-red: #B23B34;
-    --ink: #241C13; --ink2: #7A6F5C; --stamp: #A63A31;
+    --teal: #175D5A; --teal-deep: #0F413F; --yellow: #F4B93D;
+    --cream: #FBF7EE; --ink: #231F1B; --ink-soft: #6E655A; --coral: #E85B3F;
   }
   html, body { height: 100%; }
-  body { font-family: 'IBM Plex Sans', sans-serif; background: #EDE6D3; color: var(--ink); height: 100%; }
-  .page-wrap { display: grid; grid-template-columns: 0.82fr 1fr; height: 100vh; overflow: hidden; }
+  body {
+    font-family: 'IBM Plex Sans', sans-serif; background: #E7DFCB; color: var(--ink);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2.5rem 1rem;
+  }
+  .page-wrap {
+    width: 100%; max-width: 960px; min-height: 580px;
+    display: grid; grid-template-columns: 0.9fr 1fr;
+    border-radius: 22px; overflow: hidden;
+    box-shadow: 0 40px 80px -26px rgba(15,20,18,0.45);
+  }
 
-  /* ---------- LEFT: leather cover ---------- */
+  /* ---------- LEFT: painted signboard ---------- */
   .left {
-    position: relative;
-    background:
-      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.06), transparent 55%),
-      linear-gradient(160deg, var(--cover), var(--cover2));
-    padding: 2.6rem 2.3rem;
-    display: flex; flex-direction: column; justify-content: space-between;
-    height: 100vh; overflow: hidden;
+    position: relative; background: var(--teal);
+    padding: 2.8rem 2.6rem; display: flex; flex-direction: column; justify-content: space-between;
+    overflow: hidden;
   }
-  .blob { display: none; }
-  .logo-row { display: flex; align-items: center; gap: 10px; position: relative; z-index: 1; }
+  .left::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 25% 15%, rgba(255,255,255,0.10), transparent 45%);
+  }
+  .logo-row { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
   .logo-mark {
-    width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--gold);
+    width: 52px; height: 52px; border-radius: 50%; background: var(--yellow);
     display: flex; align-items: center; justify-content: center;
-    color: var(--gold); font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600;
+    font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 24px; color: var(--teal-deep);
+    box-shadow: 0 6px 0 rgba(15,65,63,0.35);
   }
-  .logo-name { font-family: 'Courier Prime', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); opacity: 0.85; }
+  .logo-name {
+    font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 15px; letter-spacing: 1px;
+    color: var(--cream); margin-top: 14px; text-transform: uppercase;
+  }
+  .logo-tag { font-size: 12px; color: rgba(251,247,238,0.65); margin-top: 3px; }
 
-  .hero { position: relative; z-index: 1; margin-top: 1.6rem; }
-  .hero-eyebrow { font-family: 'Courier Prime', monospace; font-size: 10.5px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); opacity: 0.85; margin-bottom: 12px; }
-  .hero-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 32px; line-height: 1.12; margin-bottom: 14px; color: var(--gold); text-shadow: 0 1px 0 rgba(0,0,0,0.3); }
-  .hero-body { font-size: 13px; color: #CBBB9A; line-height: 1.7; max-width: 260px; }
+  .hero { position: relative; z-index: 1; margin-top: 1.4rem; }
+  .hero-title {
+    font-family: 'Baloo 2', sans-serif; font-weight: 700; font-size: 38px; line-height: 1.08; color: var(--yellow);
+  }
+  .hero-body { font-size: 14px; color: rgba(251,247,238,0.78); line-height: 1.7; margin-top: 14px; max-width: 280px; }
 
-  .stats { display: flex; flex-direction: column; gap: 0; position: relative; z-index: 1; margin-top: 1.4rem; }
-  .stat { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px dashed rgba(190,154,82,0.28); font-family: 'Courier Prime', monospace; }
-  .stat-num { font-size: 13px; font-weight: 700; color: var(--gold); order: 2; }
-  .stat-lbl { font-size: 10.5px; letter-spacing: 0.5px; text-transform: uppercase; color: #B9AB8A; order: 1; }
+  .stats { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 1.8rem; }
+  .stat {
+    background: rgba(251,247,238,0.12); color: var(--cream); font-size: 12px; font-weight: 600;
+    padding: 8px 14px; border-radius: 999px;
+  }
 
-  .folio { position: relative; z-index: 1; font-family: 'Courier Prime', monospace; font-size: 10.5px; letter-spacing: 1px; color: var(--gold); opacity: 0.65; text-transform: uppercase; margin-top: 1.2rem; }
+  .folio {
+    position: relative; z-index: 1; align-self: flex-start; margin-top: 1.6rem;
+    background: var(--coral); color: var(--cream); font-family: 'Baloo 2', sans-serif; font-weight: 700;
+    font-size: 12.5px; padding: 10px 18px; border-radius: 999px; transform: rotate(-4deg);
+    box-shadow: 0 6px 0 rgba(0,0,0,0.15); display: inline-block;
+  }
 
-  /* ---------- RIGHT: ledger paper ---------- */
+  /* ---------- RIGHT: plain cream page ---------- */
   .right {
-    overflow-y: auto; height: 100vh; background: var(--paper);
-    display: flex; align-items: flex-start; justify-content: center; padding: 0 2.5rem;
-    background-image: repeating-linear-gradient(var(--paper) 0px, var(--paper) 33px, var(--rule-blue) 34px, var(--paper) 35px);
-    background-position: 0 12px;
-    position: relative;
+    background: var(--cream); padding: 3rem 3.2rem;
+    display: flex; flex-direction: column; justify-content: center;
   }
-  .right::before { content: ''; position: absolute; left: 2.4rem; top: 0; bottom: 0; width: 1.5px; background: var(--rule-red); opacity: 0.5; }
-  .form-card { width: 100%; max-width: 360px; padding: 3rem 0 3rem 1rem; position: relative; z-index: 1; }
-  .form-eyebrow { font-family: 'Courier Prime', monospace; font-size: 10.5px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--stamp); margin-bottom: 8px; }
-  .form-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 25px; margin-bottom: 4px; }
-  .form-sub { font-size: 13px; color: var(--ink2); margin-bottom: 1.7rem; line-height: 1.5; }
+  .form-card { width: 100%; }
+  .form-eyebrow {
+    font-family: 'Baloo 2', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--coral);
+  }
+  .form-title { font-family: 'Baloo 2', sans-serif; font-weight: 700; font-size: 28px; margin-top: 8px; }
+  .form-sub { font-size: 13.5px; color: var(--ink-soft); margin-top: 8px; margin-bottom: 2rem; line-height: 1.5; }
 
-  .field { margin-bottom: 8px; }
-  .field-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px; }
-  .field label { display: block; font-family: 'Courier Prime', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink2); margin-bottom: 2px; }
+  .field { margin-bottom: 20px; }
+  .field-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .field label { font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; font-weight: 600; color: var(--ink); }
   .field-meta label { margin-bottom: 0; }
   .field input {
-    width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(36,28,19,0.18);
-    padding: 7px 2px 9px; color: var(--ink); font-family: 'IBM Plex Sans', sans-serif; font-size: 14.5px; outline: none;
-    transition: border-color 0.15s;
+    width: 100%; border: none; background: #F1EADA; outline: none; border-radius: 12px;
+    font-family: 'IBM Plex Sans', sans-serif; font-size: 14.5px; color: var(--ink);
+    padding: 14px 16px; transition: box-shadow .15s;
   }
-  .field input::placeholder { color: #B6AB92; }
-  .field input:focus { border-bottom: 1px solid var(--stamp); }
-  .forgot { font-size: 11.5px; color: var(--stamp); text-decoration: none; font-weight: 600; }
+  .field input::placeholder { color: #A79A85; }
+  .field input:focus { box-shadow: 0 0 0 2.5px var(--teal); }
+  .forgot { font-size: 12px; color: var(--coral); font-weight: 600; text-decoration: none; }
   .forgot:hover { text-decoration: underline; }
 
   .btn-primary {
-    display: block; margin: 1.8rem auto 0; width: 176px; height: 64px;
-    border: 2.5px solid var(--stamp); border-radius: 50%; background: transparent; color: var(--stamp);
-    font-family: 'Courier Prime', monospace; font-weight: 700; font-size: 12.5px; letter-spacing: 1.5px;
-    text-transform: uppercase; cursor: pointer; position: relative; transform: rotate(-5deg);
-    transition: transform 0.15s, background 0.15s, color 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+    margin-top: 0.6rem; padding: 16px 0;
+    background: var(--teal); border: none; color: var(--cream);
+    font-family: 'Baloo 2', sans-serif; font-weight: 700; font-size: 15px;
+    cursor: pointer; border-radius: 14px; box-shadow: 0 5px 0 var(--teal-deep);
+    transition: transform .1s;
   }
-  .btn-primary::before { content: ''; position: absolute; inset: 5px; border: 1px solid var(--stamp); border-radius: 50%; opacity: 0.6; }
-  .btn-primary:hover:not(:disabled) { transform: rotate(0deg); background: var(--stamp); color: var(--paper); }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: rotate(-5deg); }
+  .btn-primary:hover:not(:disabled) { transform: translateY(2px); box-shadow: 0 3px 0 var(--teal-deep); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
   .divider { display: none; }
-  .footer-link { text-align: center; margin-top: 1.6rem; font-size: 12px; color: var(--ink2); }
-  .footer-link a { color: var(--ink); font-weight: 700; text-decoration: none; border-bottom: 1px solid var(--gold); }
-  .footer-link a:hover { opacity: 0.75; }
+  .footer-link { text-align: center; margin-top: 1.6rem; font-size: 13px; color: var(--ink-soft); }
+  .footer-link a { color: var(--teal); font-weight: 700; text-decoration: none; }
+  .footer-link a:hover { text-decoration: underline; }
 
-  .error-box { background: rgba(162,58,49,0.08); border: 1px solid rgba(162,58,49,0.35); color: var(--stamp); border-radius: 4px; padding: 9px 12px; font-size: 13px; margin-bottom: 14px; display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; font-family: 'IBM Plex Sans', sans-serif; }
-  .warn-box { background: rgba(190,154,82,0.12); border: 1px solid rgba(190,154,82,0.4); color: #6B4F1E; border-radius: 4px; padding: 12px 14px; font-size: 13px; margin-bottom: 14px; line-height: 1.6; }
-  .warn-box a { color: var(--stamp); font-weight: 600; text-decoration: underline; cursor: pointer; }
+  .error-box { background: rgba(232,91,63,0.10); border: 1px solid rgba(232,91,63,0.35); color: var(--coral); border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; font-family: 'IBM Plex Sans', sans-serif; }
+  .warn-box { background: rgba(244,185,61,0.16); border: 1px solid rgba(244,185,61,0.5); color: #6B4F1E; border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 16px; line-height: 1.6; }
+  .warn-box a { color: var(--coral); font-weight: 600; text-decoration: underline; cursor: pointer; }
 
-  .splash { position: fixed; inset: 0; background: var(--cover); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 50; }
-  .splash-logo { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--gold); display: flex; align-items: center; justify-content: center; color: var(--gold); font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600; }
-  .splash-text { font-family: 'Courier Prime', monospace; font-size: 12.5px; letter-spacing: 1px; color: #CBBB9A; text-transform: uppercase; }
-  .splash-spinner { width: 20px; height: 20px; border: 2px solid rgba(190,154,82,0.25); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  .splash { position: fixed; inset: 0; background: var(--teal); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 50; }
+  .splash-logo { width: 52px; height: 52px; border-radius: 50%; background: var(--yellow); display: flex; align-items: center; justify-content: center; color: var(--teal-deep); font-family: 'Baloo 2', sans-serif; font-size: 22px; font-weight: 800; }
+  .splash-text { font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; letter-spacing: 1px; color: var(--cream); text-transform: uppercase; }
+  .splash-spinner { width: 20px; height: 20px; border: 2px solid rgba(251,247,238,0.25); border-top-color: var(--yellow); border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  @media (max-width: 700px) {
-    .page-wrap { grid-template-columns: 1fr; height: auto; overflow: visible; }
+  @media (max-width: 760px) {
+    .page-wrap { grid-template-columns: 1fr; border-radius: 16px; }
     .left { display: none; }
-    .right { height: auto; padding: 2rem 1.25rem; }
-    .right::before { left: 1.2rem; }
-    .form-card { padding: 2rem 0 2rem 0.8rem; }
+    .right { padding: 2.2rem 1.6rem; }
   }
 `;
 
@@ -299,26 +314,28 @@ const doRedirect = (user: Record<string, string>) => {
         <div className="left">
           <div className="logo-row">
             <div className="logo-mark">P</div>
-            <span className="logo-name">Postore — The Ledger</span>
+            <span className="logo-name">Postore</span>
+            <span className="logo-tag">Point of sale for the modern duka</span>
           </div>
           <div className="hero">
-            <p className="hero-eyebrow">Est. for the modern duka</p>
             <h1 className="hero-title">Sell smarter,<br />grow faster.</h1>
             <p className="hero-body">Complete POS for modern retailers. Manage inventory, process payments, and track every transaction in real time.</p>
           </div>
-          <div className="stats">
-            <div className="stat"><span className="stat-lbl">Daily transactions</span><span className="stat-num">--</span></div>
-            <div className="stat"><span className="stat-lbl">Uptime SLA</span><span className="stat-num">--</span></div>
-            <div className="stat"><span className="stat-lbl">User rating</span><span className="stat-num">--</span></div>
+          <div>
+            <div className="stats">
+              <span className="stat">Inventory</span>
+              <span className="stat">M-Pesa payouts</span>
+              <span className="stat">Multi-branch</span>
+            </div>
+            <div className="folio">Open Daily 24/7</div>
           </div>
-          <div className="folio">Folio 01 — Sign In</div>
         </div>
 
         {/* RIGHT */}
         <div className="right">
           <div className="form-card">
             <p className="form-eyebrow">Welcome back</p>
-            <h2 className="form-title">Sign in to your ledger</h2>
+            <h2 className="form-title">Sign in to Postore</h2>
             <p className="form-sub">Enter your credentials to access your dashboard.</p>
 
             {error && <div className="error-box"><span>⚠</span><span>{error}</span></div>}
@@ -354,7 +371,7 @@ const doRedirect = (user: Record<string, string>) => {
       style={{
         position: "absolute", right: "2px", top: "50%", transform: "translateY(-50%)",
         background: "none", border: "none", cursor: "pointer", padding: "2px",
-        color: "var(--ink2)", display: "flex", alignItems: "center",
+        color: "var(--ink-soft)", display: "flex", alignItems: "center",
       }}
       aria-label={showPassword ? "Hide password" : "Show password"}
     >
