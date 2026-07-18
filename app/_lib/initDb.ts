@@ -62,6 +62,7 @@ export async function initDb(): Promise<void> {
       stock       INT           NOT NULL DEFAULT 0,
       sku         VARCHAR(100)  NULL,
       description TEXT          NULL,
+      image       LONGTEXT      NULL,
       status      ENUM('active','inactive') NOT NULL DEFAULT 'active',
       admin_id    VARCHAR(36)   NOT NULL,
       created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -549,6 +550,11 @@ export async function initDb(): Promise<void> {
       table:  "products",
       column: "cost",
       sql:    "ALTER TABLE products ADD COLUMN cost DECIMAL(10,2) NULL DEFAULT NULL",
+    },
+    {
+      table:  "products",
+      column: "image",
+      sql:    "ALTER TABLE products ADD COLUMN image LONGTEXT NULL DEFAULT NULL",
     },
     {
       table:  "orders",

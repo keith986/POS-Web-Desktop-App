@@ -8,7 +8,7 @@ export async function PUT(
 ): Promise<NextResponse> {
   try {
     const { id } = await params;
-    const { name, category, price, stock, sku, description, admin_id } = await request.json();
+    const { name, category, price, stock, sku, description, image, admin_id } = await request.json();
 
     if (!name || !category || price == null || stock == null)
       return NextResponse.json({ error: "Name, category, price and stock are required" }, { status: 400 });
@@ -26,9 +26,9 @@ export async function PUT(
       return NextResponse.json({ error: "Product not found or access denied" }, { status: 403 });
 
     await pool.query(
-      `UPDATE products SET name = ?, category = ?, price = ?, stock = ?, sku = ?, description = ?
+      `UPDATE products SET name = ?, category = ?, price = ?, stock = ?, sku = ?, description = ?, image = ?
        WHERE id = ?`,
-      [name, category, price, stock, sku ?? null, description ?? null, id]
+      [name, category, price, stock, sku ?? null, description ?? null, image ?? null, id]
     );
 
     return NextResponse.json({ success: true });

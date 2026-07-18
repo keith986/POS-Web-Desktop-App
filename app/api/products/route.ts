@@ -24,7 +24,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 /* ── POST /api/products ── */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const { name, category, price, stock, sku, description, admin_id } = await request.json();
+    const { name, category, price, stock, sku, description, image, admin_id } = await request.json();
 
     if (!name || !category || price == null || stock == null)
       return NextResponse.json({ error: "Name, category, price and stock are required" }, { status: 400 });
@@ -35,9 +35,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const id   = randomUUID();
 
     await pool.query(
-      `INSERT INTO products (id, name, category, price, stock, sku, description, admin_id, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
-      [id, name, category, price, stock, sku ?? null, description ?? null, admin_id]
+      `INSERT INTO products (id, name, category, price, stock, sku, description, image, admin_id, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
+      [id, name, category, price, stock, sku ?? null, description ?? null, image ?? null, admin_id]
     );
 
     return NextResponse.json({ success: true, id });
