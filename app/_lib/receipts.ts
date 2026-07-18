@@ -18,7 +18,7 @@ export async function generateReceipt(
      WHERE o.id = ? AND o.admin_id = ?`,
     [order_id, admin_id]
   );
-
+ 
   if ((orderRows as unknown[]).length === 0) {
     throw new Error("Order not found");
   }

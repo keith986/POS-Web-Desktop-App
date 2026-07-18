@@ -5,85 +5,88 @@ import { PLANS, POS_PRICES, getPrice } from "@/app/_lib/pricing";
 import type { PlanId, PosType } from "@/app/_lib/pricing";
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #f5f4f0; --surface: #fff; --ink: #141410; --ink2: #4a4a40;
-    --muted: #9a9a8e; --border: #e2e0d8; --border2: #c8c6bc; --accent: #d4522a;
-    --green: #16a34a; --green-bg: #f0fdf4; --green-border: #bbf7d0;
+    --teal: #175D5A; --teal-deep: #0F413F; --yellow: #F4B93D;
+    --cream: #FBF7EE; --ink: #231F1B; --ink-soft: #6E655A; --coral: #E85B3F;
+    --field: #F1EADA;
   }
-  html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); }
-  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(0,0,0,0.032) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.032) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
+  html, body { height: 100%; }
+  body { font-family: 'IBM Plex Sans', sans-serif; background: #E7DFCB; color: var(--ink); }
   .page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2.5rem 1rem 4rem; position: relative; z-index: 1; }
+  .back-row { width: 100%; max-width: 860px; margin-bottom: 1.25rem; }
+  .back-btn { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 600; color: var(--ink-soft); padding: 6px 4px; border-radius: 8px; transition: color 0.15s; }
+  .back-btn:hover { color: var(--teal); }
   .header { text-align: center; margin-bottom: 2.5rem; }
-  .logo { width: 44px; height: 44px; background: var(--ink); border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; font-weight: 700; margin-bottom: 1rem; }
-  .header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; }
-  .header p { font-size: 14px; color: var(--muted); }
+  .logo { width: 48px; height: 48px; background: var(--yellow); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--teal-deep); font-family: 'Baloo 2', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 1rem; box-shadow: 0 6px 0 rgba(15,65,63,0.35); }
+  .header h1 { font-family: 'Baloo 2', sans-serif; font-size: 26px; font-weight: 700; margin-bottom: 6px; color: var(--ink); }
+  .header p { font-size: 14px; color: var(--ink-soft); }
   .pos-selector { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 2rem; }
-  .pos-btn { padding: 7px 16px; border: 1px solid var(--border2); border-radius: 100px; background: var(--surface); font-family: inherit; font-size: 13px; cursor: pointer; color: var(--ink2); transition: all 0.15s; }
-  .pos-btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
-  .pos-btn:hover:not(.active) { border-color: var(--ink); color: var(--ink); }
+  .pos-btn { padding: 7px 16px; border: none; border-radius: 100px; background: var(--field); font-family: 'IBM Plex Sans', sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; color: var(--ink-soft); transition: all 0.15s; }
+  .pos-btn.active { background: var(--teal); color: var(--cream); }
+  .pos-btn:hover:not(.active) { color: var(--teal); }
   .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; width: 100%; max-width: 860px; margin-bottom: 2rem; }
-  .plan-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px; padding: 1.5rem; cursor: pointer; transition: all 0.15s; position: relative; }
-  .plan-card:hover { border-color: #9a9a8e; box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
-  .plan-card.selected { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(20,20,16,0.1); }
-  .plan-card.highlight { border-color: #2563eb; }
-  .plan-card.highlight.selected { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
-  .plan-badge { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: #2563eb; color: #fff; font-size: 10px; font-weight: 700; padding: 3px 12px; border-radius: 100px; white-space: nowrap; letter-spacing: 0.5px; }
-  .plan-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-  .plan-desc { font-size: 12px; color: var(--muted); margin-bottom: 1rem; line-height: 1.5; }
-  .plan-price { font-size: 28px; font-weight: 700; letter-spacing: -1px; margin-bottom: 2px; }
-  .plan-price span { font-size: 13px; font-weight: 400; color: var(--muted); }
-  .plan-divider { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
+  .plan-card { background: var(--cream); border: 1.5px solid rgba(35,31,27,0.08); border-radius: 16px; padding: 1.5rem; cursor: pointer; transition: all 0.15s; position: relative; }
+  .plan-card:hover { border-color: var(--teal); box-shadow: 0 4px 16px rgba(15,20,18,0.08); }
+  .plan-card.selected { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(23,93,90,0.15); }
+  .plan-card.highlight { border-color: var(--coral); }
+  .plan-card.highlight.selected { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(232,91,63,0.18); }
+  .plan-badge { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: var(--coral); color: var(--cream); font-family: 'Baloo 2', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 12px; border-radius: 100px; white-space: nowrap; letter-spacing: 0.5px; }
+  .plan-name { font-family: 'Baloo 2', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 4px; color: var(--ink); }
+  .plan-desc { font-size: 12px; color: var(--ink-soft); margin-bottom: 1rem; line-height: 1.5; }
+  .plan-price { font-family: 'Baloo 2', sans-serif; font-size: 26px; font-weight: 700; margin-bottom: 2px; color: var(--ink); }
+  .plan-price span { font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 400; color: var(--ink-soft); }
+  .plan-divider { border: none; border-top: 1px solid rgba(35,31,27,0.1); margin: 1rem 0; }
   .plan-features { list-style: none; display: flex; flex-direction: column; gap: 7px; }
-  .plan-features li { font-size: 12px; color: var(--ink2); display: flex; align-items: center; gap: 7px; }
-  .check { color: var(--green); flex-shrink: 0; }
-  .select-indicator { position: absolute; top: 14px; right: 14px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); display: flex; align-items: center; justify-content: center; }
-  .plan-card.highlight .select-indicator { background: #2563eb; }
-  .pay-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.75rem; width: 100%; max-width: 420px; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
-  .pay-title { font-size: 15px; font-weight: 600; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; color: var(--ink); }
-  .summary-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 5px 0; color: var(--ink2); }
-  .summary-row.total { font-size: 15px; font-weight: 700; color: var(--ink); border-top: 1px solid var(--border); padding-top: 10px; margin-top: 6px; }
+  .plan-features li { font-size: 12px; color: var(--ink-soft); display: flex; align-items: center; gap: 7px; }
+  .check { color: var(--teal); flex-shrink: 0; }
+  .select-indicator { position: absolute; top: 14px; right: 14px; width: 20px; height: 20px; border-radius: 50%; background: var(--teal); display: flex; align-items: center; justify-content: center; }
+  .plan-card.highlight .select-indicator { background: var(--coral); }
+  .pay-card { background: var(--cream); border: 1px solid rgba(35,31,27,0.08); border-radius: 22px; padding: 1.75rem; width: 100%; max-width: 420px; box-shadow: 0 30px 60px -24px rgba(15,20,18,0.4); }
+  .pay-title { font-family: 'Baloo 2', sans-serif; font-size: 15px; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; color: var(--ink); }
+  .summary-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 5px 0; color: var(--ink-soft); }
+  .summary-row.total { font-size: 15px; font-weight: 700; color: var(--ink); border-top: 1px solid rgba(35,31,27,0.1); padding-top: 10px; margin-top: 6px; }
   .field { margin: 1rem 0; }
-  .field label { display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink2); margin-bottom: 5px; }
-  .field input { width: 100%; background: #f9f8f6; border: 1px solid var(--border2); border-radius: 8px; padding: 10px 12px; color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; }
-  .field input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(20,20,16,0.07); background: #fff; }
-  .field input::placeholder { color: var(--muted); }
-  .mpesa-badge { display: flex; align-items: center; gap: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 12px; margin-bottom: 1rem; }
-  .mpesa-dot { width: 9px; height: 9px; border-radius: 50%; background: #16a34a; animation: blink 1.5s ease infinite; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+  .field input { width: 100%; background: var(--field); border: none; border-radius: 12px; padding: 13px 16px; color: var(--ink); font-family: 'IBM Plex Sans', sans-serif; font-size: 14.5px; outline: none; transition: box-shadow 0.15s; }
+  .field input:focus { box-shadow: 0 0 0 2.5px var(--teal); }
+  .field input::placeholder { color: #A79A85; }
+  .mpesa-badge { display: flex; align-items: center; gap: 8px; background: rgba(23,93,90,0.08); border: 1px solid rgba(23,93,90,0.25); border-radius: 10px; padding: 10px 12px; margin-bottom: 1rem; }
+  .mpesa-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--teal); animation: blink 1.5s ease infinite; }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  .mpesa-text { font-size: 13px; font-weight: 500; color: #166534; }
-  .pay-btn { width: 100%; padding: 12px; background: #16a34a; color: #fff; border: none; border-radius: 9px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .pay-btn:hover:not(:disabled) { background: #15803d; transform: translateY(-1px); }
-  .pay-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-  .check-btn { width: 100%; padding: 12px; background: var(--ink); color: #fff; border: none; border-radius: 9px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
-  .check-btn:hover:not(:disabled) { background: #2a2a22; transform: translateY(-1px); }
-  .check-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-  .polling-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; animation: fadeIn 0.2s ease; }
+  .mpesa-text { font-size: 13px; font-weight: 600; color: var(--teal-deep); }
+  .pay-btn { width: 100%; padding: 16px 0; background: var(--teal); color: var(--cream); border: none; border-radius: 14px; box-shadow: 0 5px 0 var(--teal-deep); font-family: 'Baloo 2', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .pay-btn:hover:not(:disabled) { transform: translateY(2px); box-shadow: 0 3px 0 var(--teal-deep); }
+  .pay-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .check-btn { width: 100%; padding: 16px 0; background: var(--teal); color: var(--cream); border: none; border-radius: 14px; box-shadow: 0 5px 0 var(--teal-deep); font-family: 'Baloo 2', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
+  .check-btn:hover:not(:disabled) { transform: translateY(2px); box-shadow: 0 3px 0 var(--teal-deep); }
+  .check-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .polling-overlay { position: fixed; inset: 0; background: rgba(15,20,18,0.55); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; animation: fadeIn 0.2s ease; }
   @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-  .polling-card { background: #fff; border-radius: 20px; padding: 2.5rem; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,0.2); animation: slideUp 0.25s ease; }
+  .polling-card { background: var(--cream); border-radius: 20px; padding: 2.5rem; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,0.25); animation: slideUp 0.25s ease; }
   @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
   .polling-icon { width: 68px; height: 68px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; }
-  .polling-icon.pending { background: #fffbeb; border: 1px solid #fde68a; }
-  .polling-icon.success { background: #f0fdf4; border: 1px solid #bbf7d0; }
-  .polling-icon.failed  { background: #fef2f2; border: 1px solid #fecaca; }
-  .polling-title { font-size: 19px; font-weight: 700; margin-bottom: 8px; color: var(--ink); }
-  .polling-sub { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 1.5rem; }
-  .spinner { width: 28px; height: 28px; border: 3px solid #e2e0d8; border-top-color: #d97706; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+  .polling-icon.pending { background: rgba(244,185,61,0.16); border: 1px solid rgba(244,185,61,0.5); }
+  .polling-icon.success { background: rgba(23,93,90,0.1); border: 1px solid rgba(23,93,90,0.3); }
+  .polling-icon.failed  { background: rgba(232,91,63,0.1); border: 1px solid rgba(232,91,63,0.35); }
+  .polling-title { font-family: 'Baloo 2', sans-serif; font-size: 19px; font-weight: 700; margin-bottom: 8px; color: var(--ink); }
+  .polling-sub { font-size: 13px; color: var(--ink-soft); line-height: 1.7; margin-bottom: 1.5rem; }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--field); border-top-color: var(--coral); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
   @keyframes spin { to{transform:rotate(360deg)} }
-  .cancel-btn { background: none; border: 1px solid var(--border2); border-radius: 8px; padding: 9px 24px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.15s; width: 100%; }
-  .cancel-btn:hover { border-color: var(--ink2); color: var(--ink); }
-  .retry-btn { width: 100%; padding: 11px; background: #dc2626; color: #fff; border: none; border-radius: 9px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; margin-bottom: 10px; }
-  .retry-btn:hover { background: #b91c1c; }
-  .error-box { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 8px; padding: 9px 12px; font-size: 13px; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; }
-  .divider-line { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
-  .secure-note { font-size: 11px; color: #c8c6bc; text-align: center; margin-top: 0.75rem; line-height: 1.5; }
-  .pending-instructions { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; text-align: left; }
-  .pending-instructions .pi-title { font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px; }
+  .cancel-btn { background: none; border: 1px solid rgba(35,31,27,0.15); border-radius: 10px; padding: 9px 24px; font-family: 'IBM Plex Sans', sans-serif; font-weight: 600; font-size: 13px; color: var(--ink-soft); cursor: pointer; transition: all 0.15s; width: 100%; }
+  .cancel-btn:hover { border-color: var(--ink-soft); color: var(--ink); }
+  .retry-btn { width: 100%; padding: 14px 0; background: var(--coral); color: var(--cream); border: none; border-radius: 12px; box-shadow: 0 4px 0 #a8402a; font-family: 'Baloo 2', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform 0.1s; margin-bottom: 10px; }
+  .retry-btn:hover { transform: translateY(2px); box-shadow: 0 2px 0 #a8402a; }
+  .error-box { background: rgba(232,91,63,0.10); border: 1px solid rgba(232,91,63,0.35); color: var(--coral); border-radius: 10px; padding: 12px 14px; font-size: 13px; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+  .divider-line { border: none; border-top: 1px solid rgba(35,31,27,0.1); margin: 1.25rem 0; }
+  .secure-note { font-size: 11px; color: var(--ink-soft); text-align: center; margin-top: 0.75rem; line-height: 1.5; }
+  .pending-instructions { background: rgba(244,185,61,0.16); border: 1px solid rgba(244,185,61,0.5); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; text-align: left; }
+  .pending-instructions .pi-title { font-size: 13px; font-weight: 700; color: #6B4F1E; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px; }
   .pending-instructions ol { padding-left: 1.1rem; display: flex; flex-direction: column; gap: 5px; }
-  .pending-instructions ol li { font-size: 12px; color: #78350f; line-height: 1.5; }
-  .pending-instructions .pi-amount { font-weight: 700; color: #92400e; }
-  .check-hint { font-size: 11px; color: var(--muted); text-align: center; margin-top: 6px; }
+  .pending-instructions ol li { font-size: 12px; color: #6B4F1E; line-height: 1.5; }
+  .pending-instructions .pi-amount { font-weight: 700; color: #6B4F1E; }
+  .check-hint { font-size: 11px; color: var(--ink-soft); text-align: center; margin-top: 6px; }
   @media (max-width: 700px) { .plans { grid-template-columns: 1fr; } .pos-selector { gap: 6px; } }
   @media (max-width: 900px) and (min-width: 701px) { .plans { grid-template-columns: 1fr 1fr; } }
 `;
@@ -267,6 +270,14 @@ export default function PaymentPage() {
     }
   };
 
+  const handleBackNav = () => {
+    if (isNewSignup) {
+      router.push("/signup");
+      return;
+    }
+    router.back();
+  };
+
   const handleCancel = () => {
     setPolling("idle");
     setCheckoutId("");
@@ -291,7 +302,7 @@ export default function PaymentPage() {
             {polling === "pending" && (
               <>
                 <div className="polling-icon pending">
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#6B4F1E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="5" y="2" width="14" height="20" rx="2"/>
                     <line x1="12" y1="18" x2="12.01" y2="18"/>
                   </svg>
@@ -305,7 +316,7 @@ export default function PaymentPage() {
                 {/* Step-by-step instructions */}
                 <div className="pending-instructions">
                   <div className="pi-title">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B4F1E" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                     How to complete payment
                   </div>
                   <ol>
@@ -353,11 +364,11 @@ export default function PaymentPage() {
             {polling === "success" && (
               <>
                 <div className="polling-icon success">
-                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#175D5A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12"/>
                   </svg>
                 </div>
-                <div className="polling-title" style={{ color: "#16a34a" }}>
+                <div className="polling-title" style={{ color: "#175D5A" }}>
                   {isNewSignup ? "Account created!" : "Payment successful!"}
                 </div>
                 <div className="polling-sub">
@@ -365,7 +376,7 @@ export default function PaymentPage() {
                     ? `Welcome to POStore, ${displayName}! Setting up your store…`
                     : `Your ${selectedPlan?.name} subscription is now active. Redirecting…`}
                 </div>
-                <div className="spinner" style={{ borderTopColor: "#16a34a" }} />
+                <div className="spinner" style={{ borderTopColor: "#175D5A" }} />
               </>
             )}
 
@@ -373,13 +384,13 @@ export default function PaymentPage() {
             {polling === "failed" && (
               <>
                 <div className="polling-icon failed">
-                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#E85B3F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/>
                     <line x1="15" y1="9" x2="9" y2="15"/>
                     <line x1="9" y1="9" x2="15" y2="15"/>
                   </svg>
                 </div>
-                <div className="polling-title" style={{ color: "#dc2626" }}>Payment failed</div>
+                <div className="polling-title" style={{ color: "#E85B3F" }}>Payment failed</div>
                 <div className="polling-sub">{failMsg}</div>
                 <button className="retry-btn" onClick={handleCancel}>Try again</button>
                 <button className="cancel-btn" style={{ marginTop: 8 }} onClick={handleCancel}>Cancel</button>
@@ -391,6 +402,16 @@ export default function PaymentPage() {
       )}
 
       <div className="page">
+
+        {/* ── Back ── */}
+        <div className="back-row">
+          <button type="button" className="back-btn" onClick={handleBackNav}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            {isNewSignup ? "Back to details" : "Back"}
+          </button>
+        </div>
 
         {/* ── Header ── */}
         <div className="header">
@@ -502,7 +523,7 @@ export default function PaymentPage() {
           </p>
         </div>
 
-        <p style={{ fontSize: 12, color: "#c8c6bc", marginTop: "1.5rem", textAlign: "center" }}>
+        <p style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: "1.5rem", textAlign: "center" }}>
           Cancel anytime · No hidden fees 
         </p>
       </div>
