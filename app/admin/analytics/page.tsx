@@ -224,6 +224,87 @@ function HBar({ label, value, max, color, sub }: { label: string; value: number;
 }
 
 /* ── Traffic Sources panel ── */
+/* ── Share Links card — pre-tagged links per platform so visits classify correctly ── */
+const SHARE_PLATFORMS: { key: string; label: string; color: string; utm: string; icon: string }[] = [
+  { key: "facebook",  label: "Facebook",    color: "#1877F2", utm: "facebook",  icon: "f" },
+  { key: "instagram", label: "Instagram",   color: "#E4405F", utm: "instagram", icon: "ig" },
+  { key: "whatsapp",  label: "WhatsApp",    color: "#25D366", utm: "whatsapp",  icon: "wa" },
+  { key: "tiktok",    label: "TikTok",      color: "#141410", utm: "tiktok",    icon: "tt" },
+  { key: "twitter",   label: "Twitter / X", color: "#14171A", utm: "twitter",   icon: "x" },
+  { key: "telegram",  label: "Telegram",    color: "#26A5E4", utm: "telegram",  icon: "tg" },
+];
+
+function ShareLinksCard({ domain }: { domain: string }) {
+  const [campaign,  setCampaign]  = useState("");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const baseUrl = `https://${domain}.upendoapps.com`;
+
+  function buildLink(utmSource: string) {
+    const params = new URLSearchParams({ utm_source: utmSource, utm_medium: "social" });
+    if (campaign.trim()) params.set("utm_campaign", campaign.trim());
+    return `${baseUrl}?${params.toString()}`;
+  }
+
+  async function copyLink(key: string, url: string) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        document.execCommand("copy"); document.body.removeChild(ta);
+      }
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(k => (k === key ? null : k)), 1800);
+    } catch { /* clipboard unavailable — link is still visible to copy manually */ }
+  }
+
+  return (
+    <div style={{ ...card, marginBottom: "1rem" }}>
+      <SectionHead title="Share Your Store Link" meta="Pre-tagged so every visit is tracked correctly" />
+
+      <div style={{ padding: "1rem 1.5rem 0.75rem" }}>
+        <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", color: "#9a9a8e" }}>
+          Campaign name (optional)
+        </label>
+        <input
+          value={campaign}
+          onChange={e => setCampaign(e.target.value)}
+          placeholder="e.g. july_promo, festive_launch"
+          style={{ display: "block", marginTop: 6, width: "100%", maxWidth: 320, padding: "8px 10px", border: "1px solid #e8e6de", borderRadius: 8, fontFamily: "inherit", fontSize: 12.5, outline: "none" }}
+        />
+      </div>
+
+      <div style={{ padding: "0.25rem 1.5rem 1.25rem", display: "flex", flexDirection: "column", gap: 10 }}>
+        {SHARE_PLATFORMS.map(p => {
+          const url = buildLink(p.utm);
+          const copied = copiedKey === p.key;
+          return (
+            <div key={p.key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ width: 10, height: 10, borderRadius: "50%", background: p.color, flexShrink: 0 }} />
+              <div style={{ width: 92, fontSize: 12.5, fontWeight: 600, color: "#141410", flexShrink: 0 }}>{p.label}</div>
+              <div style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: "#6a6a5e", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", background: "#f8f7f3", border: "1px solid #eee", borderRadius: 8, padding: "7px 10px" }}>
+                {url}
+              </div>
+              <button
+                onClick={() => copyLink(p.key, url)}
+                style={{
+                  flexShrink: 0, padding: "7px 14px", borderRadius: 8, border: "1px solid #e8e6de",
+                  background: copied ? "#141410" : "#fff", color: copied ? "#fff" : "#141410",
+                  fontSize: 11.5, fontWeight: 600, cursor: "pointer", transition: "all 0.15s", fontFamily: "inherit",
+                }}
+              >
+                {copied ? "Copied ✓" : "Copy"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function TrafficSourcesPanel({ fetching, error, traffic, domain }: {
   fetching: boolean;
   error:    string | null;
@@ -237,19 +318,25 @@ function TrafficSourcesPanel({ fetching, error, traffic, domain }: {
       </div>
     );
   }
-  if (fetching) return <Spinner />;
+  if (fetching) return <><ShareLinksCard domain={domain} /><Spinner /></>;
   if (error) {
     return (
-      <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: "1.5rem", color: "#dc2626", fontSize: 13, textAlign: "center" }}>
-        {error}
-      </div>
+      <>
+        <ShareLinksCard domain={domain} />
+        <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: "1.5rem", color: "#dc2626", fontSize: 13, textAlign: "center" }}>
+          {error}
+        </div>
+      </>
     );
   }
   if (!traffic || traffic.total === 0) {
     return (
-      <div style={{ ...card, padding: "2.5rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>
-        No visits recorded yet for <strong>{domain}</strong>. Once customers start landing on your store link — from Facebook, Instagram, WhatsApp, or anywhere else — they&apos;ll show up here.
-      </div>
+      <>
+        <ShareLinksCard domain={domain} />
+        <div style={{ ...card, padding: "2.5rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>
+          No visits recorded yet for <strong>{domain}</strong>. Once customers start landing on your store link — from Facebook, Instagram, WhatsApp, or anywhere else — they&apos;ll show up here.
+        </div>
+      </>
     );
   }
 
@@ -257,6 +344,8 @@ function TrafficSourcesPanel({ fetching, error, traffic, domain }: {
 
   return (
     <>
+      <ShareLinksCard domain={domain} />
+
       <div className="an-grid4" style={{ marginBottom: "1rem" }}>
         <div style={card}><BigMetric label="Total Visits" value={traffic.total} sub={`To ${domain}`} /></div>
         {traffic.by_source.slice(0, 3).map(s => {

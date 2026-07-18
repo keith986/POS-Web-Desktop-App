@@ -45,7 +45,7 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.12.0",
+    version: "1.11.0",
     date: "2026-07-18",
     type: "feature",
     title: "Login page has been updated",

@@ -889,6 +889,23 @@ export default function SuperAdminPage() {
   const [notifPrefs, setNotifPrefs] = useState({ newAdminSignup: true, billingAlerts: true, weeklySummary: false, securityAlerts: true });
   const [editingField, setEditingField] = useState<null | "name" | "contacts" | "social" | "language">(null);
   const [editDraft, setEditDraft] = useState<Record<string, string>>({});
+  const [copiedDomain, setCopiedDomain] = useState<string | null>(null);
+
+  const copyStoreLink = async (domain: string) => {
+    const url = `https://${domain}.upendoapps.com`;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        document.execCommand("copy"); document.body.removeChild(ta);
+      }
+      setCopiedDomain(domain);
+      setTimeout(() => setCopiedDomain(d => (d === domain ? null : d)), 1800);
+    } catch { /* clipboard unavailable */ }
+  };
 
   /* ── Auth guard ── */
   useEffect(() => {
@@ -2391,11 +2408,11 @@ const openCreateStaffModal = async () => {
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                       <thead><tr>
                         <th style={TH}>#</th>
-                        {["Store", "Domain", "Total Visits", "Facebook", "Instagram", "TikTok", "WhatsApp", "Google", "Direct", "Other", "Last Visit"].map(h => <th key={h} style={TH}>{h}</th>)}
+                        {["Store", "Domain", "Total Visits", "Facebook", "Instagram", "TikTok", "WhatsApp", "Google", "Direct", "Other", "Last Visit", "Link"].map(h => <th key={h} style={TH}>{h}</th>)}
                       </tr></thead>
                       <tbody>
                         {paginated.length === 0
-                          ? <tr><td colSpan={11} style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No traffic recorded yet.</td></tr>
+                          ? <tr><td colSpan={12} style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No traffic recorded yet.</td></tr>
                           : paginated.map((r, i) => (
                             <tr key={i} style={{ borderBottom: "1px solid var(--border)" }} {...rowHover}>
                               <td style={{ ...TD, color: "var(--muted)" }}>{(page - 1) * perPage + i + 1}</td>
@@ -2410,6 +2427,21 @@ const openCreateStaffModal = async () => {
                               <td style={TD}>{Number(r.direct || 0).toLocaleString()}</td>
                               <td style={TD}>{Number(r.other || 0).toLocaleString()}</td>
                               <td style={{ ...TD, color: "var(--muted)", fontSize: 12 }}>{r.last_visit ? fmtDateTime(r.last_visit) : "—"}</td>
+                              <td style={TD}>
+                                {r.domain && (
+                                  <button
+                                    onClick={() => copyStoreLink(String(r.domain))}
+                                    style={{
+                                      padding: "6px 10px", borderRadius: 8, border: "1px solid #c8c6cb",
+                                      background: copiedDomain === r.domain ? "#141410" : "#fff",
+                                      color: copiedDomain === r.domain ? "#fff" : "#141410",
+                                      cursor: "pointer", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {copiedDomain === r.domain ? "Copied ✓" : "Copy Link"}
+                                  </button>
+                                )}
+                              </td>
                             </tr>
                           ))}
                       </tbody>
