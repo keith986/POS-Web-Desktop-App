@@ -451,6 +451,26 @@ export async function initDb(): Promise<void> {
   console.log('✅ Table: site_analytics');
 
   await conn.query(`
+  CREATE TABLE IF NOT EXISTS traffic_sources (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  domain        VARCHAR(100)    NOT NULL,      -- matches users.domain
+  source        VARCHAR(40)     NOT NULL,      -- facebook, instagram, tiktok, whatsapp, twitter, youtube, linkedin, google, direct, other
+  referrer_url  VARCHAR(500)    NULL,
+  referrer_host VARCHAR(255)    NULL,
+  landing_page  VARCHAR(500)    NULL,
+  utm_source    VARCHAR(100)    NULL,
+  utm_medium    VARCHAR(100)    NULL,
+  utm_campaign  VARCHAR(150)    NULL,
+  created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  INDEX idx_traffic_domain (domain),
+  INDEX idx_traffic_domain_source (domain, source),
+  INDEX idx_traffic_created (created_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+  console.log('✅ Table: traffic_sources');
+
+  await conn.query(`
     CREATE TABLE IF NOT EXISTS discounts (
       id               VARCHAR(36)   NOT NULL PRIMARY KEY,
       name             VARCHAR(255)  NOT NULL,

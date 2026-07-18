@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
 /* ─── Types ── */
-type TabKey = "overview" | "users" | "staff" | "orders" | "logs" | "billing" | "notifications" | "settings" | "support";
+type TabKey = "overview" | "users" | "staff" | "orders" | "logs" | "billing" | "traffic" | "notifications" | "settings" | "support";
 
 interface OverviewStats {
   userCount: number;
@@ -136,6 +136,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "orders",    label: "Orders",    icon: <IcoOrders />   },
   { key: "logs",      label: "Logs",      icon: <IcoLogs />     },
   { key: "billing",   label: "Billing",   icon: <IcoBilling />  },
+  { key: "traffic",   label: "Traffic",   icon: <IcoTraffic />  },
   { key: "notifications", label: "Notifications", icon: <IcoBell /> },
   { key: "settings",  label: "Settings",  icon: <IcoSettings /> },
   { key: "support",   label: "Support",   icon: <IcoSupport />  },
@@ -150,6 +151,7 @@ function IcoLogs()      { return <svg width="15" height="15" viewBox="0 0 24 24"
 function IcoBilling()   { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>; }
 function IcoSettings()  { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>; }
 function IcoSupport()   { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>; }
+function IcoTraffic()   { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4.2M8.6 13.4l6.8 4.2"/></svg>; }
 function IcoRefresh()   { return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>; }
 function IcoSearch()    { return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>; }
 function IcoChevronL()  { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>; }
@@ -1458,6 +1460,13 @@ const openCreateStaffModal = async () => {
       { key: "type",       label: "Type" },
       { key: "title",       label: "Title" },
     ],
+    traffic: [
+      { key: "total",      label: "Total visits" },
+      { key: "facebook",   label: "Facebook" },
+      { key: "instagram",  label: "Instagram" },
+      { key: "last_visit", label: "Last visit" },
+      { key: "domain",     label: "Domain" },
+    ],
   };
   const sortOptions = SORT_FIELDS[activeTab] ?? [];
   const sorted = sortBy
@@ -2347,6 +2356,65 @@ const openCreateStaffModal = async () => {
                           ))}
                       </tbody>
                     </table>
+                    <Pagination page={page} total={totalPages} onChange={setPage} perPage={perPage} onPerPageChange={n => { setPerPage(n); setPage(1); }} totalItems={filtered.length} />
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ══ TRAFFIC SOURCES ══ */}
+            {activeTab === "traffic" && (
+              <div className="sa-card">
+                <div className="sa-toolbar">
+                  <div className="sa-search"><IcoSearch /><input placeholder="Search by store or domain…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
+                  {sortOptions.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} style={{ padding: "9px 10px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--card)", color: "var(--ink)", fontFamily: "inherit", fontSize: 12.5, cursor: "pointer" }}>
+                        <option value="">Sort by…</option>
+                        {sortOptions.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                      </select>
+                      {sortBy && (
+                        <button onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")} title={sortDir === "asc" ? "Ascending" : "Descending"} className="sa-icon-btn" style={{ width: 36, height: 36 }}>
+                          {sortDir === "asc" ? "↑" : "↓"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <span style={{ fontSize: 12, color: "#9a9a8e", marginLeft: "auto" }}>{filtered.length} store{filtered.length !== 1 ? "s" : ""}</span>
+                </div>
+                <p style={{ margin: "0 20px 14px", fontSize: 12.5, color: "var(--muted)" }}>
+                  Where each store&apos;s visitors are coming from — Facebook, Instagram, and other social or search referrals, tracked from the link they clicked to land on the site.
+                </p>
+                {loading ? <Spinner label="Loading traffic…" /> : (
+                  <>
+                    <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                      <thead><tr>
+                        <th style={TH}>#</th>
+                        {["Store", "Domain", "Total Visits", "Facebook", "Instagram", "TikTok", "WhatsApp", "Google", "Direct", "Other", "Last Visit"].map(h => <th key={h} style={TH}>{h}</th>)}
+                      </tr></thead>
+                      <tbody>
+                        {paginated.length === 0
+                          ? <tr><td colSpan={11} style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No traffic recorded yet.</td></tr>
+                          : paginated.map((r, i) => (
+                            <tr key={i} style={{ borderBottom: "1px solid var(--border)" }} {...rowHover}>
+                              <td style={{ ...TD, color: "var(--muted)" }}>{(page - 1) * perPage + i + 1}</td>
+                              <td style={{ ...TD, fontWeight: 600, color: "var(--ink)" }}>{String(r.store_name ?? "—")}</td>
+                              <td style={{ ...TD, color: "var(--muted)" }}>{String(r.domain ?? "—")}</td>
+                              <td style={{ ...TD, fontWeight: 700, color: "var(--ink)" }}>{Number(r.total || 0).toLocaleString()}</td>
+                              <td style={TD}>{Number(r.facebook || 0).toLocaleString()}</td>
+                              <td style={TD}>{Number(r.instagram || 0).toLocaleString()}</td>
+                              <td style={TD}>{Number(r.tiktok || 0).toLocaleString()}</td>
+                              <td style={TD}>{Number(r.whatsapp || 0).toLocaleString()}</td>
+                              <td style={TD}>{Number(r.google || 0).toLocaleString()}</td>
+                              <td style={TD}>{Number(r.direct || 0).toLocaleString()}</td>
+                              <td style={TD}>{Number(r.other || 0).toLocaleString()}</td>
+                              <td style={{ ...TD, color: "var(--muted)", fontSize: 12 }}>{r.last_visit ? fmtDateTime(r.last_visit) : "—"}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                    </div>
                     <Pagination page={page} total={totalPages} onChange={setPage} perPage={perPage} onPerPageChange={n => { setPerPage(n); setPage(1); }} totalItems={filtered.length} />
                   </>
                 )}

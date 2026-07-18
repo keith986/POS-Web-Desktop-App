@@ -56,7 +56,7 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.11.0",
+    version: "1.12.0",
     date: "2026-07-18",
     type: "improvement",
     title: "Login Page has been updated",
@@ -88,7 +88,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       "You'll never lose track of a pending update, and critical fixes are guaranteed to reach everyone within 30 seconds.",
     critical: false,
   },
-  {
+  { 
     version: "1.6.0",
     date: "2026-07-12",
     type: "feature",

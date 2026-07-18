@@ -54,6 +54,39 @@ interface StoredUser {
   email:      string;
   role:       string;
   store_name: string | null;
+  domain?:    string | null;
+}
+
+/* ── Traffic source types ── */
+interface TrafficData {
+  total:     number;
+  by_source: { source: string; count: number }[];
+  recent:    {
+    source: string; referrer_url: string | null; referrer_host: string | null;
+    landing_page: string | null; utm_source: string | null; utm_medium: string | null;
+    utm_campaign: string | null; created_at: string;
+  }[];
+  trend: { label: string; count: number }[];
+}
+
+const SOURCE_META: Record<string, { label: string; color: string }> = {
+  facebook:  { label: "Facebook",    color: "#1877F2" },
+  instagram: { label: "Instagram",   color: "#E4405F" },
+  tiktok:    { label: "TikTok",      color: "#141410" },
+  whatsapp:  { label: "WhatsApp",    color: "#25D366" },
+  twitter:   { label: "Twitter / X", color: "#14171A" },
+  youtube:   { label: "YouTube",     color: "#FF0000" },
+  linkedin:  { label: "LinkedIn",    color: "#0A66C2" },
+  pinterest: { label: "Pinterest",   color: "#E60023" },
+  snapchat:  { label: "Snapchat",    color: "#FFFC00" },
+  telegram:  { label: "Telegram",    color: "#26A5E4" },
+  google:    { label: "Google",      color: "#4285F4" },
+  bing:      { label: "Bing",        color: "#008373" },
+  direct:    { label: "Direct / None", color: "#9a9a8e" },
+  other:     { label: "Other",       color: "#c8c6bc" },
+};
+function sourceMeta(s: string) {
+  return SOURCE_META[s] ?? { label: s.charAt(0).toUpperCase() + s.slice(1), color: "#c8c6bc" };
 }
 
 type Period = "7d" | "30d" | "90d" | "12m";
@@ -190,6 +223,96 @@ function HBar({ label, value, max, color, sub }: { label: string; value: number;
   );
 }
 
+/* ── Traffic Sources panel ── */
+function TrafficSourcesPanel({ fetching, error, traffic, domain }: {
+  fetching: boolean;
+  error:    string | null;
+  traffic:  TrafficData | null;
+  domain:   string | null;
+}) {
+  if (!domain) {
+    return (
+      <div style={{ ...card, padding: "2rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>
+        No storefront domain is set up for this account yet, so there&apos;s nothing to track traffic for.
+      </div>
+    );
+  }
+  if (fetching) return <Spinner />;
+  if (error) {
+    return (
+      <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: "1.5rem", color: "#dc2626", fontSize: 13, textAlign: "center" }}>
+        {error}
+      </div>
+    );
+  }
+  if (!traffic || traffic.total === 0) {
+    return (
+      <div style={{ ...card, padding: "2.5rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>
+        No visits recorded yet for <strong>{domain}</strong>. Once customers start landing on your store link — from Facebook, Instagram, WhatsApp, or anywhere else — they&apos;ll show up here.
+      </div>
+    );
+  }
+
+  const max = Math.max(...traffic.by_source.map(s => s.count), 1);
+
+  return (
+    <>
+      <div className="an-grid4" style={{ marginBottom: "1rem" }}>
+        <div style={card}><BigMetric label="Total Visits" value={traffic.total} sub={`To ${domain}`} /></div>
+        {traffic.by_source.slice(0, 3).map(s => {
+          const meta = sourceMeta(s.source);
+          const pct2 = traffic.total > 0 ? Math.round((s.count / traffic.total) * 100) : 0;
+          return (
+            <div key={s.source} style={card}>
+              <BigMetric label={meta.label} value={s.count} sub={`${pct2}% of visits`} />
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="an-grid-62">
+        <div style={card}>
+          <SectionHead title="Traffic Sources" meta={`Where ${domain} visitors came from`} />
+          <div style={{ padding: "1.25rem 1.5rem", display: "flex", flexDirection: "column", gap: 12 }}>
+            {traffic.by_source.map(s => {
+              const meta = sourceMeta(s.source);
+              return (
+                <HBar key={s.source} label={meta.label} value={s.count} max={max} color={meta.color}
+                  sub={`${traffic.total > 0 ? Math.round((s.count / traffic.total) * 100) : 0}%`} />
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={card}>
+          <SectionHead title="Recent Visits" meta="Last 25" />
+          {traffic.recent.length === 0 ? (
+            <div style={{ padding: "2rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No recent visits.</div>
+          ) : (
+            <div>
+              {traffic.recent.map((r, i) => {
+                const meta = sourceMeta(r.source);
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.7rem 1.5rem", borderBottom: i < traffic.recent.length - 1 ? "1px solid #f0ede6" : "none" }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 600, color: "#141410" }}>{meta.label}</div>
+                      <div style={{ fontSize: 11, color: "#9a9a8e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {r.utm_campaign ? `Campaign: ${r.utm_campaign}` : r.referrer_host ? `via ${r.referrer_host}` : "No referrer"}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 10, color: "#c8c6bc", flexShrink: 0 }}>{timeAgo(r.created_at)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ── Movement type label ── */
 const MOV_CFG: Record<string, { color: string; sign: string; bg: string }> = {
   restock:    { color: "#16a34a", sign: "+", bg: "#f0fdf4" },
@@ -221,6 +344,14 @@ export default function AdminAnalyticsPage() {
   const [fetching,  setFetching] = useState(true);
   const [period,    setPeriod]   = useState<Period>("30d");
   const [error,     setError]    = useState<string | null>(null);
+  const [view,      setView]     = useState<"overview" | "traffic">("overview");
+
+  /* Traffic sources — where this store's visitors came from */
+  const [traffic,        setTraffic]        = useState<TrafficData | null>(null);
+  const [trafficFetching, setTrafficFetching] = useState(false);
+  const [trafficError,   setTrafficError]   = useState<string | null>(null);
+
+  const trafficPeriod: Exclude<Period, "12m"> | "all" = period === "12m" ? "all" : period;
 
   const fetchAnalytics = useCallback(async () => {
     if (!adminUser?.id) return;
@@ -237,7 +368,23 @@ export default function AdminAnalyticsPage() {
     }
   }, [adminUser?.id, period]);
 
+  const fetchTraffic = useCallback(async () => {
+    if (!adminUser?.domain) return;
+    setTrafficFetching(true); setTrafficError(null);
+    try {
+      const res  = await fetch(`/api/analytic?domain=${encodeURIComponent(adminUser.domain)}&period=${trafficPeriod}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setTraffic(json);
+    } catch (e) {
+      setTrafficError((e as Error).message || "Failed to load traffic sources");
+    } finally {
+      setTrafficFetching(false);
+    }
+  }, [adminUser?.domain, trafficPeriod]);
+
   useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
+  useEffect(() => { if (view === "traffic") fetchTraffic(); }, [view, fetchTraffic]);
 
   const dater = new Intl.DateTimeFormat("en-US", {
     weekday: "long", month: "long", day: "numeric", year: "numeric",
@@ -273,6 +420,21 @@ export default function AdminAnalyticsPage() {
         <div className="header-title">Analytics</div>
         <div className="header-date">{dater}</div>
 
+        {/* View tabs */}
+        <div style={{ display: "flex", border: "1px solid #e8e6de", borderRadius: 9, overflow: "hidden", background: "#f5f4f0" }}>
+          {([{ k: "overview", l: "Overview" }, { k: "traffic", l: "Traffic Sources" }] as { k: "overview" | "traffic"; l: string }[]).map(t => (
+            <button key={t.k} onClick={() => setView(t.k)} style={{
+              padding: "6px 14px", border: "none", cursor: "pointer",
+              fontFamily: "inherit", fontSize: 12, fontWeight: view === t.k ? 600 : 400,
+              background: view === t.k ? "#141410" : "transparent",
+              color:      view === t.k ? "#fff" : "#4a4a40",
+              transition: "all 0.15s",
+            }}>
+              {t.l}
+            </button>
+          ))}
+        </div>
+
         {/* Period tabs */}
         <div style={{ display: "flex", border: "1px solid #e8e6de", borderRadius: 9, overflow: "hidden", background: "#f5f4f0" }}>
           {(["7d","30d","90d","12m"] as Period[]).map(p => (
@@ -288,7 +450,7 @@ export default function AdminAnalyticsPage() {
           ))}
         </div>
 
-        <button onClick={fetchAnalytics} style={{ padding: "7px 12px", background: "#fff", color: "#141410", border: "1px solid #e8e6de", borderRadius: 8, fontFamily: "inherit", fontSize: 12, cursor: "pointer" }}>
+        <button onClick={() => (view === "traffic" ? fetchTraffic() : fetchAnalytics())} style={{ padding: "7px 12px", background: "#fff", color: "#141410", border: "1px solid #e8e6de", borderRadius: 8, fontFamily: "inherit", fontSize: 12, cursor: "pointer" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
           Refresh
         </button>
@@ -296,7 +458,14 @@ export default function AdminAnalyticsPage() {
 
       <main className="main">
 
-        {fetching ? <Spinner /> : error ? (
+        {view === "traffic" ? (
+          <TrafficSourcesPanel
+            fetching={trafficFetching}
+            error={trafficError}
+            traffic={traffic}
+            domain={adminUser?.domain ?? null}
+          />
+        ) : fetching ? <Spinner /> : error ? (
           <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 12, padding: "1.5rem", color: "#dc2626", fontSize: 13, textAlign: "center" }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>

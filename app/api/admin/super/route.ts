@@ -470,6 +470,34 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ logs });
     }
 
+    /* ── TRAFFIC SOURCES (per store, platform-wide) ── */
+    if (section === "traffic") {
+      let traffic: Record<string, unknown>[] = [];
+      try {
+        const [rows] = await pool.query<RowDataPacket[]>(`
+          SELECT
+            u.domain, u.store_name,
+            COUNT(t.id) AS total,
+            SUM(CASE WHEN t.source = 'facebook'  THEN 1 ELSE 0 END) AS facebook,
+            SUM(CASE WHEN t.source = 'instagram' THEN 1 ELSE 0 END) AS instagram,
+            SUM(CASE WHEN t.source = 'tiktok'    THEN 1 ELSE 0 END) AS tiktok,
+            SUM(CASE WHEN t.source = 'whatsapp'  THEN 1 ELSE 0 END) AS whatsapp,
+            SUM(CASE WHEN t.source = 'twitter'   THEN 1 ELSE 0 END) AS twitter,
+            SUM(CASE WHEN t.source = 'google'    THEN 1 ELSE 0 END) AS google,
+            SUM(CASE WHEN t.source = 'direct'    THEN 1 ELSE 0 END) AS direct,
+            SUM(CASE WHEN t.source NOT IN ('facebook','instagram','tiktok','whatsapp','twitter','google','direct') THEN 1 ELSE 0 END) AS other,
+            MAX(t.created_at) AS last_visit
+          FROM users u
+          LEFT JOIN traffic_sources t ON t.domain = u.domain
+          WHERE u.domain IS NOT NULL AND u.email != 'admin@postore.app'
+          GROUP BY u.domain, u.store_name
+          ORDER BY total DESC
+        `);
+        traffic = rows as Record<string, unknown>[];
+      } catch { /* traffic_sources not yet created */ }
+      return NextResponse.json({ traffic });
+    }
+
     return NextResponse.json({ error: "Invalid section" }, { status: 400 });
 
   } catch (error) {
