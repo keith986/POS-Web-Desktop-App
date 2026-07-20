@@ -31,6 +31,7 @@ const iconPaths: Record<string, string> = {
   scissors:  "M6 9a3 3 0 100-6 3 3 0 000 6zM6 21a3 3 0 100-6 3 3 0 000 6zM20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12",
   package:   "M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12",
   pill:      "M10.5 4.5a6 6 0 000 12h3a6 6 0 000-12h-3zM7.5 10.5h9",
+  washer:    "M6 2h12M8 2v2M16 2v2M4 4h16v18H4zM12 15a5 5 0 100-10 5 5 0 000 10z",
   flask:     "M9 3h6M9 3v5l-4 9a1 1 0 00.9 1.5h12.2a1 1 0 00.9-1.5L15 8V3",
   switch:    "M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4",
   chevron:   "M6 9l6 6 6-6",
@@ -129,6 +130,17 @@ const NAV_CONFIG: Record<PosType, NavSection[]> = {
     ]},
     { title: "POS Features", items: POS_FEATURES },
   ],
+  laundry: [
+    { title: "Main", items: [
+      BASE_MAIN[0],
+      { href: "/admin/orders",       icon: "washer",   label: "Laundry Orders"  },
+      { href: "/admin/appointments", icon: "calendar", label: "Pickup & Delivery" },
+      { href: "/admin/customers",    icon: "users",    label: "Customers"       },
+      BASE_MAIN[4],
+    ]},
+    { title: "Business", items: [{ href: "/admin/services", icon: "washer", label: "Laundry Services" }, ...BASE_STORE] },
+    { title: "POS Features", items: POS_FEATURES },
+  ],
 };
 
 const POS_TYPES_META: { id: PosType; label: string; svgIcon: string; accent: string; desc: string }[] = [
@@ -137,6 +149,7 @@ const POS_TYPES_META: { id: PosType; label: string; svgIcon: string; accent: str
   { id: "salon",      label: "Salon & Services", svgIcon: "scissors", accent: "#7c3aed", desc: "Appointments & services" },
   { id: "wholesale",  label: "Wholesale",        svgIcon: "package",  accent: "#16a34a", desc: "Suppliers & price tiers" },
   { id: "pharmacy",   label: "Pharmacy",         svgIcon: "pill",     accent: "#0891b2", desc: "Prescriptions & drugs"   },
+  { id: "laundry",    label: "Laundry Service",  svgIcon: "washer",   accent: "#0284c7", desc: "Orders & pickup/delivery" },
 ];
 
 function checkSubscriptionExpired(user: User | null): boolean {

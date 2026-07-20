@@ -55,6 +55,16 @@ const POS_TYPES = [
     bg:       "#ecfeff",
     border:   "#a5f3fc",
   },
+  {
+    id:       "laundry",
+    label:    "Laundry Service",
+    icon:     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="13" r="5"/><circle cx="12" cy="13" r="2"/><path d="M6 2h12M8 2v2M16 2v2"/></svg>,
+    desc:     "Order tracking, service pricing and pickup scheduling for laundromats and dry cleaners.",
+    features: ["Laundry orders", "Service catalogue", "Pickup & delivery", "Customer history"],
+    accent:   "#0284c7",
+    bg:       "#f0f9ff",
+    border:   "#bae6fd",
+  },
 ] as const;
 
 type PosTypeId = typeof POS_TYPES[number]["id"];

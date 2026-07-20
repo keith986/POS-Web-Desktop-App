@@ -9,7 +9,7 @@ interface AdminStoreRow extends RowDataPacket {
   full_name:  string;
   store_name: string | null;
   domain:     string | null;
-  pos_type:   "retail" | "restaurant" | "salon" | "wholesale" | "pharmacy" | null;
+  pos_type:   "retail" | "restaurant" | "salon" | "wholesale" | "pharmacy" | "laundry" | null;
 }
 
 /*

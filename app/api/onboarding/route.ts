@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/app/_lib/db";
 
-const VALID_TYPES = ["retail", "restaurant", "salon", "wholesale", "pharmacy"] as const;
+const VALID_TYPES = ["retail", "restaurant", "salon", "wholesale", "pharmacy", "laundry"] as const;
 type PosType = typeof VALID_TYPES[number];
 
 /* ── POST /api/onboarding ──

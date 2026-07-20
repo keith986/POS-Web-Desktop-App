@@ -2951,6 +2951,7 @@ const openCreateStaffModal = async () => {
                           <option value="salon">Salon</option>
                           <option value="wholesale">Wholesale</option>
                           <option value="pharmacy">Pharmacy</option>
+                          <option value="laundry">Laundry</option>
                         </select>
                       </label>
                     </div>
@@ -3037,6 +3038,7 @@ const openCreateStaffModal = async () => {
                           <option value="restaurant">Restaurant</option>
                           <option value="pharmacy">Pharmacy</option>
                           <option value="salon">Salon</option>
+                          <option value="laundry">Laundry</option>
                           <option value="clinic">Clinic</option>
                         </select>
                       </div>

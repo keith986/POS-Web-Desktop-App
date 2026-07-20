@@ -1,5 +1,5 @@
 export type PlanId  = "starter" | "pro" | "enterprise";
-export type PosType = "retail" | "restaurant" | "salon" | "wholesale" | "pharmacy";
+export type PosType = "retail" | "restaurant" | "salon" | "wholesale" | "pharmacy" | "laundry";
 
 export interface Plan {
   id:          PlanId;
@@ -96,6 +96,11 @@ export const POS_PRICES: PosPrice[] = [
     posType: "pharmacy",
     label:   "Pharmacy / Medicine",
     prices:  { starter: 1299, pro: 2499, enterprise: 4999 },
+  },
+  {
+    posType: "laundry",
+    label:   "Laundry Service",
+    prices:  { starter: 999, pro: 1999, enterprise: 3999 },
   },
 ];
 

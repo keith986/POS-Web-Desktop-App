@@ -29,7 +29,7 @@ export async function initDb(): Promise<void> {
       is_super_admin   BOOLEAN      DEFAULT FALSE,
       store_name       VARCHAR(100) NULL,
       domain           VARCHAR(100) NULL UNIQUE,
-      pos_type         ENUM('retail','restaurant','salon','wholesale','pharmacy') NULL DEFAULT NULL,
+      pos_type         ENUM('retail','restaurant','salon','wholesale','pharmacy','laundry') NULL DEFAULT NULL,
       subdomain_url    VARCHAR(255) NULL DEFAULT NULL,
       subdomain_status ENUM('active','pending','failed') NULL DEFAULT NULL,
       created_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -539,7 +539,7 @@ export async function initDb(): Promise<void> {
     {
       table:  "users",
       column: "pos_type",
-      sql:    "ALTER TABLE users ADD COLUMN pos_type ENUM('retail','restaurant','salon','wholesale','pharmacy') NULL DEFAULT NULL AFTER domain",
+      sql:    "ALTER TABLE users ADD COLUMN pos_type ENUM('retail','restaurant','salon','wholesale','pharmacy','laundry') NULL DEFAULT NULL AFTER domain",
     },
     {
       table:  "users",
@@ -603,6 +603,15 @@ export async function initDb(): Promise<void> {
       await conn.query(m.sql);
       console.log(`🔧 Migration: added ${m.table}.${m.column}`);
     }
+  }
+
+  // ── Widen pos_type ENUM for existing databases (adds 'laundry' if missing) ──
+  try {
+    await conn.query(
+      "ALTER TABLE users MODIFY COLUMN pos_type ENUM('retail','restaurant','salon','wholesale','pharmacy','laundry') NULL DEFAULT NULL"
+    );
+  } catch (err) {
+    console.warn("⚠️  Could not widen pos_type ENUM:", err);
   }
 
   // ── SEED DEFAULT ADMIN ───────────────────────────────

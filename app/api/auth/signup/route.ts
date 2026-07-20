@@ -20,7 +20,7 @@ import bcrypt from "bcryptjs";
 
 /* ── Pricing matrix — mirrors your plans.ts ── */
 type PlanId  = "starter" | "pro" | "enterprise";
-type PosType = "retail" | "restaurant" | "salon" | "wholesale" | "pharmacy";
+type PosType = "retail" | "restaurant" | "salon" | "wholesale" | "pharmacy" | "laundry";
 
 const POS_PRICES: Record<PosType, Record<PlanId, number>> = {
   retail:     { starter: 999,  pro: 1999, enterprise: 3999 },
@@ -28,6 +28,7 @@ const POS_PRICES: Record<PosType, Record<PlanId, number>> = {
   salon:      { starter: 999,  pro: 1999, enterprise: 3999 },
   wholesale:  { starter: 1499, pro: 2999, enterprise: 5999 },
   pharmacy:   { starter: 1299, pro: 2499, enterprise: 4999 },
+  laundry:    { starter: 999,  pro: 1999, enterprise: 3999 },
 };
 
 function getExpectedPrice(posType: string, plan: string): number | null {
