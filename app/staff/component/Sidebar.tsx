@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { getStaffNav, type PosType, type StaffNavItem } from "./navConfig";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 interface StoredStaff {
@@ -19,6 +19,7 @@ interface AdminInfo {
   full_name:  string;
   store_name: string | null;
   domain:     string | null;
+  pos_type?:  PosType | null;
 }
 
 function getStoredStaff(): StoredStaff | null {
@@ -40,22 +41,28 @@ const Ic = (d: string) => () => (
   </svg>
 );
 
-const GridIcon = Ic("M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z");
-const SaleIcon = Ic("M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0");
-const BoxIcon  = Ic("M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12");
-const HistIcon = Ic("M12 8v4l3 3M3.05 11a9 9 0 1 0 .5-3M3 4v4h4");
-const SettIcon  = Ic("M12 20a8 8 0 100-16 8 8 0 000 16zM12 14a2 2 0 100-4 2 2 0 000 4zM12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41");
+const GridIcon     = Ic("M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z");
+const SaleIcon     = Ic("M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0");
+const BoxIcon      = Ic("M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12");
+const HistIcon     = Ic("M12 8v4l3 3M3.05 11a9 9 0 1 0 .5-3M3 4v4h4");
+const SettIcon     = Ic("M12 20a8 8 0 100-16 8 8 0 000 16zM12 14a2 2 0 100-4 2 2 0 000 4zM12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41");
+const UtensilsIcon = Ic("M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2M7 2v20M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zM21 22v-7");
+const CalendarIcon = Ic("M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z");
+const TruckIcon    = Ic("M1 3h15v13H1zM16 8h4l3 3v5h-7V8zM5.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM18.5 21a1.5 1.5 0 100-3 1.5 1.5 0 000 3z");
+const PillIcon     = Ic("M10.5 4.5a6 6 0 000 12h3a6 6 0 000-12h-3zM7.5 10.5h9");
+const FlaskIcon    = Ic("M9 3h6M9 3v5l-4 9a1 1 0 00.9 1.5h12.2a1 1 0 00.9-1.5L15 8V3");
+const ScissorsIcon = Ic("M6 9a3 3 0 100-6 3 3 0 000 6zM6 21a3 3 0 100-6 3 3 0 000 6zM20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12");
+const WasherIcon   = Ic("M6 2h12M8 2v2M16 2v2M4 4h16v18H4zM12 15a5 5 0 100-10 5 5 0 000 10z");
 function ChatIcon() { return <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M7 8h10M7 12h6"/></svg>; }
 function IcoOut() { return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>; }
 
-const NAV = [
-  { icon: GridIcon, label: "Dashboard"    },
-  { icon: SaleIcon, label: "Record Sale"  },
-  { icon: BoxIcon,  label: "Products"     },
-  { icon: HistIcon, label: "Sales History"},
-  { icon: ChatIcon, label: "Support"      },
-  { icon: SettIcon,  label: "Settings"     },
-];
+/* Maps navConfig icon keys -> icon components. Adding a business type only
+   ever means editing navConfig.ts — this file doesn't need to change. */
+const ICONS: Record<string, () => JSX.Element> = {
+  grid: GridIcon, sale: SaleIcon, box: BoxIcon, history: HistIcon, chat: ChatIcon,
+  settings: SettIcon, utensils: UtensilsIcon, calendar: CalendarIcon, truck: TruckIcon,
+  pill: PillIcon, flask: FlaskIcon, scissors: ScissorsIcon, washer: WasherIcon,
+};
 
 /* ─── Props ─────────────────────────────────────────────────── */
 interface SidebarProps {
@@ -182,7 +189,8 @@ export default function Sidebar({ activeTab, setActiveTab, cartCount = 0 }: Side
   const [adminLoading, setAdminLoading]   = useState(true);
   const [showConfirm,  setShowConfirm]    = useState(false);
 
-  /* ── Fetch admin/store info ── */
+  /* ── Fetch admin/store info (includes pos_type, which drives which
+       tabs this staff member sees below) ── */
   useEffect(() => {
     if (!staff?.id) return;
     fetch(`/api/staff/admin?staff_id=${staff.id}`)
@@ -206,6 +214,8 @@ export default function Sidebar({ activeTab, setActiveTab, cartCount = 0 }: Side
   const shiftRole  = staff.shift_role
     ? staff.shift_role.charAt(0).toUpperCase() + staff.shift_role.slice(1)
     : "Cashier";
+
+  const navItems: StaffNavItem[] = getStaffNav(admin?.pos_type);
 
   return (
     <>
@@ -233,20 +243,25 @@ export default function Sidebar({ activeTab, setActiveTab, cartCount = 0 }: Side
           )}
         </div>
 
-        {/* ── Nav ── */}
+        {/* ── Nav — driven by navConfig.ts, keyed on this admin's pos_type,
+               so a laundry staff member sees laundry-relevant tabs instead
+               of generic "Products" / "Record Sale" ── */}
         <div className="sb-section">Staff Menu</div>
-        {NAV.map(({ icon: Icon, label }) => (
-          <a key={label}
-            className={`sb-nav-item ${activeTab === label ? "active" : ""}`}
-            onClick={e => { e.preventDefault(); setActiveTab(label); }}
-            href="#">
-            <Icon />
-            {label}
-            {label === "Record Sale" && cartCount > 0 && (
-              <span className="sb-cart-badge">{cartCount}</span>
-            )}
-          </a>
-        ))}
+        {navItems.map(({ key, label, icon }) => {
+          const Icon = ICONS[icon] ?? GridIcon;
+          return (
+            <a key={key}
+              className={`sb-nav-item ${activeTab === key ? "active" : ""}`}
+              onClick={e => { e.preventDefault(); setActiveTab(key); }}
+              href="#">
+              <Icon />
+              {label}
+              {key === "Record Sale" && cartCount > 0 && (
+                <span className="sb-cart-badge">{cartCount}</span>
+              )}
+            </a>
+          );
+        })}
 
         {/* ── BOTTOM: Cashier info + logout ── */}
         <div className="sb-footer">

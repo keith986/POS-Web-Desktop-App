@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useBulkSelect, HeaderCheckbox, RowCheckbox, BulkActionBar } from "@/app/admin/_components/BulkSelectBar";
 import { useStore } from "@/app/_lib/StoreContext";
 
 /* ── Types ── */
@@ -430,6 +431,20 @@ export default function AdminTablesPage() {
     return matchSection && matchStatus;
   });
 
+  const bulk = useBulkSelect(filtered.filter(t => t.status !== "occupied").map(t => t.id));
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const handleBulkDelete = () => {
+    openConfirm("Delete Tables", `Delete ${bulk.count} selected table${bulk.count === 1 ? "" : "s"}? This cannot be undone.`, true, async () => {
+      setBulkDeleting(true);
+      try {
+        await Promise.all([...bulk.selected].map(id => fetch(`/api/tables/${id}?admin_id=${adminUser?.id}`, { method: "DELETE" })));
+        bulk.clear();
+        fetchTables();
+      } catch { showToast("Failed to delete some tables", "error"); }
+      finally { setBulkDeleting(false); }
+    });
+  };
+
   /* ── Stats ── */
   const stats = {
     total:     tables.length,
@@ -483,6 +498,8 @@ export default function AdminTablesPage() {
             </div>
           ))}
         </div>
+
+        <BulkActionBar bulk={bulk} label="table" onDelete={handleBulkDelete} deleting={bulkDeleting} />
 
         {/* Floor plan card */}
         <div style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden" }}>
@@ -576,6 +593,9 @@ export default function AdminTablesPage() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr>
+                  <th style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", width: 36 }}>
+                    <HeaderCheckbox bulk={bulk} />
+                  </th>
                   {["#", "Label", "Section", "Capacity", "Status", "Last Updated", "Actions"].map(h => (
                     <th key={h} style={{ textAlign: "left", padding: "0.6rem 1.25rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "#9a9a8e", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", whiteSpace: "nowrap" }}>{h}</th>
                   ))}
@@ -588,6 +608,11 @@ export default function AdminTablesPage() {
                     <tr key={table.id} style={{ borderBottom: "1px solid #e2e0d8" }}
                       onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = "#fafaf8"}
                       onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = ""}>
+                      <td style={{ padding: "0.85rem 0.85rem" }}>
+                        {table.status !== "occupied"
+                          ? <RowCheckbox id={table.id} bulk={bulk} />
+                          : <span title="Occupied tables can't be deleted" style={{ color: "#c8c6bc", fontSize: 11 }}>—</span>}
+                      </td>
                       <td style={{ padding: "0.85rem 1.25rem", color: "#9a9a8e", fontWeight: 600 }}>#{table.table_number}</td>
                       <td style={{ padding: "0.85rem 1.25rem", fontWeight: 500, color: "#141410" }}>{table.label}</td>
                       <td style={{ padding: "0.85rem 1.25rem" }}>

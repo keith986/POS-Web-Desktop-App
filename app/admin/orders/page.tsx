@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useStore } from "@/app/_lib/StoreContext";
 import { exportToCsv } from "@/app/_lib/exportCsv";
+import TutorialButton from "@/app/_lib/tutorial/TutorialButton";
+import { useTutorialSteps } from "@/app/_lib/tutorial/TutorialContext";
 
 /* ── Types ── */
 interface OrderItem {
@@ -398,6 +400,36 @@ export default function AdminOrdersPage() {
   const [toast,      setToast]      = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [confirm,    setConfirm]    = useState<ConfirmState>({ open: false, title: "", message: "", danger: false, onConfirm: () => {} });
 
+  useTutorialSteps("orders", "Orders", [
+    {
+      target: "orders-stats",
+      title: "Orders at a glance",
+      body: "Total revenue, order count, pending orders needing attention, and anything refunded.",
+    },
+    {
+      target: "orders-search",
+      title: "Search",
+      body: "Find an order fast by its order number, customer name or email.",
+      example: "e.g. type a customer's name to pull up all their past orders.",
+    },
+    {
+      target: "orders-status-filter",
+      title: "Filter by status",
+      body: "Narrow the list down to just Pending, Processing, Completed, Refunded or Cancelled orders.",
+      example: "Tap Pending at the start of a shift to see what still needs to be prepared or fulfilled.",
+    },
+    {
+      target: "orders-export",
+      title: "Export CSV",
+      body: "Downloads whatever orders are currently showing (respecting your search & filters) as a spreadsheet.",
+    },
+    {
+      target: "orders-refresh",
+      title: "Refresh",
+      body: "Pulls in any new orders that came in since you loaded the page.",
+    },
+  ]);
+
   const showToast = (msg: string, type: "success" | "error" = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
@@ -492,7 +524,9 @@ export default function AdminOrdersPage() {
       <header className="header">
         <div className="header-title">Orders</div>
         <div className="header-date">{dater}</div>
+        <TutorialButton />
         <button
+          data-tutorial="orders-export"
           onClick={() => exportToCsv("orders", filtered, [
             { key: "order_number",    label: "Order #" },
             { key: "customer_name",   label: "Customer" },
@@ -507,6 +541,7 @@ export default function AdminOrdersPage() {
           <IconDownload /> Export CSV
         </button>
         <button
+          data-tutorial="orders-refresh"
           onClick={fetchOrders}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border2)", borderRadius: 7, fontFamily: "inherit", fontSize: 13, cursor: "pointer" }}
         >
@@ -517,7 +552,7 @@ export default function AdminOrdersPage() {
       <main className="main">
 
         {/* Stat strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1rem" }}>
+        <div data-tutorial="orders-stats" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1rem" }}>
           {[
             { label: "Total Revenue",   value: formatCurrency(totalRevenue), sub: "Paid orders",    alert: false },
             { label: "Total Orders",    value: orders.length,                sub: "All time",       alert: false },
@@ -540,7 +575,7 @@ export default function AdminOrdersPage() {
           <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
 
             {/* Search */}
-            <div style={{ flex: 1, minWidth: 200, display: "flex", alignItems: "center", gap: 8, background: "var(--bg)", border: "1px solid var(--border2)", borderRadius: 8, padding: "0 10px" }}>
+            <div data-tutorial="orders-search" style={{ flex: 1, minWidth: 200, display: "flex", alignItems: "center", gap: 8, background: "var(--bg)", border: "1px solid var(--border2)", borderRadius: 8, padding: "0 10px" }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
               </svg>
@@ -554,7 +589,7 @@ export default function AdminOrdersPage() {
             </div>
 
             {/* Status filter */}
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            <div data-tutorial="orders-status-filter" style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
               {(["all", "pending", "processing", "completed", "refunded", "cancelled"] as const).map(s => (
                 <button key={s} onClick={() => setStatusFilter(s)} style={{
                   padding: "5px 10px", borderRadius: 7, fontSize: 12, cursor: "pointer", fontFamily: "inherit",

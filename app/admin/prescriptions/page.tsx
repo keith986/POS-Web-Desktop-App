@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useBulkSelect, HeaderCheckbox, RowCheckbox, BulkActionBar } from "@/app/admin/_components/BulkSelectBar";
 import { useStore } from "@/app/_lib/StoreContext";
 
 /* ── Types ── */
@@ -723,6 +724,25 @@ export default function AdminPrescriptionsPage() {
     return matchSearch && matchStatus && matchPay;
   });
 
+  const bulk = useBulkSelect(filtered.map(r => r.id));
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const handleBulkDelete = () => {
+    setConfirm({
+      open: true, danger: true,
+      title: "Delete Prescriptions",
+      message: `Delete ${bulk.count} selected prescription${bulk.count === 1 ? "" : "s"}? This cannot be undone.`,
+      onConfirm: async () => {
+        setBulkDeleting(true);
+        try {
+          await Promise.all([...bulk.selected].map(id => fetch(`/api/prescriptions/${id}?admin_id=${adminUser?.id}`, { method: "DELETE" })));
+          bulk.clear();
+          fetchRx();
+        } catch { showToast("Failed to delete some prescriptions", "error"); }
+        finally { setBulkDeleting(false); }
+      },
+    });
+  };
+
   /* ── Stats ── */
   const todayRx = rxList.filter(r => r.created_at?.slice(0, 10) === todayStr());
   const stats = {
@@ -788,6 +808,8 @@ export default function AdminPrescriptionsPage() {
           ))}
         </div>
 
+        <BulkActionBar bulk={bulk} label="prescription" onDelete={handleBulkDelete} deleting={bulkDeleting} />
+
         {/* Main card */}
         <div style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden" }}>
 
@@ -838,6 +860,9 @@ export default function AdminPrescriptionsPage() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr>
+                  <th style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", width: 36 }}>
+                    <HeaderCheckbox bulk={bulk} />
+                  </th>
                   {["Rx No.", "Patient", "Doctor / Hospital", "Drugs", "Issued", "Expiry", "Amount", "Status", "Payment", "Actions"].map(h => (
                     <th key={h} style={{ textAlign: "left", padding: "0.6rem 1.25rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "#9a9a8e", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", whiteSpace: "nowrap" }}>{h}</th>
                   ))}
@@ -853,6 +878,9 @@ export default function AdminPrescriptionsPage() {
                       onClick={() => { setSelected(r); setDetailOpen(true); }}
                       onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = "#fafaf8"}
                       onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = ""}>
+                      <td style={{ padding: "0.85rem 0.85rem" }} onClick={e => e.stopPropagation()}>
+                        <RowCheckbox id={r.id} bulk={bulk} />
+                      </td>
                       <td style={{ padding: "0.85rem 1.25rem" }}>
                         <div style={{ fontWeight: 700, color: "#2563eb", fontSize: 12 }}>{r.rx_number}</div>
                         <div style={{ fontSize: 10, color: "#9a9a8e", marginTop: 2 }}>{formatDate(r.created_at?.slice(0,10))}</div>

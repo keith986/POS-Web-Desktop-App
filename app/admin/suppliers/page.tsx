@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useBulkSelect, HeaderCheckbox, RowCheckbox, BulkActionBar } from "@/app/admin/_components/BulkSelectBar";
 import { useStore } from "@/app/_lib/StoreContext";
 
 /* ── Types ── */
@@ -599,6 +600,26 @@ export default function AdminSuppliersPage() {
     return matchSearch && matchCat && matchStatus;
   });
 
+  const bulk = useBulkSelect(filtered.map(s => s.id));
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const handleBulkDelete = () => {
+    setConfirm({
+      open: true, danger: true,
+      title: "Delete Suppliers",
+      message: `Delete ${bulk.count} selected supplier${bulk.count === 1 ? "" : "s"}? This cannot be undone.`,
+      onConfirm: async () => {
+        setBulkDeleting(true);
+        try {
+          await Promise.all([...bulk.selected].map(id => fetch(`/api/suppliers/${id}?admin_id=${adminUser?.id}`, { method: "DELETE" })));
+          showToast("Suppliers deleted");
+          bulk.clear();
+          fetchSuppliers();
+        } catch { showToast("Failed to delete", "error"); }
+        finally { setBulkDeleting(false); }
+      },
+    });
+  };
+
   /* ── Stats ── */
   const totalBalanceDue  = suppliers.reduce((sum, s) => sum + s.balance_due,  0);
   const totalCreditLimit = suppliers.reduce((sum, s) => sum + s.credit_limit, 0);
@@ -710,6 +731,8 @@ export default function AdminSuppliersPage() {
             </div>
           </div>
 
+          <BulkActionBar bulk={bulk} label="supplier" onDelete={handleBulkDelete} deleting={bulkDeleting} />
+
           {/* Content */}
           {fetching ? (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "4rem", color: "#9a9a8e", fontSize: 13, gap: 10 }}>
@@ -740,6 +763,9 @@ export default function AdminSuppliersPage() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr>
+                  <th style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", width: 36 }}>
+                    <HeaderCheckbox bulk={bulk} />
+                  </th>
                   {["Supplier", "Category", "Contact", "Location", "Payment Terms", "Balance Due", "Credit Limit", "Status", "Actions"].map(h => (
                     <th key={h} style={{ textAlign: "left", padding: "0.6rem 1.25rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "#9a9a8e", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", whiteSpace: "nowrap" }}>{h}</th>
                   ))}
@@ -754,6 +780,9 @@ export default function AdminSuppliersPage() {
                       onClick={() => { setSelected(s); setDetailOpen(true); }}
                       onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = "#fafaf8"}
                       onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = ""}>
+                      <td style={{ padding: "0.85rem 0.85rem" }} onClick={e => e.stopPropagation()}>
+                        <RowCheckbox id={s.id} bulk={bulk} />
+                      </td>
                       <td style={{ padding: "0.85rem 1.25rem" }}>
                         <div style={{ fontWeight: 500 }}>{s.name}</div>
                         {s.email && <div style={{ fontSize: 11, color: "#9a9a8e", marginTop: 2 }}>{s.email}</div>}

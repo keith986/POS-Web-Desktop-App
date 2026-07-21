@@ -641,7 +641,7 @@ export default function Sidebar() {
       {mobileOpen && <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />}
 
       <aside className={`sidebar${mobileOpen ? " open" : ""}`}>
-        <div className="sidebar-logo" style={{ cursor: "pointer" }} onClick={() => setSwitcherOpen(true)}>
+        <div data-tutorial="sidebar-switcher" className="sidebar-logo" style={{ cursor: "pointer" }} onClick={() => setSwitcherOpen(true)}>
           <div className="sidebar-logo-mark">{user.store_name?.charAt(0).toUpperCase() ?? "P"}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <span className="sidebar-logo-name">
@@ -661,19 +661,21 @@ export default function Sidebar() {
 
         {subscriptionExpired ? <ExpiredSubscriptionBanner /> : <PlanBadge plan={userPlan} />}
 
-        {sections.map((section, idx) => (
-          <NavSection
-            key={section.title}
-            section={section}
-            userPlan={userPlan}
-            isActive={isActive}
-            pendingOrders={pendingOrders}
-            router={router}
-            initialOpen={idx === 0}
-            subscriptionExpired={subscriptionExpired}
-            supportNew={supportNew}
-          />
-        ))}
+        <div data-tutorial="sidebar-nav">
+          {sections.map((section, idx) => (
+            <NavSection
+              key={section.title}
+              section={section}
+              userPlan={userPlan}
+              isActive={isActive}
+              pendingOrders={pendingOrders}
+              router={router}
+              initialOpen={idx === 0}
+              subscriptionExpired={subscriptionExpired}
+              supportNew={supportNew}
+            />
+          ))}
+        </div>
 
         <div style={{ padding: "0 0.75rem", marginTop: "0.5rem" }}>
           <button

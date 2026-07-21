@@ -5,6 +5,8 @@ import { ThemeProvider } from "@/app/_lib/ThemeContext";
 import Sidebar from "./Sidebar";
 import IdleTimeoutWarning from "../components/IdleTimeoutWarning";
 import AppUpdateGate from "@/app/_lib/appUpdates/AppUpdateGate";
+import { TutorialProvider } from "@/app/_lib/tutorial/TutorialContext";
+import TutorialOverlay from "@/app/_lib/tutorial/TutorialOverlay";
 
 const css = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,700&display=swap');
@@ -442,13 +444,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <ThemeProvider>
       <StoreProvider>
-        <IdleTimeoutWarning />
-        <AppUpdateGate role="admin" />
-        <style>{css}</style>
-        <div className="shell">
-          <Sidebar />
-          {children}
-        </div>
+        <TutorialProvider>
+          <IdleTimeoutWarning />
+          <AppUpdateGate role="admin" />
+          <style>{css}</style>
+          <div className="shell">
+            <Sidebar />
+            {children}
+          </div>
+          <TutorialOverlay />
+        </TutorialProvider>
       </StoreProvider>
     </ThemeProvider>
   );

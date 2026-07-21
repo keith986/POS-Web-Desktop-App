@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useBulkSelect, HeaderCheckbox, RowCheckbox, BulkActionBar } from "@/app/admin/_components/BulkSelectBar";
 
 interface Discount {
   id: string;
@@ -114,6 +115,20 @@ export default function DiscountsPage() {
     if (!confirm("Delete this discount?")) return;
     const res = await fetch(`/api/discounts?id=${id}`, { method: "DELETE" });
     if (res.ok) fetchDiscounts();
+  };
+
+  const bulk = useBulkSelect(discounts.map(d => d.id));
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${bulk.count} selected discount${bulk.count === 1 ? "" : "s"}? This can't be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all([...bulk.selected].map(id => fetch(`/api/discounts?id=${id}`, { method: "DELETE" })));
+      bulk.clear();
+      fetchDiscounts();
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   const handleEdit = (d: Discount) => {
@@ -244,6 +259,8 @@ export default function DiscountsPage() {
           </div>
         )}
 
+        <BulkActionBar bulk={bulk} label="discount" onDelete={handleBulkDelete} deleting={bulkDeleting} />
+
         {/* Table */}
         <div style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden" }}>
           <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #e2e0d8", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -259,6 +276,9 @@ export default function DiscountsPage() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr>
+                  <th style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", width: 36 }}>
+                    <HeaderCheckbox bulk={bulk} />
+                  </th>
                   {["Discount", "Type / Value", "Code", "Usage", "Validity", "Status", "Actions"].map(h => (
                     <th key={h} style={{ textAlign: "left", padding: "0.6rem 1.25rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "#9a9a8e", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", whiteSpace: "nowrap" }}>
                       {h}
@@ -279,6 +299,10 @@ export default function DiscountsPage() {
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#fafaf8"}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ""}
                     >
+                      <td style={{ padding: "0.85rem 0.85rem" }}>
+                        <RowCheckbox id={d.id} bulk={bulk} />
+                      </td>
+
                       {/* Name */}
                       <td style={{ padding: "0.85rem 1.25rem" }}>
                         <div style={{ fontWeight: 500, color: "#141410" }}>{d.name}</div>

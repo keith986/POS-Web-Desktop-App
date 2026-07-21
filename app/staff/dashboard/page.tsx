@@ -6,6 +6,8 @@ import staffCss from "@/app/staff/component/staffStyles";
 import StaffSettingsTab from "@/app/staff/component/StaffSettingsTab";
 import StaffSupportTab from "@/app/staff/component/StaffSupportTab";
 import MpesaPaymentModal from "@/app/staff/component/MpesaPaymentModal";
+import SimpleListTab from "@/app/staff/component/SimpleListTab";
+import { getStaffNav, type PosType } from "@/app/staff/component/navConfig";
 import { useStaffTheme, buildThemeCss, THEMES } from "@/app/staff/component/theme";
 import { useAppUpdates } from "@/app/_lib/appUpdates/useAppUpdates";
 import WhatsNewModal from "@/app/_lib/appUpdates/WhatsNewModal";
@@ -149,7 +151,10 @@ function CategoryIcon({ category, size = 18 }: { category: string; size?: number
   );
 }
 
-const TABS = ["Dashboard", "Record Sale", "Products", "Sales History", "Support", "Settings"];
+/* Fallback header titles for the tabs that exist on every vertical.
+   Vertical-specific tabs (Tables, Appointments, Prescriptions, Suppliers,
+   Pickup & Delivery) get their header title straight from navConfig's label,
+   since that's already worded correctly per business type. */
 const HEADER_TITLES: Record<string, string> = {
   "Dashboard":     "Staff Dashboard",
   "Record Sale":   "Record a Sale",
@@ -351,6 +356,19 @@ export default function StaffDashboard() {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
   };
+
+  /* ── Admin's business type — drives which nav tabs & labels this
+       staff member sees (e.g. laundry gets "Pickup & Delivery" instead
+       of generic tabs the business doesn't use). ── */
+  const [posType, setPosType] = useState<PosType | null>(null);
+  useEffect(() => {
+    if (!staff?.id) return;
+    fetch(`/api/staff/admin?staff_id=${staff.id}`)
+      .then(r => r.json())
+      .then(d => { if (d?.pos_type) setPosType(d.pos_type); })
+      .catch(() => {});
+  }, [staff?.id]);
+  const navItems = getStaffNav(posType);
 
   /* ── Fetch all data ── */
   const fetchAll = useCallback(async () => {
@@ -672,7 +690,7 @@ export default function StaffDashboard() {
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
-          <div className="hdr-title">{HEADER_TITLES[activeTab]}</div>
+          <div className="hdr-title">{HEADER_TITLES[activeTab] ?? navItems.find(n => n.key === activeTab)?.label ?? activeTab}</div>
           <div className="hdr-shift-pill"><div className="hdr-shift-dot" />{staff.full_name} · On Shift</div>
           <div className="hdr-time">{dater}</div>
 
@@ -715,10 +733,10 @@ export default function StaffDashboard() {
         <main className="staff-main">
 
           <div className="staff-tabs">
-            {TABS.map(t => (
-              <button key={t} className={`staff-tab-btn ${activeTab === t ? "active" : ""}`} onClick={() => goToTab(t)}>
-                {t}
-                {t === "Record Sale" && cartCount > 0 && <span className="staff-tab-count">{cartCount}</span>}
+            {navItems.map(({ key, label }) => (
+              <button key={key} className={`staff-tab-btn ${activeTab === key ? "active" : ""}`} onClick={() => goToTab(key)}>
+                {label}
+                {key === "Record Sale" && cartCount > 0 && <span className="staff-tab-count">{cartCount}</span>}
               </button>
             ))}
           </div>
@@ -1027,6 +1045,24 @@ export default function StaffDashboard() {
                     </div>
                   )}
             </div>
+          )}
+
+          {/* ══ VERTICAL-SPECIFIC TABS ══
+               Tables (restaurant), Appointments (salon), Pickup & Delivery
+               (laundry), Prescriptions (pharmacy), Suppliers (wholesale).
+               Each reuses the same admin_id-scoped API the admin side
+               already has — staff gets a lighter, read-mostly view. */}
+          {["Tables", "Appointments", "Pickup & Delivery", "Prescriptions", "Suppliers"].includes(activeTab) && staff && (
+            <SimpleListTab
+              mode={
+                activeTab === "Tables"        ? "tables" :
+                activeTab === "Prescriptions" ? "prescriptions" :
+                activeTab === "Suppliers"     ? "suppliers" :
+                "appointments" /* Appointments (salon) & Pickup & Delivery (laundry) share the appointments table */
+              }
+              adminId={staff.admin_id}
+              onToast={showToast}
+            />
           )}
 
           {/* ══ SUPPORT ══ */}

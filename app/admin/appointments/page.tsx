@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useBulkSelect, HeaderCheckbox, RowCheckbox, BulkActionBar } from "@/app/admin/_components/BulkSelectBar";
 import { useStore } from "@/app/_lib/StoreContext";
 
 /* ── Types ── */
@@ -608,6 +609,25 @@ export default function AdminAppointmentsPage() {
   const weekAppts = appts.filter(a => weekDays.includes(a.date) && filterAppt(a));
   const listAppts = appts.filter(filterAppt).sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
 
+  const bulk = useBulkSelect(listAppts.map(a => a.id));
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const handleBulkDelete = () => {
+    setConfirm({
+      open: true, danger: true,
+      title: "Delete Appointments",
+      message: `Delete ${bulk.count} selected appointment${bulk.count === 1 ? "" : "s"}? This cannot be undone.`,
+      onConfirm: async () => {
+        setBulkDeleting(true);
+        try {
+          await Promise.all([...bulk.selected].map(id => fetch(`/api/appointments/${id}?admin_id=${adminUser?.id}`, { method: "DELETE" })));
+          bulk.clear();
+          fetchAppts();
+        } catch { showToast("Failed to delete some appointments", "error"); }
+        finally { setBulkDeleting(false); }
+      },
+    });
+  };
+
   /* ── Stats ── */
   const todayAppts   = appts.filter(a => a.date === todayStr());
   const stats = {
@@ -681,6 +701,8 @@ export default function AdminAppointmentsPage() {
             </div>
           ))}
         </div>
+
+        {view === "list" && <BulkActionBar bulk={bulk} label="appointment" onDelete={handleBulkDelete} deleting={bulkDeleting} />}
 
         {/* Calendar card */}
         <div style={{ background: "#fff", border: "1px solid #e2e0d8", borderRadius: 12, overflow: "hidden" }}>
@@ -827,6 +849,9 @@ export default function AdminAppointmentsPage() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr>
+                    <th style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", width: 36 }}>
+                      <HeaderCheckbox bulk={bulk} />
+                    </th>
                     {["Client", "Service", "Staff", "Date & Time", "Duration", "Price", "Status", "Payment", "Actions"].map(h => (
                       <th key={h} style={{ textAlign: "left", padding: "0.6rem 1.25rem", fontSize: 11, fontWeight: 500, letterSpacing: "0.5px", textTransform: "uppercase", color: "#9a9a8e", borderBottom: "1px solid #e2e0d8", background: "#f5f4f0", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
@@ -841,6 +866,9 @@ export default function AdminAppointmentsPage() {
                         onClick={() => { setSelected(appt); setDetailOpen(true); }}
                         onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = "#fafaf8"}
                         onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = ""}>
+                        <td style={{ padding: "0.85rem 0.85rem" }} onClick={e => e.stopPropagation()}>
+                          <RowCheckbox id={appt.id} bulk={bulk} />
+                        </td>
                         <td style={{ padding: "0.85rem 1.25rem" }}>
                           <div style={{ fontWeight: 500 }}>{appt.client_name}</div>
                           {appt.client_phone && <div style={{ fontSize: 11, color: "#9a9a8e" }}>{appt.client_phone}</div>}

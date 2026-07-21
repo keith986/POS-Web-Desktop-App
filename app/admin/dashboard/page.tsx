@@ -5,6 +5,8 @@ import { useStore } from "@/app/_lib/StoreContext";
 import { HeaderThemeToggle } from "@/app/_lib/ThemeContext";
 import WeeklyRevenueChart from "@/app/admin/WeeklyRevenueChart";
 import Link from "next/link";
+import TutorialButton from "@/app/_lib/tutorial/TutorialButton";
+import { useTutorialSteps } from "@/app/_lib/tutorial/TutorialContext";
 
 /* ── Types ── */
 interface Notification {
@@ -422,6 +424,35 @@ export default function AdminDashboard() {
   const [error,     setError]    = useState<string | null>(null);
   const [supportUnread, setSupportUnread] = useState(0);
 
+  useTutorialSteps("dashboard", "the Dashboard", [
+    {
+      target: "sidebar-switcher",
+      title: "Your store & POS type",
+      body: "This is your store name and current POS type (Retail, Salon, Laundry, etc). Tap it any time to switch between POS types you've unlocked.",
+    },
+    {
+      target: "sidebar-nav",
+      title: "Navigation",
+      body: "Everything you need lives here, grouped by section. What you see is tailored to your POS type — a laundry store sees Laundry Services and Pickup & Delivery, a restaurant sees Tables and Menu, and so on.",
+    },
+    {
+      target: "dash-refresh",
+      title: "Refresh",
+      body: "Pulls the latest numbers without reloading the whole page.",
+      example: "Use this after a shift change to confirm today's totals are current.",
+    },
+    {
+      target: "dash-stats",
+      title: "Today at a glance",
+      body: "Revenue, orders and active staff for today, updated live as sales come in.",
+    },
+    {
+      target: "sidebar-subscription",
+      title: "Subscription",
+      body: "Shows your plan and renewal date. If it ever shows Expired, tap it to renew — most of the app locks until you do.",
+    },
+  ]);
+
 
 useEffect(() => {
   const params = new URLSearchParams(window.location.search);
@@ -519,7 +550,9 @@ if (!checked) return (
       <header className="header">
         <div className="header-title">Overview</div>
         <div className="header-date">{dater}</div>
+        <TutorialButton />
         <button
+          data-tutorial="dash-refresh"
           onClick={fetchDashboard}
           style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted, #9a9a8e)", padding: 4, display: "flex", alignItems: "center" }}
           title="Refresh"
@@ -574,7 +607,7 @@ if (!checked) return (
         ) : !data ? null : (<>
 
           {/* ── Stat cards ── */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
+          <div data-tutorial="dash-stats" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
             {[
               { label: "Today's Revenue", value: usd(data.revenue_today),  change: usd(data.revenue_week) + " this week", up: true,                          icon: <IconRevenue  />, color: "#d4522a", bg: "#fff4f0" },
               { label: "Orders Today",    value: data.orders_today,         change: `${data.orders_pending} pending`,      up: data.orders_pending === 0,     icon: <IconOrders   />, color: "#2563eb", bg: "#eff6ff" },
