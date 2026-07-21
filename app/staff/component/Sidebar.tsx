@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { JSX } from "react";
 import { getStaffNav, type PosType, type StaffNavItem } from "./navConfig";
 
 /* ─── Types ─────────────────────────────────────────────────── */
