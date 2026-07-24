@@ -159,6 +159,7 @@ export async function initDb(): Promise<void> {
       notif_daily_report    TINYINT(1)   DEFAULT 0,
       notif_staff_login     TINYINT(1)   DEFAULT 0,
       notif_email           VARCHAR(255) DEFAULT '',
+      low_stock_threshold   INT          NOT NULL DEFAULT 10,
       auto_deduct_inventory TINYINT(1)   DEFAULT 0,
       updated_at            TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
@@ -590,6 +591,11 @@ export async function initDb(): Promise<void> {
       table:  "users",
       column: "account_status",
       sql:    "ALTER TABLE users ADD COLUMN account_status ENUM('active','inactive') NOT NULL DEFAULT 'active' AFTER subdomain_status",
+    },
+    {
+      table:  "settings",
+      column: "low_stock_threshold",
+      sql:    "ALTER TABLE settings ADD COLUMN low_stock_threshold INT NOT NULL DEFAULT 10 AFTER notif_email",
     },
   ];
 

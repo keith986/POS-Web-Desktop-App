@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/app/_lib/db";
 import { randomUUID } from "crypto";
+import { notifyNewOrder, notifyLowStockIfCrossed } from "@/app/_lib/notify";
 
 const VALID_STATUSES        = ["pending", "processing", "completed", "refunded", "cancelled"];
 const VALID_PAYMENT_METHODS = ["card", "cash", "mobile"];
@@ -88,6 +89,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       ]
     );
 
+    /* Fire-and-forget: "New Order" email alert (Settings → Notifications) */
+    notifyNewOrder(admin_id, {
+      order_number:   order_number,
+      customer_name:  customer_name,
+      total:          Number(total),
+      payment_method: payMethod,
+      item_count:     Array.isArray(items) ? items.length : 0,
+    });
+
     /* ── 2. Update customer stats if linked and completed ── */
     if (customer_id && orderStatus === "completed") {
       await pool.query(
@@ -117,6 +127,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         for (const item of parsedItems) {
           if (!item.id || !item.quantity) continue;
 
+          /* Read stock before the deduction so we can detect a
+             threshold crossing for the low-stock alert below */
+          const [prodRows] = await pool.query(
+            "SELECT name, sku, stock FROM products WHERE id = ? AND admin_id = ?",
+            [item.id, admin_id]
+          );
+          const prod = (prodRows as { name: string; sku: string | null; stock: number }[])[0];
+          if (!prod) continue;
+
+          const previousStock = prod.stock;
+          const newStock      = Math.max(0, previousStock - Number(item.quantity));
+
           /* Deduct — never below 0 */
           await pool.query(
             `UPDATE products
@@ -136,6 +158,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               `Auto-deducted via ${order_number}${staff_name ? ` — ${staff_name}` : ""}`,
               admin_id,
             ]
+          );
+
+          /* Fire-and-forget: only emails if this sale pushed the
+             product from above the threshold to at/below it */
+          notifyLowStockIfCrossed(
+            admin_id,
+            { name: prod.name, sku: prod.sku },
+            previousStock,
+            newStock
           );
         }
       }

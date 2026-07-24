@@ -28,6 +28,7 @@ interface NotifSettings {
   notif_daily_report: boolean;
   notif_staff_login:  boolean;
   notif_email:        string;
+  low_stock_threshold: number;
 }
 interface SecurityForm {
   currentPassword: string;
@@ -401,7 +402,7 @@ export default function AdminSettingsPage() {
     tax_enabled: true, tax_rate: "16", tax_name: "VAT", tax_inclusive: false, receipt_footer: "",
   });
   const [notif, setNotif] = useState<NotifSettings>({
-    notif_new_order: true, notif_low_stock: true, notif_daily_report: false, notif_staff_login: false, notif_email: "",
+    notif_new_order: true, notif_low_stock: true, notif_daily_report: false, notif_staff_login: false, notif_email: "", low_stock_threshold: 10,
   });
   const [profile, setProfile] = useState<ProfileForm>({
     firstName: "", lastName: "", email: "", phone: "",
@@ -447,6 +448,7 @@ export default function AdminSettingsPage() {
         notif_daily_report: !!data.notif_daily_report,
         notif_staff_login:  !!data.notif_staff_login,
         notif_email:        data.notif_email ?? "",
+        low_stock_threshold: Number(data.low_stock_threshold ?? 10),
       });
       if (user) {
         const parts = user.full_name.split(" ");
@@ -810,7 +812,7 @@ export default function AdminSettingsPage() {
                   <div style={cardBodyStyle}>
                     {[
                       { key: "notif_new_order",    label: "New Order",       desc: "Get notified whenever a new sale is recorded" },
-                      { key: "notif_low_stock",    label: "Low Stock Alert",  desc: "Alert when a product drops below 10 units" },
+                      { key: "notif_low_stock",    label: "Low Stock Alert",  desc: `Alert when a product drops below ${notif.low_stock_threshold} units` },
                       { key: "notif_daily_report", label: "Daily Summary",    desc: "Receive a daily sales report every morning" },
                       { key: "notif_staff_login",  label: "Staff Login",      desc: "Alert when a staff member signs in" },
                     ].map(({ key, label, desc }) => (
@@ -825,6 +827,21 @@ export default function AdminSettingsPage() {
                         />
                       </div>
                     ))}
+                    {notif.notif_low_stock && (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.85rem 0" }}>
+                        <div>
+                          <label style={labelStyle}>Low stock threshold</label>
+                          <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 2 }}>Units remaining that triggers the alert</div>
+                        </div>
+                        <input
+                          style={{ ...fieldStyle, width: 90, textAlign: "right" }}
+                          type="number"
+                          min={0}
+                          value={notif.low_stock_threshold}
+                          onChange={e => setNotif(n => ({ ...n, low_stock_threshold: Math.max(0, Number(e.target.value) || 0) }))}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div style={cardStyle}>

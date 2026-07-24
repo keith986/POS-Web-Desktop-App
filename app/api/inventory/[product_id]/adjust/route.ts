@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/app/_lib/db";
 import { randomUUID } from "crypto";
+import { notifyLowStockIfCrossed } from "@/app/_lib/notify";
 
 /* ── POST /api/inventory/[product_id]/adjust ──
    Updates the stock column directly in the products table,
@@ -25,11 +26,11 @@ export async function POST(
 
     /* Verify product belongs to this admin and get current stock */
     const [check] = await pool.query(
-      "SELECT id, name, stock FROM products WHERE id = ? AND admin_id = ?",
+      "SELECT id, name, sku, stock FROM products WHERE id = ? AND admin_id = ?",
       [product_id, admin_id]
-    ) as [{ id: string; name: string; stock: number }[], unknown];
+    ) as [{ id: string; name: string; sku: string | null; stock: number }[], unknown];
 
-    const product = (check as { id: string; name: string; stock: number }[])[0];
+    const product = (check as { id: string; name: string; sku: string | null; stock: number }[])[0];
     if (!product)
       return NextResponse.json({ error: "Product not found or access denied" }, { status: 403 });
 
@@ -65,6 +66,16 @@ export async function POST(
       );
 
       await conn.commit();
+
+      /* Fire-and-forget: only emails if this adjustment pushed the
+         product from above the threshold to at/below it */
+      notifyLowStockIfCrossed(
+        admin_id,
+        { name: product.name, sku: product.sku },
+        currentStock,
+        newStock
+      );
+
       return NextResponse.json({ success: true, previousStock: currentStock, newStock });
     } catch (err) {
       await conn.rollback();

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/app/_lib/db";
 import bcrypt from "bcryptjs";
 import { RowDataPacket } from "mysql2";
+import { notifyStaffLogin } from "@/app/_lib/notify";
 
 interface UserRow extends RowDataPacket {
   id:               string;
@@ -62,6 +63,13 @@ async function logLoginNotification(
     `INSERT INTO notifications (admin_id, type, title, message) VALUES (?, 'login', ?, ?)`,
     [adminId, title, message]
   );
+
+  /* Fire-and-forget: "Staff Login" email alert (Settings → Notifications).
+     Only fires for staff sign-ins — the setting is scoped to staff, not
+     the admin's own logins. */
+  if (role === "staff") {
+    notifyStaffLogin(adminId, { staff_name: loginName, email, ip });
+  }
 }
 
 /**

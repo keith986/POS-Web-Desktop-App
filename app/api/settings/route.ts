@@ -19,6 +19,7 @@ const DEFAULTS = {
   notif_daily_report:    false,
   notif_staff_login:     false,
   notif_email:           "",
+  low_stock_threshold:   10,
   auto_deduct_inventory: false,
 };
 
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       ...row,
       currency:              row.currency              ?? "KES",
       timezone:              row.timezone              ?? "Africa/Nairobi",
+      low_stock_threshold:   Number(row.low_stock_threshold ?? 10),
       auto_deduct_inventory: Boolean(row.auto_deduct_inventory ?? false),
     });
   } catch (error) {
@@ -72,9 +74,9 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
         currency, timezone, tax_enabled, tax_rate, tax_name,
         tax_inclusive, receipt_footer,
         notif_new_order, notif_low_stock, notif_daily_report,
-        notif_staff_login, notif_email,
+        notif_staff_login, notif_email, low_stock_threshold,
         auto_deduct_inventory
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         store_name            = VALUES(store_name),
         domain                = VALUES(domain),
@@ -93,6 +95,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
         notif_daily_report    = VALUES(notif_daily_report),
         notif_staff_login     = VALUES(notif_staff_login),
         notif_email           = VALUES(notif_email),
+        low_stock_threshold   = VALUES(low_stock_threshold),
         auto_deduct_inventory = VALUES(auto_deduct_inventory),
         updated_at            = NOW()
     `, [
@@ -105,6 +108,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
       body.notif_new_order,    body.notif_low_stock,
       body.notif_daily_report, body.notif_staff_login,
       body.notif_email,
+      Number.isFinite(Number(body.low_stock_threshold)) ? Number(body.low_stock_threshold) : 10,
       body.auto_deduct_inventory ? 1 : 0,
     ]);
 
