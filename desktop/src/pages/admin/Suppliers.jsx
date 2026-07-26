@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { SortTh, Pagination, FilterSelect, sortRows, toggleSort } from "../../components/TableControls";
+import ExportMenu from "../../components/ExportMenu";
+import ImportButton from "../../components/ImportButton";
+import ImportPreviewModal from "../../components/ImportPreviewModal";
+import { exportToExcel, exportToCSV, readImportFile, downloadTemplate } from "../../utils/excelUtils";
+import { buildPdfReport } from "../../utils/pdfReport";
 
 const blankSupplier = {
   name: "",
@@ -31,6 +36,9 @@ export default function Suppliers() {
   const [sort, setSort] = useState({ key: "name", dir: "asc" });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [importRows, setImportRows] = useState(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importResult, setImportResult] = useState("");
 
   useEffect(() => {
     loadSuppliers();
@@ -170,14 +178,145 @@ export default function Suppliers() {
 
   const handleSort = (key) => setSort((s) => toggleSort(s, key));
 
+  /* ── EXPORT ── */
+  const buildExportRows = (rows) => rows.map((s) => ({
+    Name: s.name,
+    Category: s.category || "",
+    Contact: s.contact_name || "",
+    Email: s.email || "",
+    Phone: s.phone || "",
+    Address: s.address || "",
+    City: s.city || "",
+    Country: s.country || "",
+    "Tax Number": s.tax_number || "",
+    "Payment Terms": s.payment_terms || "",
+    "Credit Limit (Ksh)": Number(s.credit_limit || 0),
+    "Balance Due (Ksh)": Number(s.balance_due || 0),
+    Status: s.status || "active",
+    Notes: s.notes || "",
+  }));
+
+  const handleExportExcel = () => exportToExcel("suppliers", [{ name: "Suppliers", rows: buildExportRows(filtered) }]);
+  const handleExportCSV = () => exportToCSV("suppliers", buildExportRows(filtered));
+
+  const handleExportPDF = async () => {
+    const rows = filtered.length ? filtered : suppliers;
+    const totalOwed = rows.reduce((s, r) => s + Number(r.balance_due || 0), 0);
+    const activeCount = rows.filter((r) => (r.status || "active") === "active").length;
+
+    buildPdfReport({
+      title: "Suppliers Report",
+      subtitle: `POStore · ${rows.length} suppliers · Generated ${new Date().toLocaleString()}`,
+      filename: "suppliers-report",
+      sections: [
+        {
+          type: "stats",
+          items: [
+            { label: "Total Suppliers", value: rows.length },
+            { label: "Active Suppliers", value: activeCount },
+            { label: "Total Balance Owed", value: `Ksh ${Math.round(totalOwed).toLocaleString()}` },
+          ],
+        },
+        {
+          type: "table",
+          title: "Supplier Directory",
+          head: ["Name", "Category", "Contact", "Phone", "Status", "Balance (Ksh)", "Terms"],
+          body: rows.map((s) => [
+            s.name, s.category || "—", s.contact_name || "—", s.phone || "—",
+            s.status || "active", Number(s.balance_due || 0).toLocaleString(), s.payment_terms || "—",
+          ]),
+        },
+      ],
+    });
+  };
+
+  /* ── IMPORT ── */
+  const handleImportFile = async (file) => {
+    try {
+      const rows = await readImportFile(file);
+      setImportResult("");
+      setImportRows(rows);
+    } catch {
+      setImportResult("Could not read that file. Please use a .csv or .xlsx file.");
+    }
+  };
+
+  const getField = (row, ...names) => {
+    for (const key of Object.keys(row)) {
+      if (names.some((n) => n.toLowerCase() === key.toLowerCase().trim())) return row[key];
+    }
+    return undefined;
+  };
+
+  const mapImportRow = (raw) => {
+    const name = String(getField(raw, "name", "supplier", "supplier name") ?? "").trim();
+    const email = String(getField(raw, "email") ?? "").trim();
+    const phone = String(getField(raw, "phone") ?? "").trim();
+    const category = String(getField(raw, "category") ?? "").trim();
+    const contact_name = String(getField(raw, "contact", "contact name", "contact_name") ?? "").trim();
+    const payment_terms = String(getField(raw, "payment terms", "payment_terms", "terms") ?? "Net 30").trim();
+    const creditRaw = getField(raw, "credit limit", "credit_limit");
+    const credit_limit = creditRaw !== undefined && creditRaw !== "" ? parseFloat(creditRaw) : 0;
+
+    const errors = [];
+    if (!name) errors.push("Missing name");
+    if (!email && !phone) errors.push("Needs email or phone");
+    if (creditRaw !== undefined && creditRaw !== "" && isNaN(credit_limit)) errors.push("Invalid credit limit");
+
+    return {
+      row: { name, category, contact_name, email, phone, payment_terms, credit_limit: isNaN(credit_limit) ? 0 : credit_limit },
+      errors,
+    };
+  };
+
+  const handleConfirmImport = async (rows) => {
+    setImportBusy(true);
+    let created = 0, updated = 0;
+    for (const row of rows) {
+      const existing = suppliers.find((s) => s.name.toLowerCase() === row.name.toLowerCase());
+      if (existing) {
+        await window.electronAPI.executeDatabase(
+          `UPDATE suppliers SET category=?, contact_name=?, email=?, phone=?, payment_terms=?, credit_limit=?, updated_at=datetime('now') WHERE id=?`,
+          [row.category, row.contact_name, row.email, row.phone, row.payment_terms, row.credit_limit, existing.id]
+        );
+        updated++;
+      } else {
+        await window.electronAPI.executeDatabase(
+          `INSERT INTO suppliers (
+             id, name, category, contact_name, email, phone,
+             address, city, country, tax_number, payment_terms,
+             credit_limit, balance_due, status, notes, created_at, updated_at
+           ) VALUES (?, ?, ?, ?, ?, ?, '', '', '', '', ?, ?, 0, 'active', '', datetime('now'), datetime('now'))`,
+          [uuidv4(), row.name, row.category, row.contact_name, row.email, row.phone, row.payment_terms, row.credit_limit]
+        );
+        created++;
+      }
+    }
+    setImportBusy(false);
+    setImportRows(null);
+    setImportResult(`Imported ${created} new supplier${created !== 1 ? "s" : ""}${updated ? `, updated ${updated} existing` : ""}.`);
+    loadSuppliers();
+  };
+
   return (
     <div className="page">
       <div className="page-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <h1 className="page-title">Suppliers</h1>
-        <button className="btn-primary" onClick={() => { resetForm(); setShowForm(true); }}>
-          + Add Supplier
-        </button>
+        <div className="toolbar-actions">
+          <ImportButton label="Import" onFile={handleImportFile} />
+          <ExportMenu onExportExcel={handleExportExcel} onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
+          <button className="btn-primary" onClick={() => { resetForm(); setShowForm(true); }}>
+            + Add Supplier
+          </button>
+        </div>
       </div>
+
+      {importResult && (
+        <div className="badge badge-green" style={{ display: "inline-flex", marginBottom: 14, padding: "8px 12px" }}>
+          {importResult}
+          <button onClick={() => setImportResult("")} style={{ marginLeft: 10, background: "none", border: "none", color: "inherit", cursor: "pointer", fontWeight: 700 }}>×</button>
+        </div>
+      )}
 
       <div className="table-toolbar">
         <input
@@ -197,6 +336,14 @@ export default function Suppliers() {
             { value: "blacklisted", label: "Blacklisted" },
           ]}
         />
+        <button
+          type="button"
+          className="table-toolbar-group"
+          style={{ background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+          onClick={() => downloadTemplate("suppliers-import-template", ["name", "category", "contact_name", "email", "phone", "payment_terms", "credit_limit"])}
+        >
+          Download import template
+        </button>
       </div>
 
       <div style={{ background: "var(--surface)", border: "1px solid var(--surface-border)", borderRadius: 14, overflow: "hidden" }}>
@@ -296,6 +443,25 @@ export default function Suppliers() {
             </form>
           </div>
         </div>
+      )}
+
+      {importRows && (
+        <ImportPreviewModal
+          title="Import Suppliers"
+          rawRows={importRows}
+          mapRow={mapImportRow}
+          columns={[
+            { key: "name", label: "Name" },
+            { key: "category", label: "Category" },
+            { key: "contact_name", label: "Contact" },
+            { key: "email", label: "Email" },
+            { key: "phone", label: "Phone" },
+            { key: "payment_terms", label: "Terms" },
+          ]}
+          importing={importBusy}
+          onConfirm={handleConfirmImport}
+          onClose={() => setImportRows(null)}
+        />
       )}
     </div>
   );

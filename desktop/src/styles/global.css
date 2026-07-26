@@ -452,7 +452,38 @@ body {
 .data-table th.sortable-th:hover { color: var(--text); }
 .row-number-cell { color: var(--text-3); font-size: 12px; font-family: 'DM Mono', monospace; width: 36px; }
 
-/* TABLE TOOLBAR (search + filters row above a table) */
+/* EXPORT MENU */
+.export-menu { position: relative; display: inline-block; }
+.export-menu-btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.export-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px -8px rgba(0,0,0,0.35);
+  min-width: 210px;
+  padding: 6px;
+  z-index: 40;
+}
+.export-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+  padding: 9px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.export-dropdown-item:hover { background: var(--bg-3); }
+.toolbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .table-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
 .table-toolbar .search-input { margin-bottom: 0; width: 280px; flex: 1; min-width: 200px; max-width: 340px; }
 .filter-select {

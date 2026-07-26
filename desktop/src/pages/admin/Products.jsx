@@ -2,6 +2,12 @@ import React, { useState, useEffect, useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { BoxIcon, AlertIcon } from "../../components/Icons";
 import { SortTh, Pagination, FilterSelect, sortRows, toggleSort } from "../../components/TableControls";
+import ExportMenu from "../../components/ExportMenu";
+import ImportButton from "../../components/ImportButton";
+import ImportPreviewModal from "../../components/ImportPreviewModal";
+import { exportToExcel, exportToCSV, readImportFile, downloadTemplate } from "../../utils/excelUtils";
+import { buildPdfReport } from "../../utils/pdfReport";
+import { renderChartImage, CHART_COLORS } from "../../utils/chartImage";
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -20,6 +26,9 @@ export default function Products() {
   const [sort, setSort] = useState({ key: "name", dir: "asc" });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [importRows, setImportRows] = useState(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importResult, setImportResult] = useState("");
 
   const handleImagePick = (e) => {
     const file = e.target.files?.[0];
@@ -230,24 +239,180 @@ export default function Products() {
 
   const stockChanged = editing && parseInt(form.stock || 0) !== editing.stock;
 
+  /* ── EXPORT ── */
+  const buildExportRows = (rows) => rows.map((p) => {
+    const buy = Number(p.buying_price || 0);
+    const sell = Number(p.price || 0);
+    return {
+      Name: p.name,
+      SKU: p.sku || "",
+      Category: p.category || "",
+      "Buying Price (Ksh)": buy,
+      "Selling Price (Ksh)": sell,
+      "Profit / Unit (Ksh)": +(sell - buy).toFixed(2),
+      "Margin %": buy > 0 ? +(((sell - buy) / buy) * 100).toFixed(1) : "",
+      Stock: p.stock,
+      "Stock Value (Ksh)": +(sell * p.stock).toFixed(2),
+      Status: p.is_active ? "Active" : "Inactive",
+    };
+  });
+
+  const handleExportExcel = () => {
+    exportToExcel("products", [{ name: "Products", rows: buildExportRows(filtered) }]);
+  };
+
+  const handleExportCSV = () => {
+    exportToCSV("products", buildExportRows(filtered));
+  };
+
+  const handleExportPDF = async () => {
+    const rows = filtered.length ? filtered : products;
+    const withProfit = rows.map((p) => ({ ...p, profit: Number(p.price || 0) - Number(p.buying_price || 0) }));
+    const topByProfit = [...withProfit].sort((a, b) => b.profit - a.profit).slice(0, 8);
+
+    const chartImage = topByProfit.length
+      ? await renderChartImage({
+          type: "bar",
+          labels: topByProfit.map((p) => p.name),
+          datasets: [{ label: "Profit per unit (Ksh)", data: topByProfit.map((p) => p.profit), backgroundColor: CHART_COLORS[0] }],
+        })
+      : null;
+
+    const totalStockValue = rows.reduce((s, p) => s + Number(p.price || 0) * Number(p.stock || 0), 0);
+    const avgMargin = rows.length
+      ? rows.reduce((s, p) => {
+          const buy = Number(p.buying_price || 0);
+          const sell = Number(p.price || 0);
+          return s + (buy > 0 ? ((sell - buy) / buy) * 100 : 0);
+        }, 0) / rows.length
+      : 0;
+
+    buildPdfReport({
+      title: "Products Report",
+      subtitle: `POStore · ${rows.length} products · Generated ${new Date().toLocaleString()}`,
+      filename: "products-report",
+      sections: [
+        {
+          type: "stats",
+          items: [
+            { label: "Total Products", value: rows.length },
+            { label: "Total Stock Value", value: `Ksh ${Math.round(totalStockValue).toLocaleString()}` },
+            { label: "Avg. Margin", value: `${avgMargin.toFixed(1)}%` },
+          ],
+        },
+        chartImage ? { type: "chart", title: "Most Profitable Products (per unit)", image: chartImage, height: 220 } : null,
+        {
+          type: "table",
+          title: "Product Inventory",
+          head: ["Name", "SKU", "Category", "Buying (Ksh)", "Selling (Ksh)", "Profit (Ksh)", "Stock", "Status"],
+          body: rows.map((p) => [
+            p.name,
+            p.sku || "—",
+            p.category || "—",
+            Number(p.buying_price || 0).toLocaleString(),
+            Number(p.price).toLocaleString(),
+            (Number(p.price) - Number(p.buying_price || 0)).toLocaleString(),
+            p.stock,
+            p.is_active ? "Active" : "Inactive",
+          ]),
+        },
+      ].filter(Boolean),
+    });
+  };
+
+  /* ── IMPORT ── */
+  const handleImportFile = async (file) => {
+    try {
+      const rows = await readImportFile(file);
+      setImportResult("");
+      setImportRows(rows);
+    } catch (err) {
+      setImportResult("Could not read that file. Please use a .csv or .xlsx file.");
+    }
+  };
+
+  const getField = (row, ...names) => {
+    for (const key of Object.keys(row)) {
+      if (names.some((n) => n.toLowerCase() === key.toLowerCase().trim())) return row[key];
+    }
+    return undefined;
+  };
+
+  const mapImportRow = (raw) => {
+    const name = String(getField(raw, "name", "product", "product name") ?? "").trim();
+    const priceRaw = getField(raw, "price", "selling price", "selling_price");
+    const buyingRaw = getField(raw, "buying price", "buying_price", "cost", "cost price");
+    const stockRaw = getField(raw, "stock", "quantity", "qty");
+    const category = String(getField(raw, "category") ?? "").trim();
+    const sku = String(getField(raw, "sku") ?? "").trim();
+
+    const price = parseFloat(priceRaw);
+    const buying_price = buyingRaw !== undefined && buyingRaw !== "" ? parseFloat(buyingRaw) : 0;
+    const stock = stockRaw !== undefined && stockRaw !== "" ? parseInt(stockRaw, 10) : 0;
+
+    const errors = [];
+    if (!name) errors.push("Missing name");
+    if (isNaN(price) || price < 0) errors.push("Invalid selling price");
+    if (stockRaw !== undefined && isNaN(stock)) errors.push("Invalid stock");
+    if (buyingRaw !== undefined && buyingRaw !== "" && isNaN(buying_price)) errors.push("Invalid buying price");
+
+    return { row: { name, sku, category, price: isNaN(price) ? 0 : price, buying_price: isNaN(buying_price) ? 0 : buying_price, stock: isNaN(stock) ? 0 : stock }, errors };
+  };
+
+  const handleConfirmImport = async (rows) => {
+    setImportBusy(true);
+    let created = 0, updated = 0;
+    for (const row of rows) {
+      const existing = row.sku ? products.find((p) => (p.sku || "").toLowerCase() === row.sku.toLowerCase()) : null;
+      if (existing) {
+        await window.electronAPI.executeDatabase(
+          "UPDATE products SET name=?, price=?, buying_price=?, stock=?, category=?, sku=?, updated_at=datetime('now') WHERE id=?",
+          [row.name, row.price, row.buying_price, row.stock, row.category, row.sku, existing.id]
+        );
+        updated++;
+      } else {
+        await window.electronAPI.executeDatabase(
+          "INSERT INTO products (id, name, price, buying_price, stock, category, sku) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [uuidv4(), row.name, row.price, row.buying_price, row.stock, row.category, row.sku]
+        );
+        created++;
+      }
+    }
+    setImportBusy(false);
+    setImportRows(null);
+    setImportResult(`Imported ${created} new product${created !== 1 ? "s" : ""}${updated ? `, updated ${updated} existing` : ""}.`);
+    loadProducts();
+  };
+
   return (
     <div className="page">
       <div className="page-header">
         <h1 className="page-title">Products</h1>
-        <button
-          className="btn-primary"
-          onClick={() => {
-            setShowForm(true);
-            setEditing(null);
-            setForm({ name: "", price: "", buying_price: "", stock: "", category: "", sku: "", image: null });
-            setError("");
-            setApprovalReason("");
-            setImgError("");
-          }}
-        >
-          + Add Product
-        </button>
+        <div className="toolbar-actions">
+          <ImportButton label="Import" onFile={handleImportFile} />
+          <ExportMenu onExportExcel={handleExportExcel} onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
+          <button
+            className="btn-primary"
+            onClick={() => {
+              setShowForm(true);
+              setEditing(null);
+              setForm({ name: "", price: "", buying_price: "", stock: "", category: "", sku: "", image: null });
+              setError("");
+              setApprovalReason("");
+              setImgError("");
+            }}
+          >
+            + Add Product
+          </button>
+        </div>
       </div>
+
+      {importResult && (
+        <div className="badge badge-green" style={{ display: "inline-flex", marginBottom: 14, padding: "8px 12px" }} onAnimationEnd={() => {}}>
+          {importResult}
+          <button onClick={() => setImportResult("")} style={{ marginLeft: 10, background: "none", border: "none", color: "inherit", cursor: "pointer", fontWeight: 700 }}>×</button>
+        </div>
+      )}
 
       <div className="table-toolbar">
         <input
@@ -267,6 +432,14 @@ export default function Products() {
           onChange={setStatusFilter}
           options={[{ value: "all", label: "All statuses" }, { value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }]}
         />
+        <button
+          type="button"
+          className="table-toolbar-group"
+          style={{ background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+          onClick={() => downloadTemplate("products-import-template", ["name", "sku", "category", "buying_price", "price", "stock"])}
+        >
+          Download import template
+        </button>
       </div>
 
       {showForm && (
@@ -532,6 +705,25 @@ export default function Products() {
             </div>
           </div>
         </div>
+      )}
+
+      {importRows && (
+        <ImportPreviewModal
+          title="Import Products"
+          rawRows={importRows}
+          mapRow={mapImportRow}
+          columns={[
+            { key: "name", label: "Name" },
+            { key: "sku", label: "SKU" },
+            { key: "category", label: "Category" },
+            { key: "buying_price", label: "Buying Price" },
+            { key: "price", label: "Selling Price" },
+            { key: "stock", label: "Stock" },
+          ]}
+          importing={importBusy}
+          onConfirm={handleConfirmImport}
+          onClose={() => setImportRows(null)}
+        />
       )}
     </div>
   );

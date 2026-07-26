@@ -3,6 +3,9 @@ import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
 import { CheckCircleIcon, XCircleIcon } from "../../components/Icons";
 import { SortTh, Pagination, FilterSelect, sortRows, toggleSort } from "../../components/TableControls";
+import ExportMenu from "../../components/ExportMenu";
+import { exportToExcel, exportToCSV } from "../../utils/excelUtils";
+import { buildPdfReport } from "../../utils/pdfReport";
 
 export default function Staff() {
   const [staff, setStaff] = useState([]);
@@ -81,11 +84,53 @@ export default function Staff() {
 
   const handleSort = (key) => setSort((s) => toggleSort(s, key));
 
+  /* ── EXPORT ── */
+  const buildExportRows = (rows) => rows.map((m) => ({
+    Name: m.name,
+    Email: m.email,
+    Role: m.role,
+    Status: m.is_active ? "Active" : "Inactive",
+    "Joined": m.created_at ? new Date(m.created_at).toLocaleDateString() : "",
+  }));
+
+  const handleExportExcel = () => exportToExcel("staff", [{ name: "Staff", rows: buildExportRows(filtered) }]);
+  const handleExportCSV = () => exportToCSV("staff", buildExportRows(filtered));
+
+  const handleExportPDF = async () => {
+    const rows = filtered.length ? filtered : staff;
+    const activeCount = rows.filter((m) => m.is_active).length;
+
+    buildPdfReport({
+      title: "Staff Report",
+      subtitle: `POStore · ${rows.length} staff members · Generated ${new Date().toLocaleString()}`,
+      filename: "staff-report",
+      sections: [
+        {
+          type: "stats",
+          items: [
+            { label: "Total Staff", value: rows.length },
+            { label: "Active", value: activeCount },
+            { label: "Inactive", value: rows.length - activeCount },
+          ],
+        },
+        {
+          type: "table",
+          title: "Staff Directory",
+          head: ["Name", "Email", "Role", "Status", "Joined"],
+          body: rows.map((m) => [m.name, m.email, m.role, m.is_active ? "Active" : "Inactive", m.created_at ? new Date(m.created_at).toLocaleDateString() : "—"]),
+        },
+      ],
+    });
+  };
+
   return (
     <div className="page">
       <div className="page-header">
         <h1 className="page-title">Staff</h1>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>+ Add Staff</button>
+        <div className="toolbar-actions">
+          <ExportMenu onExportExcel={handleExportExcel} onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
+          <button className="btn-primary" onClick={() => setShowForm(true)}>+ Add Staff</button>
+        </div>
       </div>
 
       {showForm && (

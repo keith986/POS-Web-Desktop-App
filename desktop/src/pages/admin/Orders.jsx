@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { AlertIcon } from "../../components/Icons";
 import { SortTh, Pagination, FilterSelect, sortRows, toggleSort } from "../../components/TableControls";
+import ExportMenu from "../../components/ExportMenu";
+import { exportToExcel, exportToCSV } from "../../utils/excelUtils";
+import { buildPdfReport } from "../../utils/pdfReport";
+import { renderChartImage, CHART_COLORS } from "../../utils/chartImage";
 
 /* ── SVG Icons ── */
 function CheckCircleIcon() {
@@ -214,6 +218,58 @@ export default function Orders() {
 
   const handleSort = (key) => setSort((s) => toggleSort(s, key));
 
+  /* ── EXPORT ── */
+  const buildExportRows = (rows) => rows.map((o) => ({
+    "Order #": o.order_number,
+    Staff: o.staff_name,
+    Items: o.item_count,
+    "Total (Ksh)": Number(o.total),
+    Payment: o.payment_method,
+    Time: new Date(o.created_at).toLocaleString(),
+  }));
+
+  const handleExportExcel = () => exportToExcel("orders", [{ name: "Orders", rows: buildExportRows(sortedOrders) }]);
+  const handleExportCSV = () => exportToCSV("orders", buildExportRows(sortedOrders));
+
+  const handleExportPDF = async () => {
+    const rows = sortedOrders.length ? sortedOrders : orders;
+    const total = rows.reduce((s, o) => s + Number(o.total), 0);
+    const avg = rows.length ? total / rows.length : 0;
+
+    const byPayment = {};
+    rows.forEach((o) => { byPayment[o.payment_method] = (byPayment[o.payment_method] || 0) + Number(o.total); });
+    const chartImage = Object.keys(byPayment).length
+      ? await renderChartImage({
+          type: "pie",
+          labels: Object.keys(byPayment),
+          datasets: [{ data: Object.values(byPayment), backgroundColor: CHART_COLORS }],
+        })
+      : null;
+
+    buildPdfReport({
+      title: "Orders Report",
+      subtitle: `POStore · ${dateFilter} · ${rows.length} orders · Generated ${new Date().toLocaleString()}`,
+      filename: "orders-report",
+      sections: [
+        {
+          type: "stats",
+          items: [
+            { label: "Total Orders", value: rows.length },
+            { label: "Total Revenue", value: `Ksh ${Math.round(total).toLocaleString()}` },
+            { label: "Avg. Order Value", value: `Ksh ${Math.round(avg).toLocaleString()}` },
+          ],
+        },
+        chartImage ? { type: "chart", title: "Revenue by Payment Method", image: chartImage, height: 220 } : null,
+        {
+          type: "table",
+          title: "Order List",
+          head: ["Order #", "Staff", "Items", "Total (Ksh)", "Payment", "Time"],
+          body: rows.map((o) => [o.order_number, o.staff_name, o.item_count, Number(o.total).toLocaleString(), o.payment_method, new Date(o.created_at).toLocaleString()]),
+        },
+      ].filter(Boolean),
+    });
+  };
+
   return (
     <div className="page">
       <div className="page-header">
@@ -234,6 +290,7 @@ export default function Orders() {
           <button className="badge" onClick={() => setShowApprovals(!showApprovals)} style={{ padding: "6px 12px", background: pendingApprovals.length > 0 ? "#fffbeb" : "#f5f4f0", color: pendingApprovals.length > 0 ? "#d97706" : "#9a9a8e", cursor: "pointer", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
             <ClipboardIcon /> Pending: {pendingApprovals.length}
           </button>
+          <ExportMenu onExportExcel={handleExportExcel} onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
         </div>
       </div>
 
