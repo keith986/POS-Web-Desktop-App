@@ -73,7 +73,7 @@ body {
   background: var(--bg);
 }
 .splash-logo { display: flex; align-items: center; gap: 12px; }
-.splash-icon { font-size: 40px; color: var(--accent); }
+.splash-icon { display: inline-flex; color: var(--accent); }
 .splash-logo h1 { font-size: 32px; font-weight: 700; letter-spacing: -1px; }
 .splash-spinner {
   width: 32px; height: 32px;
@@ -125,7 +125,7 @@ body {
   box-shadow: 0 4px 40px rgba(100, 80, 60, 0.13);
 }
 .login-header { text-align: center; margin-bottom: 32px; }
-.login-logo { font-size: 36px; color: var(--accent); margin-bottom: 12px; }
+.login-logo { display: flex; justify-content: center; color: var(--accent); margin-bottom: 12px; }
 .login-title { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
 .login-subtitle { color: var(--text-2); font-size: 13px; margin-top: 4px; }
 .login-form { display: flex; flex-direction: column; gap: 16px; }
@@ -407,6 +407,22 @@ body {
   transition: background 0.8s ease, border-color 0.8s ease;
 }
 .stat-icon { font-size: 20px; color: var(--accent); margin-bottom: 12px; }
+.stat-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 14px -4px rgba(0,0,0,0.35);
+}
+.stat-icon-wrap svg { display: block; }
+.stat-icon-revenue { background: linear-gradient(135deg, #f6a536, #e85d2f); }
+.stat-icon-orders { background: linear-gradient(135deg, #6366f1, #a855f7); }
+.stat-icon-products { background: linear-gradient(135deg, #22c55e, #0d9488); }
+.stat-icon-staff { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
 .stat-value { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
 .stat-label { color: var(--text-2); font-size: 12px; }
 
@@ -433,6 +449,61 @@ body {
 .clickable-row { cursor: pointer; }
 .order-number { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--accent); }
 .low-stock { color: var(--yellow); }
+.data-table th.sortable-th:hover { color: var(--text); }
+.row-number-cell { color: var(--text-3); font-size: 12px; font-family: 'DM Mono', monospace; width: 36px; }
+
+/* TABLE TOOLBAR (search + filters row above a table) */
+.table-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.table-toolbar .search-input { margin-bottom: 0; width: 280px; flex: 1; min-width: 200px; max-width: 340px; }
+.filter-select {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.filter-select:focus { outline: none; border-color: var(--accent); }
+.table-toolbar-group { display: flex; align-items: center; gap: 6px; color: var(--text-3); font-size: 12px; }
+
+/* PAGINATION */
+.pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding-top: 4px; }
+.pagination-info { color: var(--text-3); font-size: 12px; }
+.pagination-info strong { color: var(--text-2); font-weight: 600; }
+.pagination-controls { display: flex; align-items: center; gap: 6px; }
+.pagination-btn {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-2);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pagination-btn:hover:not(:disabled) { border-color: var(--text-3); color: var(--text); }
+.pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pagination-btn-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pagination-ellipsis { color: var(--text-3); font-size: 12px; padding: 0 2px; }
+.pagination-size {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-2);
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
 
 /* BADGES */
 .badge {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import UpdateBanner from "../components/UpdateBanner";
+import { BoxIcon, EyeIcon } from "../components/Icons";
 
 // Icons
 const SunIcon = () => (
@@ -315,7 +316,7 @@ export default function StaffDashboard({ user, onLogout }) {
                   {product.image ? (
                     <img src={product.image} alt={product.name} className="product-thumb-img" />
                   ) : (
-                    <span>📦</span>
+                    <span><BoxIcon size={20} /></span>
                   )}
                   <button
                     type="button"
@@ -323,7 +324,7 @@ export default function StaffDashboard({ user, onLogout }) {
                     title="View details"
                     onClick={(e) => { e.stopPropagation(); setViewingProduct(product); }}
                   >
-                    👁
+                    <EyeIcon size={14} />
                   </button>
                 </div>
                 <div className="product-name">{product.name}</div>
@@ -340,7 +341,7 @@ export default function StaffDashboard({ user, onLogout }) {
                   {viewingProduct.image ? (
                     <img src={viewingProduct.image} alt={viewingProduct.name} />
                   ) : (
-                    <span style={{ fontSize: 36 }}>📦</span>
+                    <span style={{ fontSize: 36 }}><BoxIcon size={32} /></span>
                   )}
                 </div>
                 <div className="pv-modal-body">

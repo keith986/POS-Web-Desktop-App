@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { CheckIcon, BellIcon, XIcon } from "./Icons";
 
 export default function UpdateBanner() {
   const [updateInfo, setUpdateInfo] = useState(null);
@@ -72,14 +73,14 @@ export default function UpdateBanner() {
             <line x1="12" y1="12" x2="12" y2="21"/>
             <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
           </svg>
-          <span style={{ color: "white", fontSize: "13px", fontWeight: "700" }}>
-            {updateInfo.isReminder ? "⏰ Update Reminder" : "🆕 Update Available"}
+          <span style={{ color: "white", fontSize: "13px", fontWeight: "700", display: "flex", alignItems: "center", gap: "6px" }}>
+            <BellIcon size={13} /> {updateInfo.isReminder ? "Update Reminder" : "Update Available"}
           </span>
         </div>
         <button
           onClick={handleIgnore}
-          style={{ background: "none", border: "none", color: "rgba(255,255,255,0.7)", cursor: "pointer", fontSize: "16px", padding: "0" }}
-        >✕</button>
+          style={{ background: "none", border: "none", color: "rgba(255,255,255,0.7)", cursor: "pointer", padding: "0", display: "flex", alignItems: "center" }}
+        ><XIcon size={14} /></button>
       </div>
 
       {/* Body */}
@@ -118,7 +119,7 @@ export default function UpdateBanner() {
               <ul style={{ margin: "6px 0 0 0", paddingLeft: "16px", listStyle: "none" }}>
                 {updateInfo.changelog.map((item, i) => (
                   <li key={i} style={{ fontSize: "11px", color: "#cbd5e0", marginBottom: "3px", display: "flex", gap: "6px" }}>
-                    <span style={{ color: "#48bb78" }}>✓</span> {item}
+                    <span style={{ color: "#48bb78", display: "inline-flex" }}><CheckIcon size={11} /></span> {item}
                   </li>
                 ))}
               </ul>

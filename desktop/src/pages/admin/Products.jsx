@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { BoxIcon, AlertIcon } from "../../components/Icons";
+import { SortTh, Pagination, FilterSelect, sortRows, toggleSort } from "../../components/TableControls";
 
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: "", price: "", stock: "", category: "", sku: "", image: null });
+  const [form, setForm] = useState({ name: "", price: "", buying_price: "", stock: "", category: "", sku: "", image: null });
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,6 +15,11 @@ export default function Products() {
   const [inventoryMode, setInventoryMode] = useState("auto");
   const [imgError, setImgError] = useState("");
   const [viewing, setViewing] = useState(null);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sort, setSort] = useState({ key: "name", dir: "asc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const handleImagePick = (e) => {
     const file = e.target.files?.[0];
@@ -115,8 +122,8 @@ export default function Products() {
 
           // Save everything except stock (keep old stock until approved)
           result = await window.electronAPI.executeDatabase(
-            "UPDATE products SET name=?, price=?, category=?, sku=?, image=?, updated_at=datetime('now') WHERE id=?",
-            [form.name, parseFloat(form.price), form.category, form.sku, form.image, editing.id]
+            "UPDATE products SET name=?, price=?, buying_price=?, category=?, sku=?, image=?, updated_at=datetime('now') WHERE id=?",
+            [form.name, parseFloat(form.price), parseFloat(form.buying_price || 0), form.category, form.sku, form.image, editing.id]
           );
         } else {
           // Auto mode or no stock change: save everything including stock immediately
@@ -138,15 +145,15 @@ export default function Products() {
           }
 
           result = await window.electronAPI.executeDatabase(
-            "UPDATE products SET name=?, price=?, stock=?, category=?, sku=?, image=?, updated_at=datetime('now') WHERE id=?",
-            [form.name, parseFloat(form.price), newStock, form.category, form.sku, form.image, editing.id]
+            "UPDATE products SET name=?, price=?, buying_price=?, stock=?, category=?, sku=?, image=?, updated_at=datetime('now') WHERE id=?",
+            [form.name, parseFloat(form.price), parseFloat(form.buying_price || 0), newStock, form.category, form.sku, form.image, editing.id]
           );
         }
       } else {
         // New product — always insert with given stock
         result = await window.electronAPI.executeDatabase(
-          "INSERT INTO products (id, name, price, stock, category, sku, image) VALUES (?, ?, ?, ?, ?, ?, ?)",
-          [uuidv4(), form.name, parseFloat(form.price), newStock, form.category, form.sku, form.image]
+          "INSERT INTO products (id, name, price, buying_price, stock, category, sku, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+          [uuidv4(), form.name, parseFloat(form.price), parseFloat(form.buying_price || 0), newStock, form.category, form.sku, form.image]
         );
       }
 
@@ -158,7 +165,7 @@ export default function Products() {
 
       setShowForm(false);
       setEditing(null);
-      setForm({ name: "", price: "", stock: "", category: "", sku: "", image: null });
+      setForm({ name: "", price: "", buying_price: "", stock: "", category: "", sku: "", image: null });
       setApprovalReason("");
       setImgError("");
       loadProducts();
@@ -175,6 +182,7 @@ export default function Products() {
     setForm({
       name: product.name,
       price: product.price,
+      buying_price: product.buying_price ?? "",
       stock: product.stock,
       category: product.category || "",
       sku: product.sku || "",
@@ -199,9 +207,26 @@ export default function Products() {
     }
   };
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const categories = useMemo(() => {
+    const set = new Set(products.map((p) => p.category).filter(Boolean));
+    return Array.from(set).sort();
+  }, [products]);
+
+  const searched = products.filter((p) => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || (p.sku || "").toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
+    const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? !!p.is_active : !p.is_active);
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
+
+  const filtered = sortRows(searched, sort);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [search, categoryFilter, statusFilter, pageSize]);
+
+  const handleSort = (key) => setSort((s) => toggleSort(s, key));
 
   const stockChanged = editing && parseInt(form.stock || 0) !== editing.stock;
 
@@ -214,7 +239,7 @@ export default function Products() {
           onClick={() => {
             setShowForm(true);
             setEditing(null);
-            setForm({ name: "", price: "", stock: "", category: "", sku: "", image: null });
+            setForm({ name: "", price: "", buying_price: "", stock: "", category: "", sku: "", image: null });
             setError("");
             setApprovalReason("");
             setImgError("");
@@ -224,13 +249,25 @@ export default function Products() {
         </button>
       </div>
 
-      <input
-        type="text"
-        className="search-input"
-        placeholder="Search products..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <div className="table-toolbar">
+        <input
+          type="text"
+          className="search-input"
+          placeholder="Search products or SKU..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <FilterSelect
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          options={[{ value: "all", label: "All categories" }, ...categories.map((c) => ({ value: c, label: c }))]}
+        />
+        <FilterSelect
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[{ value: "all", label: "All statuses" }, { value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }]}
+        />
+      </div>
 
       {showForm && (
         <div className="modal-overlay">
@@ -272,7 +309,17 @@ export default function Products() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Price (Ksh) *</label>
+                  <label className="form-label">Buying Price (Ksh)</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    placeholder="Cost from supplier"
+                    value={form.buying_price}
+                    onChange={(e) => setForm({ ...form, buying_price: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Selling Price (Ksh) *</label>
                   <input
                     className="form-input"
                     type="number"
@@ -347,7 +394,9 @@ export default function Products() {
                   color: "#92400e",
                   marginBottom: "12px",
                 }}>
-                  ⚠ Stock will not change until approved by admin. Current stock ({editing.stock}) will remain until then.
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <AlertIcon size={13} /> Stock will not change until approved by admin. Current stock ({editing.stock}) will remain until then.
+                  </span>
                 </div>
               )}
 
@@ -373,32 +422,42 @@ export default function Products() {
       <table className="data-table">
         <thead>
           <tr>
+            <th>#</th>
             <th></th>
-            <th>Name</th>
-            <th>Price</th>
-            <th>Stock</th>
-            <th>Category</th>
+            <SortTh label="Name" sortKey="name" sort={sort} onSort={handleSort} />
+            <SortTh label="Buying Price" sortKey="buying_price" sort={sort} onSort={handleSort} />
+            <SortTh label="Selling Price" sortKey="price" sort={sort} onSort={handleSort} />
+            <SortTh label="Stock" sortKey="stock" sort={sort} onSort={handleSort} />
+            <SortTh label="Category" sortKey="category" sort={sort} onSort={handleSort} />
             <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {filtered.map((product) => (
+          {paginated.length === 0 ? (
+            <tr>
+              <td colSpan={9} style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-3)" }}>
+                {products.length === 0 ? "No products yet." : "No products match your filters."}
+              </td>
+            </tr>
+          ) : paginated.map((product, i) => (
             <tr key={product.id}>
+              <td className="row-number-cell">{(currentPage - 1) * pageSize + i + 1}</td>
               <td style={{ width: 44 }}>
                 <div
                   onClick={() => setViewing(product)}
                   title="View details"
-                  style={{ width: 34, height: 34, borderRadius: 6, background: "#f5f4f0", border: "1px solid #c8c6bc", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", cursor: "pointer" }}
+                  style={{ width: 34, height: 34, borderRadius: 6, background: "#f5f4f0", border: "1px solid #c8c6bc", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", cursor: "pointer", color: "#9a9a8e" }}
                 >
                   {product.image ? (
                     <img src={product.image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
-                    <span style={{ fontSize: 14 }}>📦</span>
+                    <BoxIcon size={15} />
                   )}
                 </div>
               </td>
               <td>{product.name}</td>
+              <td>Ksh {Number(product.buying_price || 0).toLocaleString()}</td>
               <td>Ksh {Number(product.price).toLocaleString()}</td>
               <td className={product.stock <= 5 ? "low-stock" : ""}>{product.stock}</td>
               <td>{product.category || "—"}</td>
@@ -417,6 +476,14 @@ export default function Products() {
         </tbody>
       </table>
 
+      <Pagination
+        page={currentPage}
+        pageSize={pageSize}
+        totalItems={filtered.length}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
+
       {viewing && (
         <div className="modal-overlay" onClick={() => setViewing(null)}>
           <div className="modal" style={{ maxWidth: 380, padding: 0, overflow: "hidden" }} onClick={(e) => e.stopPropagation()}>
@@ -424,7 +491,7 @@ export default function Products() {
               {viewing.image ? (
                 <img src={viewing.image} alt={viewing.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (
-                <span style={{ fontSize: 36 }}>📦</span>
+                <BoxIcon size={40} style={{ color: "#9a9a8e" }} />
               )}
             </div>
             <div style={{ padding: "1.25rem" }}>
@@ -432,10 +499,20 @@ export default function Products() {
               <div style={{ fontSize: 12, color: "#9a9a8e", marginBottom: 12 }}>
                 {viewing.category || "Uncategorized"}{viewing.sku ? ` · ${viewing.sku}` : ""}
               </div>
-              <div style={{ display: "flex", gap: 24, marginBottom: viewing.description ? 12 : 0 }}>
+              <div style={{ display: "flex", gap: 24, marginBottom: viewing.description ? 12 : 0, flexWrap: "wrap" }}>
                 <div>
-                  <div style={{ fontSize: 10, textTransform: "uppercase", color: "#9a9a8e", marginBottom: 3 }}>Price</div>
+                  <div style={{ fontSize: 10, textTransform: "uppercase", color: "#9a9a8e", marginBottom: 3 }}>Buying Price</div>
+                  <div style={{ fontSize: 15, fontWeight: 500 }}>Ksh {Number(viewing.buying_price || 0).toLocaleString()}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, textTransform: "uppercase", color: "#9a9a8e", marginBottom: 3 }}>Selling Price</div>
                   <div style={{ fontSize: 15, fontWeight: 500 }}>Ksh {Number(viewing.price).toLocaleString()}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, textTransform: "uppercase", color: "#9a9a8e", marginBottom: 3 }}>Margin</div>
+                  <div style={{ fontSize: 15, fontWeight: 500 }}>
+                    Ksh {(Number(viewing.price) - Number(viewing.buying_price || 0)).toLocaleString()}
+                  </div>
                 </div>
                 <div>
                   <div style={{ fontSize: 10, textTransform: "uppercase", color: "#9a9a8e", marginBottom: 3 }}>Stock</div>

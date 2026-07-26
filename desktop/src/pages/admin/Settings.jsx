@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import bcrypt from "bcryptjs";
+import { SparklesIcon, CheckIcon } from "../../components/Icons";
 
 export default function Settings({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState("security");
@@ -235,7 +236,7 @@ export default function Settings({ user, onLogout }) {
                   {updateInfo && (
                     <div style={{ background: "linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%)", border: "1px solid #9ae6b4", borderRadius: "10px", padding: "16px", marginBottom: "20px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-                        <span style={{ fontSize: "20px" }}>🎉</span>
+                        <span style={{ display: "inline-flex", color: "#38a169" }}><SparklesIcon size={18} /></span>
                         <div>
                           <div style={{ fontSize: "14px", fontWeight: "700", color: "#276749" }}>Update Available — v{updateInfo.newVersion}</div>
                           {updateInfo.releaseDate && <div style={{ fontSize: "11px", color: "#48bb78" }}>Released {updateInfo.releaseDate}</div>}
@@ -247,7 +248,7 @@ export default function Settings({ user, onLogout }) {
                           <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
                             {updateInfo.changelog.map((item, i) => (
                               <li key={i} style={{ fontSize: "12px", color: "#2d6a4f", display: "flex", gap: "6px", marginBottom: "4px" }}>
-                                <span style={{ color: "#38a169" }}>✓</span> {item}
+                                <span style={{ color: "#38a169", display: "inline-flex" }}><CheckIcon size={12} /></span> {item}
                               </li>
                             ))}
                           </ul>
@@ -274,8 +275,8 @@ export default function Settings({ user, onLogout }) {
                   )}
 
                   {!updateInfo && !updateCheckMsg && (
-                    <div style={{ color: "#a0aec0", fontSize: "13px", textAlign: "center", marginBottom: "16px" }}>
-                      ✓ No updates pending. Click below to check now.
+                    <div style={{ color: "#a0aec0", fontSize: "13px", textAlign: "center", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                      <CheckIcon size={13} /> No updates pending. Click below to check now.
                     </div>
                   )}
 

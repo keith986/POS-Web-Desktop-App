@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { SortTh, Pagination, FilterSelect, sortRows, toggleSort } from "../../components/TableControls";
 
 const blankSupplier = {
   name: "",
@@ -26,6 +27,10 @@ export default function Suppliers() {
   const [form, setForm] = useState(blankSupplier);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sort, setSort] = useState({ key: "name", dir: "asc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     loadSuppliers();
@@ -146,12 +151,24 @@ export default function Suppliers() {
     }
   };
 
-  const filtered = suppliers.filter((supplier) =>
-    supplier.name.toLowerCase().includes(search.toLowerCase()) ||
-    String(supplier.email || "").toLowerCase().includes(search.toLowerCase()) ||
-    String(supplier.phone || "").toLowerCase().includes(search.toLowerCase()) ||
-    String(supplier.category || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const searched = suppliers.filter((supplier) => {
+    const matchesSearch =
+      supplier.name.toLowerCase().includes(search.toLowerCase()) ||
+      String(supplier.email || "").toLowerCase().includes(search.toLowerCase()) ||
+      String(supplier.phone || "").toLowerCase().includes(search.toLowerCase()) ||
+      String(supplier.category || "").toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === "all" || (supplier.status || "active") === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filtered = sortRows(searched, sort);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [search, statusFilter, pageSize]);
+
+  const handleSort = (key) => setSort((s) => toggleSort(s, key));
 
   return (
     <div className="page">
@@ -162,14 +179,23 @@ export default function Suppliers() {
         </button>
       </div>
 
-      <div style={{ marginBottom: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
+      <div className="table-toolbar">
         <input
           type="text"
-          className="form-input"
+          className="search-input"
           placeholder="Search suppliers..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ minWidth: 220, flex: 1, maxWidth: 380 }}
+        />
+        <FilterSelect
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: "all", label: "All statuses" },
+            { value: "active", label: "Active" },
+            { value: "inactive", label: "Inactive" },
+            { value: "blacklisted", label: "Blacklisted" },
+          ]}
         />
       </div>
 
@@ -177,24 +203,37 @@ export default function Suppliers() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr>
+              <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.4px", color: "var(--text-2)", borderBottom: "1px solid var(--surface-border)", background: "var(--surface-alt)", width: 36 }}>#</th>
               {[
-                "Supplier", "Contact", "Phone", "Status", "Balance", "Terms", "Actions"
-              ].map((heading) => (
-                <th key={heading} style={{ textAlign: "left", padding: "12px 16px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.4px", color: "var(--text-2)", borderBottom: "1px solid var(--surface-border)", background: "var(--surface-alt)" }}>
-                  {heading}
-                </th>
+                { key: "name", label: "Supplier" },
+                { key: "contact_name", label: "Contact" },
+                { key: "phone", label: "Phone" },
+                { key: "status", label: "Status" },
+                { key: "balance_due", label: "Balance" },
+                { key: "payment_terms", label: "Terms" },
+              ].map(({ key, label }) => (
+                <SortTh
+                  key={key}
+                  label={label}
+                  sortKey={key}
+                  sort={sort}
+                  onSort={handleSort}
+                  style={{ textAlign: "left", padding: "12px 16px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.4px", color: "var(--text-2)", borderBottom: "1px solid var(--surface-border)", background: "var(--surface-alt)" }}
+                />
               ))}
+              <th style={{ textAlign: "left", padding: "12px 16px", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.4px", color: "var(--text-2)", borderBottom: "1px solid var(--surface-border)", background: "var(--surface-alt)" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {paginated.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: "2.5rem 1rem", textAlign: "center", color: "var(--text-2)", fontSize: 13 }}>
-                  {suppliers.length === 0 ? "No suppliers added yet." : `No suppliers match "${search}".`}
+                <td colSpan={8} style={{ padding: "2.5rem 1rem", textAlign: "center", color: "var(--text-2)", fontSize: 13 }}>
+                  {suppliers.length === 0 ? "No suppliers added yet." : `No suppliers match your filters.`}
                 </td>
               </tr>
-            ) : filtered.map((supplier) => (
+            ) : paginated.map((supplier, i) => (
               <tr key={supplier.id} style={{ borderBottom: "1px solid var(--surface-border)" }}>
+                <td className="row-number-cell" style={{ padding: "12px 16px" }}>{(currentPage - 1) * pageSize + i + 1}</td>
                 <td style={{ padding: "12px 16px" }}>
                   <div style={{ fontWeight: 600, color: "var(--text)" }}>{supplier.name}</div>
                   <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 4 }}>{supplier.category || "General"}</div>
@@ -221,6 +260,13 @@ export default function Suppliers() {
         </table>
       </div>
 
+      <Pagination
+        page={currentPage}
+        pageSize={pageSize}
+        totalItems={filtered.length}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
       {showForm && (
         <div className="modal-overlay" onClick={() => { resetForm(); setShowForm(false); }}>
           <div className="modal" onClick={(event) => event.stopPropagation()} style={{ maxWidth: 700 }}>

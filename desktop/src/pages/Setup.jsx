@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { HexagonIcon, CheckCircleIcon } from "../components/Icons";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:3000";
 
@@ -99,7 +100,7 @@ export default function Setup({ onSetupComplete }) {
 
       <div className="login-card">
         <div className="login-header">
-          <div className="login-logo">⬡</div>
+          <div className="login-logo"><HexagonIcon size={36} /></div>
           <h1 className="login-title">POStore Desktop</h1>
           <p className="login-subtitle">First time setup</p>
         </div>
@@ -113,7 +114,7 @@ export default function Setup({ onSetupComplete }) {
 
         {step === "done" && (
           <div style={{ textAlign: "center", padding: "32px 0" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
+            <div style={{ display: "flex", justifyContent: "center", color: "var(--green)", marginBottom: 16 }}><CheckCircleIcon size={44} /></div>
             <p style={{ color: "var(--green)", fontWeight: 600 }}>Setup complete!</p>
           </div>
         )}

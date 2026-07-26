@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { WalletIcon, CartIcon, ReceiptIcon } from "../../components/Icons";
 
 export default function Reports() {
   const [period, setPeriod] = useState("week");
@@ -68,17 +69,17 @@ export default function Reports() {
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon">◈</div>
+          <div className="stat-icon-wrap stat-icon-revenue"><WalletIcon size={19} /></div>
           <div className="stat-value">Ksh {Number(data.revenue).toLocaleString()}</div>
           <div className="stat-label">Total Revenue</div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">◫</div>
+          <div className="stat-icon-wrap stat-icon-orders"><CartIcon size={19} /></div>
           <div className="stat-value">{data.orders}</div>
           <div className="stat-label">Total Orders</div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">◎</div>
+          <div className="stat-icon-wrap stat-icon-products"><ReceiptIcon size={19} /></div>
           <div className="stat-value">Ksh {Number(data.avgOrder).toFixed(0)}</div>
           <div className="stat-label">Avg Order Value</div>
         </div>

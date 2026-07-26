@@ -63,6 +63,7 @@ const createTables = () => {
       category    TEXT,
       description TEXT,
       price       REAL NOT NULL,
+      buying_price REAL DEFAULT 0,
       stock       INTEGER DEFAULT 0,
       sku         TEXT,
       emoji       TEXT,
@@ -145,6 +146,9 @@ const createTables = () => {
   } catch (e) {}
   try {
     db.run("ALTER TABLE products ADD COLUMN image TEXT;");
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE products ADD COLUMN buying_price REAL DEFAULT 0;");
   } catch (e) {}
   save();
 };

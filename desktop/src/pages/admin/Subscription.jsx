@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { ReceiptIcon } from "../../components/Icons";
 
 // ─────────────────────────────────────────
 // HELPERS
@@ -597,7 +598,7 @@ useEffect(() => {
                   ) : (
                     <tr>
                       <td colSpan={4} style={{ padding: "3rem", textAlign: "center", color: "var(--text-2)", fontSize: 13 }}>
-                        <div style={{ fontSize: 28, marginBottom: 10 }}>🧾</div>
+                        <div style={{ display: "flex", justifyContent: "center", color: "var(--text-3)", marginBottom: 10 }}><ReceiptIcon size={26} /></div>
                         No payments found.
                         {!isOnline && <div style={{ marginTop: 6, fontSize: 12, color: "#f97316" }}>Connect to the internet to sync payment history.</div>}
                       </td>

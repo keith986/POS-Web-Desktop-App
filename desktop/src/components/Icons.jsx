@@ -82,3 +82,125 @@ export const TruckIcon = ({ size = 16 }) => (
     <circle cx="18" cy="19" r="2" />
   </svg>
 );
+
+/* Brand mark — used wherever a hexagon "⬡" glyph previously stood in for the logo */
+export const HexagonIcon = ({ size = 22 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+    <path d="M12 2 L21 7 L21 17 L12 22 L3 17 L3 7 Z" />
+  </svg>
+);
+
+/* Replaces the 📦 package emoji used for product placeholders */
+export const BoxIcon = ({ size = 16, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <path d="M21 8.5v7c0 .35-.19.68-.5.86l-8 4.62a1 1 0 0 1-1 0l-8-4.62a1 1 0 0 1-.5-.86v-7c0-.35.19-.68.5-.86l8-4.62a1 1 0 0 1 1 0l8 4.62c.31.18.5.51.5.86Z" />
+    <path d="M3.27 7.5 12 12.5l8.73-5" />
+    <path d="M12 22.5v-10" />
+  </svg>
+);
+
+/* Replaces the 👁 eye emoji used for "view" affordances */
+export const EyeIcon = ({ size = 16, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+/* Replaces the 🎉 celebration emoji */
+export const SparklesIcon = ({ size = 16, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <path d="M12 3v4M4 6l2.5 2.5M20 6l-2.5 2.5M3 13h4M17 13h4" />
+    <path d="M12 11c1.2 3 2.6 4.4 5.6 5.6-3 1.2-4.4 2.6-5.6 5.6-1.2-3-2.6-4.4-5.6-5.6 3-1.2 4.4-2.6 5.6-5.6Z" />
+  </svg>
+);
+
+/* Replaces the 🧾 receipt emoji */
+export const ReceiptIcon = ({ size = 16, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <path d="M6 2h12a1 1 0 0 1 1 1v18l-2.5-1.5L14 21l-2-1.5L10 21l-2.5-1.5L5 21V3a1 1 0 0 1 1-1Z" />
+    <line x1="8.5" y1="7" x2="15.5" y2="7" />
+    <line x1="8.5" y1="11" x2="15.5" y2="11" />
+    <line x1="8.5" y1="15" x2="12.5" y2="15" />
+  </svg>
+);
+
+/* Sort indicators used in sortable table headers */
+export const ChevronUpIcon = ({ size = 12, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <polyline points="18 15 12 9 6 15" />
+  </svg>
+);
+
+export const ChevronDownIcon = ({ size = 12, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
+export const ChevronsUpDownIcon = ({ size = 12, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <polyline points="7 8 12 3 17 8" />
+    <polyline points="7 16 12 21 17 16" />
+  </svg>
+);
+
+export const ChevronLeftIcon = ({ size = 14, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+);
+
+export const ChevronRightIcon = ({ size = 14, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
+export const FilterIcon = ({ size = 14, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+  </svg>
+);
+
+/* Overview stat-card icons */
+export const WalletIcon = ({ size = 20, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <path d="M20 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z" />
+    <path d="M16 7V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v2" />
+    <path d="M17 13.5h.01" />
+  </svg>
+);
+
+export const CartIcon = ({ size = 20, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <circle cx="9" cy="21" r="1" />
+    <circle cx="20" cy="21" r="1" />
+    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+  </svg>
+);
+
+export const UsersIcon = ({ size = 20, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
+/* Plain close "x" — replaces bare ✕ dismiss glyphs */
+export const XIcon = ({ size = 14, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+/* Replaces the 🆕 / ⏰ emoji used in update notifications */
+export const BellIcon = ({ size = 14, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...rest}>
+    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </svg>
+);

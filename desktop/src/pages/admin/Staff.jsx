@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
 import { CheckCircleIcon, XCircleIcon } from "../../components/Icons";
+import { SortTh, Pagination, FilterSelect, sortRows, toggleSort } from "../../components/TableControls";
 
 export default function Staff() {
   const [staff, setStaff] = useState([]);
@@ -9,6 +10,11 @@ export default function Staff() {
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "staff" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sort, setSort] = useState({ key: "name", dir: "asc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => { loadStaff(); }, []);
 
@@ -60,6 +66,21 @@ export default function Staff() {
     loadStaff();
   };
 
+  const searched = staff.filter((member) => {
+    const matchesSearch = member.name.toLowerCase().includes(search.toLowerCase()) || member.email.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? !!member.is_active : !member.is_active);
+    return matchesSearch && matchesStatus;
+  });
+
+  const filtered = sortRows(searched, sort);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [search, statusFilter, pageSize]);
+
+  const handleSort = (key) => setSort((s) => toggleSort(s, key));
+
   return (
     <div className="page">
       <div className="page-header">
@@ -100,19 +121,46 @@ export default function Staff() {
         </div>
       )}
 
+      <div className="table-toolbar">
+        <input
+          type="text"
+          className="search-input"
+          placeholder="Search staff..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <FilterSelect
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: "all", label: "All statuses" },
+            { value: "active", label: "Active" },
+            { value: "inactive", label: "Inactive" },
+          ]}
+        />
+      </div>
+
       <table className="data-table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Role</th>
+            <th>#</th>
+            <SortTh label="Name" sortKey="name" sort={sort} onSort={handleSort} />
+            <SortTh label="Email" sortKey="email" sort={sort} onSort={handleSort} />
+            <SortTh label="Role" sortKey="role" sort={sort} onSort={handleSort} />
             <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {staff.map((member) => (
+          {paginated.length === 0 ? (
+            <tr>
+              <td colSpan={6} style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-3)" }}>
+                {staff.length === 0 ? "No staff members yet." : "No staff match your filters."}
+              </td>
+            </tr>
+          ) : paginated.map((member, i) => (
             <tr key={member.id}>
+              <td className="row-number-cell">{(currentPage - 1) * pageSize + i + 1}</td>
               <td>
                 <div className="staff-name">
                   <div className="staff-avatar">{member.name[0]}</div>
@@ -145,6 +193,14 @@ export default function Staff() {
           ))}
         </tbody>
       </table>
+
+      <Pagination
+        page={currentPage}
+        pageSize={pageSize}
+        totalItems={filtered.length}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }

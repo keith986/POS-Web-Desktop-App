@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { AlertIcon } from "../../components/Icons";
+import { SortTh, Pagination, FilterSelect, sortRows, toggleSort } from "../../components/TableControls";
 
 /* ── SVG Icons ── */
 function CheckCircleIcon() {
@@ -46,6 +48,10 @@ export default function Orders() {
   const [dateFilter, setDateFilter] = useState("today");
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const [showApprovals, setShowApprovals] = useState(false);
+  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [sort, setSort] = useState({ key: "created_at", dir: "desc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     loadOrders();
@@ -193,6 +199,21 @@ export default function Orders() {
 
   const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total), 0);
 
+  const paymentMethods = useMemo(() => {
+    const set = new Set(orders.map((o) => o.payment_method).filter(Boolean));
+    return Array.from(set).sort();
+  }, [orders]);
+
+  const filteredOrders = paymentFilter === "all" ? orders : orders.filter((o) => o.payment_method === paymentFilter);
+  const sortedOrders = sortRows(filteredOrders, sort);
+  const totalPages = Math.max(1, Math.ceil(sortedOrders.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedOrders = sortedOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [dateFilter, paymentFilter, pageSize]);
+
+  const handleSort = (key) => setSort((s) => toggleSort(s, key));
+
   return (
     <div className="page">
       <div className="page-header">
@@ -205,6 +226,11 @@ export default function Orders() {
               </button>
             ))}
           </div>
+          <FilterSelect
+            value={paymentFilter}
+            onChange={setPaymentFilter}
+            options={[{ value: "all", label: "All payments" }, ...paymentMethods.map((p) => ({ value: p, label: p.charAt(0).toUpperCase() + p.slice(1) }))]}
+          />
           <button className="badge" onClick={() => setShowApprovals(!showApprovals)} style={{ padding: "6px 12px", background: pendingApprovals.length > 0 ? "#fffbeb" : "#f5f4f0", color: pendingApprovals.length > 0 ? "#d97706" : "#9a9a8e", cursor: "pointer", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
             <ClipboardIcon /> Pending: {pendingApprovals.length}
           </button>
@@ -213,7 +239,7 @@ export default function Orders() {
 
       {showApprovals && pendingApprovals.length > 0 && (
         <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "8px", padding: "15px", marginBottom: "20px" }}>
-          <h3 style={{ marginTop: 0, color: "#d97706" }}>⚠ Pending Inventory Approvals</h3>
+          <h3 style={{ marginTop: 0, color: "#d97706", display: "flex", alignItems: "center", gap: 6 }}><AlertIcon size={15} /> Pending Inventory Approvals</h3>
           {pendingApprovals.map(approval => (
             <div key={approval.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px", background: "#fff", borderRadius: "4px", marginBottom: "8px" }}>
               <div>
@@ -237,11 +263,27 @@ export default function Orders() {
 
       <table className="data-table">
         <thead>
-          <tr><th>Order #</th><th>Staff</th><th>Items</th><th>Total</th><th>Payment</th><th>Time</th><th>Actions</th></tr>
+          <tr>
+            <th>#</th>
+            <SortTh label="Order #" sortKey="order_number" sort={sort} onSort={handleSort} />
+            <SortTh label="Staff" sortKey="staff_name" sort={sort} onSort={handleSort} />
+            <SortTh label="Items" sortKey="item_count" sort={sort} onSort={handleSort} />
+            <SortTh label="Total" sortKey="total" sort={sort} onSort={handleSort} />
+            <SortTh label="Payment" sortKey="payment_method" sort={sort} onSort={handleSort} />
+            <SortTh label="Time" sortKey="created_at" sort={sort} onSort={handleSort} />
+            <th>Actions</th>
+          </tr>
         </thead>
         <tbody>
-          {orders.map((order) => (
+          {paginatedOrders.length === 0 ? (
+            <tr>
+              <td colSpan={8} style={{ textAlign: "center", padding: "2.5rem 1rem", color: "var(--text-3)" }}>
+                No orders found for this filter.
+              </td>
+            </tr>
+          ) : paginatedOrders.map((order, i) => (
             <tr key={order.id}>
+              <td className="row-number-cell">{(currentPage - 1) * pageSize + i + 1}</td>
               <td className="order-number" onClick={() => viewOrder(order)} style={{ cursor: "pointer" }}>{order.order_number}</td>
               <td>{order.staff_name}</td>
               <td>{order.item_count} items</td>
@@ -254,15 +296,23 @@ export default function Orders() {
         </tbody>
       </table>
 
+      <Pagination
+        page={currentPage}
+        pageSize={pageSize}
+        totalItems={sortedOrders.length}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
+
       {selected && (
         <div className="modal-overlay" onClick={() => setSelected(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2 className="modal-title">Order {selected.order_number}</h2>
             <table className="data-table">
-              <thead><tr><th>Product</th><th>Qty</th><th>Total</th></tr></thead>
+              <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Total</th></tr></thead>
               <tbody>
-                {items.map((item) => (
-                  <tr key={item.id}><td>{item.product_name}</td><td>{item.quantity}</td><td>Ksh {Number(item.total_price).toLocaleString()}</td></tr>
+                {items.map((item, i) => (
+                  <tr key={item.id}><td className="row-number-cell">{i + 1}</td><td>{item.product_name}</td><td>{item.quantity}</td><td>Ksh {Number(item.total_price).toLocaleString()}</td></tr>
                 ))}
               </tbody>
             </table>

@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import Setup from "./pages/Setup";
 import AdminDashboard from "./pages/AdminDashboard";
 import StaffDashboard from "./pages/StaffDashboard";
+import { HexagonIcon } from "./components/Icons";
 import "./styles/global.css";
 
 function App() {
@@ -71,7 +72,7 @@ function App() {
     return (
       <div className="splash">
         <div className="splash-logo">
-          <span className="splash-icon">⬡</span>
+          <span className="splash-icon"><HexagonIcon size={40} /></span>
           <h1>POStore</h1>
         </div>
         <div className="splash-spinner" />
