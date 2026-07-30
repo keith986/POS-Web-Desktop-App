@@ -56,18 +56,18 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.11.0",
-    date: "2026-07-18",
+    version: "1.12.0",
+    date: "2026-07-30",
     type: "improvement",
-    title: "Login Page has been updated",
+    title: "Etims invoicing integration",
     description:
-      "The login page has been redesigned to provide a more user-friendly experience, with improved layout and accessibility features.",
+      "Staff can now send invoices directly to customers via the Etims platform, streamlining the billing process and improving cash flow.",
     importance:
       "Enhance the user experience and accessibility for all staff members.",
     critical: false,
   },
   {
-    version: "1.8.0",
+    version: "1.11.0",
     date: "2026-07-12",
     type: "improvement",
     title: "Update reminder now keeps nagging until you update",
@@ -78,7 +78,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     critical: false,
   },
   {
-    version: "1.7.0",
+    version: "1.10.0",
     date: "2026-07-12",
     type: "feature",
     title: "Update notifications now available on the admin console too",
