@@ -7,14 +7,26 @@ import { notifyNewOrder, notifyLowStockIfCrossed } from "@/app/_lib/notify";
 const VALID_STATUSES        = ["pending", "processing", "completed", "refunded", "cancelled"];
 const VALID_PAYMENT_METHODS = ["card", "cash", "mobile"];
 
-/* ── GET /api/orders?admin_id=xxx&today=true&customer_id=xxx&status=xxx ── */
+/* ── GET /api/orders?admin_id=xxx&range=today|week|month|all&customer_id=xxx&status=xxx&page=1&limit=50 ── */
+const VALID_RANGES = ["today", "week", "month", "all"] as const;
+type Range = typeof VALID_RANGES[number];
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     const sp          = request.nextUrl.searchParams;
     const admin_id    = sp.get("admin_id");
     const customer_id = sp.get("customer_id");
-    const today       = sp.get("today") === "true";
     const status      = sp.get("status");
+    const page        = Math.max(1, Number(sp.get("page")) || 1);
+    const limit       = sp.get("limit") ? Math.max(1, Number(sp.get("limit"))) : null;
+
+    // range=... is the new param. today=true is kept working so the
+    // admin orders page (which never sends either) still gets everything,
+    // and any other old caller passing today=true still gets today-only.
+    let range: Range = "all";
+    const rangeParam = sp.get("range") as Range | null;
+    if (rangeParam && VALID_RANGES.includes(rangeParam)) range = rangeParam;
+    else if (sp.get("today") === "true")                 range = "today";
 
     if (!admin_id)
       return NextResponse.json({ error: "admin_id is required" }, { status: 400 });
@@ -24,11 +36,29 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     let sql    = "SELECT * FROM orders WHERE admin_id = ?";
     const args: (string | number)[] = [admin_id];
 
-    if (customer_id) { sql += " AND customer_id = ?";            args.push(customer_id); }
-    if (today)       { sql += " AND DATE(created_at) = CURDATE()"; }
-    if (status)      { sql += " AND status = ?";                 args.push(status); }
+    if (customer_id) { sql += " AND customer_id = ?"; args.push(customer_id); }
+    if (status)       { sql += " AND status = ?";      args.push(status); }
+
+    if (range === "today") sql += " AND DATE(created_at) = CURDATE()";
+    if (range === "week")  sql += " AND created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+    if (range === "month") sql += " AND created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+    // range === "all" adds no date filter
 
     sql += " ORDER BY created_at DESC";
+
+    // Pagination is opt-in — only applied when ?limit is sent, so existing
+    // callers that never pass it still get the full array back unpaginated.
+    let total: number | null = null;
+    if (limit) {
+      const [countRows] = await pool.query(
+        sql.replace("SELECT *", "SELECT COUNT(*) AS c"),
+        args
+      );
+      total = Number((countRows as { c: number }[])[0]?.c ?? 0);
+
+      sql += " LIMIT ? OFFSET ?";
+      args.push(limit, (page - 1) * limit);
+    }
 
     const [rows] = await pool.query(sql, args);
 
@@ -37,6 +67,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       items: typeof o.items === "string" ? JSON.parse(o.items as string) : o.items ?? [],
     }));
 
+    // Shape is unchanged (plain array) when no pagination is requested, so
+    // /admin/orders and any other existing caller keeps working untouched.
+    if (limit) {
+      return NextResponse.json({ orders, total, page, limit });
+    }
     return NextResponse.json(orders);
   } catch (error) {
     const err = error as Error;

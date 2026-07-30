@@ -87,6 +87,16 @@ function formatCurrency(n: number, currency = "KES"): string {
 function formatTime(dateStr: string): string {
   return new Date(dateStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
+function formatDateTime(dateStr: string): string {
+  const d     = new Date(dateStr);
+  const today = new Date();
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (sameDay(d, today))     return `Today, ${time}`;
+  if (sameDay(d, yesterday)) return `Yesterday, ${time}`;
+  return `${d.toLocaleDateString([], { month: "short", day: "numeric" })}, ${time}`;
+}
 function parseItems(raw: SaleItem[] | string): SaleItem[] {
   try {
     if (Array.isArray(raw)) return raw;
@@ -281,7 +291,10 @@ export default function StaffDashboard() {
   const [activeTab,        setActiveTab]        = useState("Dashboard");
   const [products,         setProducts]         = useState<Product[]>([]);
   const [viewProduct,      setViewProduct]      = useState<Product | null>(null);
-  const [sales,            setSales]            = useState<Sale[]>([]);
+  const [sales,            setSales]            = useState<Sale[]>([]);   // today-only, feeds Dashboard tab widgets
+  const [historySales,     setHistorySales]      = useState<Sale[]>([]);  // Sales History tab, independent range
+  const [historyLoading,   setHistoryLoading]    = useState(false);
+  const [historyRange,     setHistoryRange]      = useState<"today" | "week" | "month" | "all">("today");
   const [discounts,        setDiscounts]        = useState<Discount[]>([]);
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
   const [settings,         setSettings]         = useState<StoreSettings>({ tax_enabled: true, tax_rate: 16, tax_name: "VAT", tax_inclusive: false, currency: "KES" });
@@ -378,7 +391,7 @@ export default function StaffDashboard() {
       const [prodRes, settRes, salesRes, discRes] = await Promise.all([
         fetch(`/api/products?admin_id=${staff.admin_id}`),
         fetch(`/api/settings?admin_id=${staff.admin_id}`),
-        fetch(`/api/orders?admin_id=${staff.admin_id}&staff_id=${staff.id}&today=true`),
+        fetch(`/api/orders?admin_id=${staff.admin_id}&staff_id=${staff.id}&range=today`),
         fetch(`/api/discounts?admin_id=${staff.admin_id}`),
       ]);
       const [prodData, settData, salesData, discData] = await Promise.all([
@@ -398,6 +411,29 @@ export default function StaffDashboard() {
   }, [staff?.admin_id, staff?.id]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  /* ── Sales History tab: independent fetch, keyed by its own range filter.
+     Only runs when that tab is open, so switching Dashboard <-> Sales
+     History doesn't do extra work, and the Dashboard's "today" widgets
+     above are never affected by this filter. ── */
+  useEffect(() => {
+    if (activeTab !== "Sales History" || !staff?.admin_id) return;
+    setHistoryLoading(true);
+    fetch(`/api/orders?admin_id=${staff.admin_id}&staff_id=${staff.id}&range=${historyRange}`)
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setHistorySales(data.map((s: Sale) => ({
+            ...s,
+            items: parseItems(s.items),
+            discount_amount: Number(s.discount_amount) || 0,
+            total: Number(s.total) || 0,
+          })));
+        }
+      })
+      .catch(() => showToast("Failed to load sales history", "err"))
+      .finally(() => setHistoryLoading(false));
+  }, [activeTab, historyRange, staff?.admin_id, staff?.id]);
 
   /* ── Categories + filtered products ── */
   const categories = useMemo(() => {
@@ -1015,23 +1051,41 @@ export default function StaffDashboard() {
           {/* ══ SALES HISTORY ══ */}
           {activeTab === "Sales History" && (
             <div className="card">
-              <div className="card-header"><span className="card-title">Sales History — Today</span><span className="card-meta">{sales.length} transactions · {formatCurrency(shiftTotal, settings.currency)}</span></div>
-              {fetching
+              <div className="card-header" style={{ flexWrap: "wrap", gap: 10 }}>
+                <span className="card-title">
+                  Sales History{historyRange !== "all" ? ` — ${historyRange === "today" ? "Today" : historyRange === "week" ? "This week" : "This month"}` : " — All receipts"}
+                </span>
+                <span className="card-meta">{historySales.length} transactions · {formatCurrency(historySales.reduce((s, r) => s + (Number(r.total) || 0), 0), settings.currency)}</span>
+              </div>
+              <div className="toolbar" style={{ borderTop: "none" }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {(["all", "today", "week", "month"] as const).map(r => (
+                    <button
+                      key={r}
+                      className={`filter-btn ${historyRange === r ? "active" : ""}`}
+                      onClick={() => setHistoryRange(r)}
+                    >
+                      {r === "all" ? "All" : r === "today" ? "Today" : r === "week" ? "This week" : "This month"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {historyLoading
                 ? <div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Loading…</div>
-                : sales.length === 0
-                  ? <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No sales recorded today.</div>
+                : historySales.length === 0
+                  ? <div style={{ padding: "3rem", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>No sales recorded{historyRange !== "all" ? ` for this period` : ""}.</div>
                   : (
                     <div className="tbl-scroll">
                     <table className="tbl">
-                      <thead><tr><th>Order</th><th>Time</th><th>Items</th><th>Total</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
+                      <thead><tr><th>Date</th><th>Order</th><th>Items</th><th>Total</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead>
                       <tbody>
-                        {sales.map(s => {
+                        {historySales.map(s => {
                           const items   = parseItems(s.items);
                           const itemStr = items.length > 0 ? items.map(i => `${i.name}${i.quantity > 1 ? ` ×${i.quantity}` : ""}`).join(", ") : "—";
                           return (
                             <tr key={s.id}>
+                              <td style={{ whiteSpace: "nowrap", color: "var(--muted)" }}>{formatDateTime(s.created_at)}</td>
                               <td style={{ fontWeight: 500, color: "var(--ink)" }}>{s.order_number}</td>
-                              <td>{formatTime(s.created_at)}</td>
                               <td style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{itemStr}</td>
                               <td style={{ fontWeight: 500, color: "var(--ink)" }}>{formatCurrency(s.total, settings.currency)}</td>
                               <td><span className="badge info"><span className="badge-dot" />{s.payment_method}</span></td>
