@@ -1,7 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import UpdateBanner from "../components/UpdateBanner";
-import { BoxIcon, EyeIcon } from "../components/Icons";
+import { BoxIcon, EyeIcon, CartIcon, CheckCircleIcon } from "../components/Icons";
+
+// Payment method icons
+const CashIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/>
+  </svg>
+);
+const CardIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+  </svg>
+);
+const PhoneIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="6" y="2" width="12" height="20" rx="2"/><line x1="10" y1="18" x2="14" y2="18"/>
+  </svg>
+);
+const SplitIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="2" x2="12" y2="22"/><path d="M5 6h5M14 6h5M5 18h5M14 18h5"/>
+  </svg>
+);
+const PAYMENT_ICONS = { cash: CashIcon, card: CardIcon, mpesa: PhoneIcon, split: SplitIcon };
 
 // Icons
 const SunIcon = () => (
@@ -264,6 +287,8 @@ export default function StaffDashboard({ user, onLogout }) {
     p.name.toLowerCase().includes(search.toLowerCase()) && (category === "all" || p.category === category)
   );
 
+  const cartQtyById = cart.reduce((map, i) => { map[i.id] = i.qty; return map; }, {});
+
   return (
     <div className="pos-layout">
       <UpdateBanner />
@@ -303,36 +328,56 @@ export default function StaffDashboard({ user, onLogout }) {
             </div>
           </div>
 
-          <div className="products-grid">
-            {filteredProducts.map(product => (
-              <div
-                key={product.id}
-                className={`product-card ${product.stock <= 0 ? "product-card-disabled" : ""}`}
-                onClick={() => product.stock > 0 && addToCart(product)}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="product-thumb">
-                  {product.image ? (
-                    <img src={product.image} alt={product.name} className="product-thumb-img" />
-                  ) : (
-                    <span><BoxIcon size={20} /></span>
-                  )}
-                  <button
-                    type="button"
-                    className="product-view-btn"
-                    title="View details"
-                    onClick={(e) => { e.stopPropagation(); setViewingProduct(product); }}
-                  >
-                    <EyeIcon size={14} />
-                  </button>
+          {loading ? (
+            <div className="products-grid">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div className="skeleton-card" key={i}>
+                  <div className="skeleton-block skeleton-thumb" />
+                  <div className="skeleton-block skeleton-line" />
+                  <div className="skeleton-block skeleton-line short" />
                 </div>
-                <div className="product-name">{product.name}</div>
-                <div className="product-price">Ksh {Number(product.price).toLocaleString()}</div>
-                <div className={`product-stock ${product.stock <= 5 ? "low-stock" : ""}`}>{product.stock <= 0 ? "Out of stock" : `${product.stock} left`}</div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="pos-empty">
+              <BoxIcon size={28} />
+              <p style={{ marginTop: 10 }}>No products match your search</p>
+            </div>
+          ) : (
+            <div className="products-grid">
+              {filteredProducts.map(product => (
+                <div
+                  key={product.id}
+                  className={`product-card ${product.stock <= 0 ? "product-card-disabled" : ""}`}
+                  onClick={() => product.stock > 0 && addToCart(product)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  {cartQtyById[product.id] > 0 && (
+                    <span className="product-cart-badge">{cartQtyById[product.id]}</span>
+                  )}
+                  <div className="product-thumb">
+                    {product.image ? (
+                      <img src={product.image} alt={product.name} className="product-thumb-img" />
+                    ) : (
+                      <span><BoxIcon size={20} /></span>
+                    )}
+                    <button
+                      type="button"
+                      className="product-view-btn"
+                      title="View details"
+                      onClick={(e) => { e.stopPropagation(); setViewingProduct(product); }}
+                    >
+                      <EyeIcon size={14} />
+                    </button>
+                  </div>
+                  <div className="product-name">{product.name}</div>
+                  <div className="product-price">Ksh {Number(product.price).toLocaleString()}</div>
+                  <div className={`product-stock ${product.stock <= 5 ? "low-stock" : ""}`}>{product.stock <= 0 ? "Out of stock" : `${product.stock} left`}</div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {viewingProduct && (
             <div className="pv-modal-overlay" onClick={() => setViewingProduct(null)}>
@@ -388,7 +433,10 @@ export default function StaffDashboard({ user, onLogout }) {
 
           <div className="cart-items">
             {cart.length === 0 ? (
-              <div className="cart-empty"><p>Add products to begin</p></div>
+              <div className="cart-empty">
+                <CartIcon size={36} />
+                <p>Tap a product to start the sale</p>
+              </div>
             ) : (
               cart.map(item => (
                 <div key={item.id} className="cart-item">
@@ -435,9 +483,15 @@ export default function StaffDashboard({ user, onLogout }) {
             <div className="summary-row summary-total"><span>Total</span><span>Ksh {finalTotal.toFixed(2)}</span></div>
 
             <div className="payment-methods">
-              {["cash", "card", "mpesa", "split"].map(m => (
-                <button key={m} className={`payment-btn ${paymentMethod === m ? "payment-active" : ""}`} onClick={() => setPaymentMethod(m)}>{m.toUpperCase()}</button>
-              ))}
+              {["cash", "card", "mpesa", "split"].map(m => {
+                const Icon = PAYMENT_ICONS[m];
+                return (
+                  <button key={m} className={`payment-btn ${paymentMethod === m ? "payment-active" : ""}`} onClick={() => setPaymentMethod(m)}>
+                    <Icon />
+                    <span>{m.toUpperCase()}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {paymentMethod === 'split' && (
@@ -458,8 +512,9 @@ export default function StaffDashboard({ user, onLogout }) {
 
           {orderComplete && lastOrder && (
             <div className="order-success">
-              <div style={{fontWeight: 700}}>Order Complete!</div>
-              <div style={{fontSize: 16, color: "var(--accent)"}}>Ksh {lastOrder.total.toFixed(2)}</div>
+              <div className="success-icon"><CheckCircleIcon size={32} /></div>
+              <div style={{fontWeight: 700, fontSize: 15}}>Order complete</div>
+              <div style={{fontSize: 20, fontWeight: 700, color: "var(--accent)"}}>Ksh {lastOrder.total.toFixed(2)}</div>
               <button className="btn-primary" style={{marginTop: 10}} onClick={() => printReceipt(lastOrder, user, taxSettings)}>Print Receipt</button>
               <button className="btn-secondary" style={{marginTop: 5, fontSize: '11px'}} onClick={() => setOrderComplete(false)}>Close</button>
             </div>
