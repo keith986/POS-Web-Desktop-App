@@ -57,7 +57,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   // Example of a future entry — copy this shape when you ship something new:
   // {
-  //   version: "1.2.0",
+  //   version: "1.2.0", 
   //   date: "2026-08-01",
   //   type: "removed",
   //   title: "Manual discount entry removed from Record Sale",
