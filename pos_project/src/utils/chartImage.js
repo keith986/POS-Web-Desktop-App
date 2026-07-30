@@ -3,8 +3,7 @@ import Chart from "chart.js/auto";
 /**
  * Renders a Chart.js chart off-screen and resolves to a PNG data URL.
  * Used to embed bar/line/pie charts into generated PDF reports.
-*/
-
+ */
 export function renderChartImage({ type = "bar", labels, datasets, options = {}, width = 760, height = 360 }) {
   return new Promise((resolve) => {
     const canvas = document.createElement("canvas");
