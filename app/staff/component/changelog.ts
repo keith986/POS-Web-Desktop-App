@@ -45,12 +45,12 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.11.0",
-    date: "2026-07-18",
+    version: "1.13.0",
+    date: "2026-07-31",
     type: "feature",
-    title: "Login page has been updated",
+    title: "Etims Intergration",
     description:
-      "The login page has been redesigned to provide a more user-friendly experience, with improved layout and accessibility features.",
+      "Etims invoicing intergration is now intergrated in our app",
     importance:
       "Enhances the user experience and accessibility for all staff members.",
     critical : false,
