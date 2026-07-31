@@ -642,7 +642,12 @@ export async function initDb(): Promise<void> {
       column: "etims_cmc_key",
       sql:    "ALTER TABLE settings ADD COLUMN etims_cmc_key VARCHAR(255) NULL AFTER etims_branch_id",
     },
-  ];   
+    {
+      table:  "orders",
+      column: "customer_phone",
+      sql:    "ALTER TABLE orders ADD COLUMN customer_phone VARCHAR(50) NULL AFTER customer_email",
+    },
+  ];
 
   for (const m of migrations) {
     const [cols] = await conn.query(

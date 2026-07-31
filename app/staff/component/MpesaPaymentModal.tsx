@@ -9,7 +9,7 @@ interface MpesaPaymentModalProps {
   orderNumber:    string;
   exactAmount:    number;
   currency:       string;
-  onSuccess:      (receipt: string, amountPaid: number, mode: PaymentMode) => void;
+  onSuccess:      (receipt: string, amountPaid: number, mode: PaymentMode, phone?: string) => void;
   onClose:        () => void;
 }
 
@@ -113,7 +113,7 @@ export default function MpesaPaymentModal({
   const handleMarkPaid = () => {
     const paidAmount = mode === "cash_and_mpesa" ? Math.max(exactAmount, cashNum + mpesaNum) : exactAmount;
     const receiptLabel = manualReceipt.trim() || "MPESA";
-    onSuccess(receiptLabel, paidAmount, mode);
+    onSuccess(receiptLabel, paidAmount, mode, customerPhone.trim() || undefined);
   };
 
   // ── Poll for payment confirmation ────────────────────────────────────
@@ -127,7 +127,7 @@ export default function MpesaPaymentModal({
           stopAll();
           setReceipt(data.mpesaReceipt ?? "MPESA");
           setStep("done");
-          onSuccess(data.mpesaReceipt ?? "MPESA", mpesaNum, mode);
+          onSuccess(data.mpesaReceipt ?? "MPESA", mpesaNum, mode, customerPhone.trim() || undefined);
         }
         if (data.status === "failed") {
           stopAll();

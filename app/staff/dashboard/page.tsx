@@ -6,6 +6,7 @@ import staffCss from "@/app/staff/component/staffStyles";
 import StaffSettingsTab from "@/app/staff/component/StaffSettingsTab";
 import StaffSupportTab from "@/app/staff/component/StaffSupportTab";
 import MpesaPaymentModal from "@/app/staff/component/MpesaPaymentModal";
+import { buildReceiptWhatsAppLink } from "@/app/_lib/whatsapp";
 import SimpleListTab from "@/app/staff/component/SimpleListTab";
 import { getStaffNav, type PosType } from "@/app/staff/component/navConfig";
 import { useStaffTheme, buildThemeCss, THEMES } from "@/app/staff/component/theme";
@@ -52,6 +53,7 @@ interface Sale {
   status:          string;
   staff_name:      string | null;
   created_at:      string;
+  customer_phone?: string | null;
 }
 interface StoreSettings {
   tax_enabled:   boolean;
@@ -288,6 +290,26 @@ function printSaleReceipt(sale: Sale, staffName: string) {
   win.document.close();
 }
 
+/* Opens WhatsApp with the receipt pre-filled. Uses the phone captured at
+   checkout (mpesa payments); for cash sales with no phone on file, asks
+   once via a plain prompt — no modal needed for something this simple. */
+function sendReceiptViaWhatsApp(sale: Sale, storeName: string, currency: string) {
+  const phone = sale.customer_phone || window.prompt("Customer WhatsApp number (07XX XXX XXX):");
+  if (!phone) return;
+
+  const items = parseItems(sale.items).map(i => ({ name: i.name, qty: i.quantity, unit_price: i.price }));
+
+  const link = buildReceiptWhatsAppLink(phone, {
+    order_number: sale.order_number,
+    store_name:   storeName,
+    items,
+    total:        Number(sale.total),
+    currency,
+  });
+
+  window.open(link, "_blank");
+}
+
 /* ─────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────── */
@@ -503,7 +525,8 @@ export default function StaffDashboard() {
   const handlePaymentSuccess = async (
     receipt:    string,
     amountPaid: number,
-    mode:       "mpesa_full" | "cash_full" | "cash_and_mpesa"
+    mode:       "mpesa_full" | "cash_full" | "cash_and_mpesa",
+    phone?:     string   // ← populated for mpesa-involved payments; used for WhatsApp receipts
   ) => {
     if (!staff) return;
 
@@ -529,6 +552,7 @@ export default function StaffDashboard() {
           mpesa_receipt:   receipt !== "CASH" ? receipt : null,
           customer_name:   "Walk-in Customer",
           customer_email:  "",
+          customer_phone:  phone || null,
           staff_name:      staff.full_name,
           admin_id:        staff.admin_id,
         }),
@@ -1097,7 +1121,10 @@ export default function StaffDashboard() {
                               <td style={{ fontWeight: 500, color: "var(--ink)" }}>{formatCurrency(s.total, settings.currency)}</td>
                               <td><span className="badge info"><span className="badge-dot" />{s.payment_method}</span></td>
                               <td><span className={`badge ${s.status === "completed" ? "ok" : "warn"}`}><span className="badge-dot" />{s.status === "completed" ? "Completed" : s.status}</span></td>
-                              <td><button onClick={() => printSaleReceipt(s, staff?.full_name || "Staff")} style={{ fontSize: 11, padding: "4px 10px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}>Print</button></td>
+                              <td>
+                                <button onClick={() => printSaleReceipt(s, staff?.full_name || "Staff")} style={{ fontSize: 11, padding: "4px 10px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "inherit", marginRight: 6 }}>Print</button>
+                                <button onClick={() => sendReceiptViaWhatsApp(s, "POStore", settings.currency)} style={{ fontSize: 11, padding: "4px 10px", background: "#25D366", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}>WhatsApp</button>
+                              </td>
                             </tr>
                           );
                         })}

@@ -84,7 +84,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const {
-      customer_id, customer_name, customer_email,
+      customer_id, customer_name, customer_email, customer_phone,
       items, subtotal, discount_amount, discount_code, tax, total,
       status,           // ← respect status sent by caller
       payment_method, payment_status,
@@ -110,14 +110,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     /* ── 1. Insert order ── */
     await pool.query(
       `INSERT INTO orders
-         (id, order_number, customer_id, customer_name, customer_email,
+         (id, order_number, customer_id, customer_name, customer_email, customer_phone,
           items, subtotal, discount_amount, discount_code, tax, total,
           status, payment_method, payment_status,
           staff_name, note, admin_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, order_number,
-        customer_id ?? null, customer_name, customer_email ?? "",
+        customer_id ?? null, customer_name, customer_email ?? "", customer_phone ?? null,
         JSON.stringify(items), subtotal ?? 0, discount_amount ?? 0, discount_code ?? null, tax ?? 0, total,
         orderStatus,           // ← was hardcoded 'pending', now uses sent value
         payMethod, payment_status ?? "paid",
