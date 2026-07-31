@@ -241,7 +241,7 @@ function WhatsAppPhoneModal({
     onSend(phone.trim());
     onClose();
   };
-
+   
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1300, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
       <div onClick={e => e.stopPropagation()} style={{ background: "var(--bg)", borderRadius: 14, width: "100%", maxWidth: 380, padding: "1.25rem", boxShadow: "0 24px 60px rgba(0,0,0,0.25)" }}>
