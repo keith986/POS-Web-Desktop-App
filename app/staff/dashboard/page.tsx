@@ -223,6 +223,48 @@ function ProductViewModal({ product, currency, onClose }: { product: Product | n
   );
 }
 
+/* Asks for a customer's WhatsApp number when none is on file for the sale
+   (only needed for cash sales — mpesa sales already have it captured). */
+function WhatsAppPhoneModal({
+  open, onClose, onSend,
+}: {
+  open:    boolean;
+  onClose: () => void;
+  onSend:  (phone: string) => void;
+}) {
+  const [phone, setPhone] = useState("");
+  useEffect(() => { if (open) setPhone(""); }, [open]);
+  if (!open) return null;
+
+  const submit = () => {
+    if (!phone.trim()) return;
+    onSend(phone.trim());
+    onClose();
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1300, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "var(--bg)", borderRadius: 14, width: "100%", maxWidth: 380, padding: "1.25rem", boxShadow: "0 24px 60px rgba(0,0,0,0.25)" }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>Send receipt via WhatsApp</div>
+        <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>No phone number on file for this sale — enter one to send the receipt.</div>
+        <input
+          autoFocus
+          type="tel"
+          placeholder="07XX XXX XXX"
+          value={phone}
+          onChange={e => setPhone(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && submit()}
+          style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--ink)", fontSize: 14, fontFamily: "inherit", marginBottom: 16, boxSizing: "border-box" }}
+        />
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <button onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--ink)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+          <button onClick={submit} disabled={!phone.trim()} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#25D366", color: "#fff", fontSize: 13, fontWeight: 500, cursor: phone.trim() ? "pointer" : "not-allowed", opacity: phone.trim() ? 1 : 0.5, fontFamily: "inherit" }}>Send</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Receipt helpers ────────────────────────────────────────── */
 function buildReceiptHtml(opts: {
   orderNumber: string; dateStr: string; itemLines: string;
@@ -290,13 +332,9 @@ function printSaleReceipt(sale: Sale, staffName: string) {
   win.document.close();
 }
 
-/* Opens WhatsApp with the receipt pre-filled. Uses the phone captured at
-   checkout (mpesa payments); for cash sales with no phone on file, asks
-   once via a plain prompt — no modal needed for something this simple. */
-function sendReceiptViaWhatsApp(sale: Sale, storeName: string, currency: string) {
-  const phone = sale.customer_phone || window.prompt("Customer WhatsApp number (07XX XXX XXX):");
-  if (!phone) return;
-
+/* Opens WhatsApp with the receipt pre-filled. Called with a phone number
+   already resolved (either from the order or the WhatsAppPhoneModal). */
+function openWhatsAppReceipt(sale: Sale, phone: string, storeName: string, currency: string) {
   const items = parseItems(sale.items).map(i => ({ name: i.name, qty: i.quantity, unit_price: i.price }));
 
   const link = buildReceiptWhatsAppLink(phone, {
@@ -320,6 +358,7 @@ export default function StaffDashboard() {
   const [activeTab,        setActiveTab]        = useState("Dashboard");
   const [products,         setProducts]         = useState<Product[]>([]);
   const [viewProduct,      setViewProduct]      = useState<Product | null>(null);
+  const [waPromptSale,     setWaPromptSale]      = useState<Sale | null>(null);
   const [sales,            setSales]            = useState<Sale[]>([]);   // today-only, feeds Dashboard tab widgets
   const [historySales,     setHistorySales]      = useState<Sale[]>([]);  // Sales History tab, independent range
   const [historyLoading,   setHistoryLoading]    = useState(false);
@@ -1123,7 +1162,7 @@ export default function StaffDashboard() {
                               <td><span className={`badge ${s.status === "completed" ? "ok" : "warn"}`}><span className="badge-dot" />{s.status === "completed" ? "Completed" : s.status}</span></td>
                               <td>
                                 <button onClick={() => printSaleReceipt(s, staff?.full_name || "Staff")} style={{ fontSize: 11, padding: "4px 10px", background: "var(--accent)", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "inherit", marginRight: 6 }}>Print</button>
-                                <button onClick={() => sendReceiptViaWhatsApp(s, "POStore", settings.currency)} style={{ fontSize: 11, padding: "4px 10px", background: "#25D366", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}>WhatsApp</button>
+                                <button onClick={() => s.customer_phone ? openWhatsAppReceipt(s, s.customer_phone, "POStore", settings.currency) : setWaPromptSale(s)} style={{ fontSize: 11, padding: "4px 10px", background: "#25D366", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontFamily: "inherit" }}>WhatsApp</button>
                               </td>
                             </tr>
                           );
@@ -1189,6 +1228,11 @@ export default function StaffDashboard() {
         />
 
       <ProductViewModal product={viewProduct} currency={settings.currency} onClose={() => setViewProduct(null)} />
+      <WhatsAppPhoneModal
+        open={!!waPromptSale}
+        onClose={() => setWaPromptSale(null)}
+        onSend={phone => { if (waPromptSale) openWhatsAppReceipt(waPromptSale, phone, "POStore", settings.currency); }}
+      />
 
     </>
   );
