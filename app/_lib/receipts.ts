@@ -81,7 +81,7 @@ ${'-'.repeat(40)}
 
 Payment Method: ${order.payment_method.toUpperCase()}
 Status: ${order.status.toUpperCase()}
-
+${order.etims_control_code ? `KRA CU Invoice: ${order.etims_invoice_number}\nControl No: ${order.etims_control_code}\n` : order.etims_status === 'pending' ? '[eTIMS invoice pending]\n' : ''}
 ${address ? `Address: ${address}` : ''}
 ${phone ? `Phone: ${phone}` : ''}
 ${email ? `Email: ${email}` : ''}
@@ -194,6 +194,16 @@ function generateHTMLReceipt(
         <span>Status:</span>
         <span>${order.status.toUpperCase()}</span>
       </div>
+      ${order.etims_control_code ? `
+      <div class="totals-row">
+        <span>KRA Invoice:</span>
+        <span>${order.etims_invoice_number}</span>
+      </div>
+      <div style="text-align:center; font-size:11px; margin-top:6px;">
+        Control No: ${order.etims_control_code}
+        ${order.etims_qr_url ? `<br/><img src="${order.etims_qr_url}" width="80" height="80" alt="KRA verification QR" />` : ''}
+      </div>` : order.etims_status === 'pending' ? `
+      <div class="totals-row"><span style="font-size:11px;">eTIMS invoice pending</span></div>` : ''}
     </div>
 
     <div class="footer">

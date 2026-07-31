@@ -597,6 +597,51 @@ export async function initDb(): Promise<void> {
       column: "low_stock_threshold",
       sql:    "ALTER TABLE settings ADD COLUMN low_stock_threshold INT NOT NULL DEFAULT 10 AFTER notif_email",
     },
+    {
+      table:  "orders",
+      column: "etims_status",
+      sql:    `ALTER TABLE orders ADD COLUMN etims_status ENUM('not_applicable','pending','submitted','failed') NOT NULL DEFAULT 'pending' AFTER payment_status`,
+    },
+    {
+      table:  "orders",
+      column: "etims_invoice_number",
+      sql:    "ALTER TABLE orders ADD COLUMN etims_invoice_number VARCHAR(50) NULL AFTER etims_status",
+    },
+    {
+      table:  "orders",
+      column: "etims_control_code",
+      sql:    "ALTER TABLE orders ADD COLUMN etims_control_code VARCHAR(100) NULL AFTER etims_invoice_number",
+    },
+    {
+      table:  "orders",
+      column: "etims_qr_url",
+      sql:    "ALTER TABLE orders ADD COLUMN etims_qr_url VARCHAR(255) NULL AFTER etims_control_code",
+    },
+    {
+      table:  "orders",
+      column: "etims_error",
+      sql:    "ALTER TABLE orders ADD COLUMN etims_error TEXT NULL AFTER etims_qr_url",
+    },
+    {
+      table:  "settings",
+      column: "etims_enabled",
+      sql:    "ALTER TABLE settings ADD COLUMN etims_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER low_stock_threshold",
+    },
+    {
+      table:  "settings",
+      column: "etims_pin",
+      sql:    "ALTER TABLE settings ADD COLUMN etims_pin VARCHAR(20) NULL AFTER etims_enabled",
+    },
+    {
+      table:  "settings",
+      column: "etims_branch_id",
+      sql:    "ALTER TABLE settings ADD COLUMN etims_branch_id VARCHAR(10) NOT NULL DEFAULT '00' AFTER etims_pin",
+    },
+    {
+      table:  "settings",
+      column: "etims_cmc_key",
+      sql:    "ALTER TABLE settings ADD COLUMN etims_cmc_key VARCHAR(255) NULL AFTER etims_branch_id",
+    },
   ];
 
   for (const m of migrations) {

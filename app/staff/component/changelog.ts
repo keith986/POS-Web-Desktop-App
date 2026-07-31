@@ -45,19 +45,19 @@ export interface ChangelogEntry {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.12.0",
-    date: "2026-07-30",
+    version: "1.11.0",
+    date: "2026-07-18",
     type: "feature",
-    title: "Etims invoicing integration",
+    title: "Login page has been updated",
     description:
-      "Integrates with the Etims invoicing system to streamline the invoicing process for staff members.",
+      "The login page has been redesigned to provide a more user-friendly experience, with improved layout and accessibility features.",
     importance:
-      "Enhance the user experience and accessibility for all staff members.",
+      "Enhances the user experience and accessibility for all staff members.",
     critical : false,
   },
   // Example of a future entry — copy this shape when you ship something new:
   // {
-  //   version: "1.2.0", 
+  //   version: "1.2.0",
   //   date: "2026-08-01",
   //   type: "removed",
   //   title: "Manual discount entry removed from Record Sale",

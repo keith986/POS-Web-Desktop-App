@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/app/_lib/db";
 import { randomUUID } from "crypto";
 import { notifyNewOrder, notifyLowStockIfCrossed } from "@/app/_lib/notify";
+import { submitEtimsInvoice, saveEtimsResult } from "@/app/_lib/etims";
 
 const VALID_STATUSES        = ["pending", "processing", "completed", "refunded", "cancelled"];
 const VALID_PAYMENT_METHODS = ["card", "cash", "mobile"];
@@ -132,6 +133,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       payment_method: payMethod,
       item_count:     Array.isArray(items) ? items.length : 0,
     });
+
+    /* Fire-and-forget: submit to KRA eTIMS if the store has it enabled
+       (Settings → Tax & Billing). Never blocks the sale response — the
+       control number lands on the order a beat later and the receipt
+       picks it up whenever it's printed/sent. */
+    if (orderStatus === "completed") {
+      submitEtimsInvoice(
+        {
+          id, order_number, customer_name,
+          items: Array.isArray(items) ? items : [],
+          subtotal: Number(subtotal ?? 0),
+          tax:      Number(tax ?? 0),
+          total:    Number(total),
+          payment_method: payMethod,
+        },
+        admin_id
+      )
+        .then(result => saveEtimsResult(id, result))
+        .catch(() => { /* already caught inside submitEtimsInvoice */ });
+    }
 
     /* ── 2. Update customer stats if linked and completed ── */
     if (customer_id && orderStatus === "completed") {

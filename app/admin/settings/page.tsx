@@ -22,6 +22,12 @@ interface TaxSettings {
   tax_inclusive:  boolean;
   receipt_footer: string;
 }
+interface EtimsSettings {
+  etims_enabled:   boolean;
+  etims_pin:       string;
+  etims_branch_id: string;
+  etims_cmc_key:   string;
+}
 interface NotifSettings {
   notif_new_order:    boolean;
   notif_low_stock:    boolean;
@@ -401,6 +407,9 @@ export default function AdminSettingsPage() {
   const [tax, setTax] = useState<TaxSettings>({
     tax_enabled: true, tax_rate: "16", tax_name: "VAT", tax_inclusive: false, receipt_footer: "",
   });
+  const [etims, setEtims] = useState<EtimsSettings>({
+    etims_enabled: false, etims_pin: "", etims_branch_id: "00", etims_cmc_key: "",
+  });
   const [notif, setNotif] = useState<NotifSettings>({
     notif_new_order: true, notif_low_stock: true, notif_daily_report: false, notif_staff_login: false, notif_email: "", low_stock_threshold: 10,
   });
@@ -442,6 +451,12 @@ export default function AdminSettingsPage() {
         receipt_footer: data.receipt_footer ?? "",
       });
       setInventoryMode(data.auto_deduct_inventory ? "auto" : "manual");
+      setEtims({
+        etims_enabled:   !!data.etims_enabled,
+        etims_pin:       data.etims_pin       ?? "",
+        etims_branch_id: data.etims_branch_id ?? "00",
+        etims_cmc_key:   data.etims_cmc_key   ?? "",
+      });
       setNotif({
         notif_new_order:    !!data.notif_new_order,
         notif_low_stock:    !!data.notif_low_stock,
@@ -474,6 +489,7 @@ export default function AdminSettingsPage() {
           ...store,
           ...tax,
           ...notif,
+          ...etims,
           auto_deduct_inventory: inventoryMode === "auto" ? 1 : 0,
           admin_id: user?.id,
         }),
@@ -798,13 +814,58 @@ export default function AdminSettingsPage() {
                     </div>
                   </div>
                 </div>
+                <div style={cardStyle}>
+                  <div style={cardHeaderStyle}>
+                    <span style={{ fontSize: 13, fontWeight: 500 }}>KRA eTIMS (Electronic Tax Invoicing)</span>
+                    <Toggle checked={etims.etims_enabled} onChange={() => setEtims(t => ({ ...t, etims_enabled: !t.etims_enabled }))} />
+                  </div>
+                  <div style={{ ...cardBodyStyle, opacity: etims.etims_enabled ? 1 : 0.4, pointerEvents: etims.etims_enabled ? "auto" : "none", transition: "opacity 0.2s" }}>
+                    <div style={sectionStyle}>
+                      <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8, padding: "0.75rem 1rem", fontSize: 12, color: "#1e40af" }}>
+                        <span style={{ display: "inline-flex", alignItems: "flex-start", gap: 7 }}>
+                          <span style={{ marginTop: 1, flexShrink: 0 }}><IconInfo /></span>
+                          <span>Every completed sale is submitted to KRA in the background and gets a control number printed on the receipt. Get your PIN, branch ID and CMC key by registering as an OSCU/VSCU integrator on the KRA eTIMS portal.</span>
+                        </span>
+                      </div>
+                      <div style={rowStyle}>
+                        <div>
+                          <label style={labelStyle}>KRA PIN</label>
+                          <input style={fieldStyle} value={etims.etims_pin} onChange={e => setEtims(t => ({ ...t, etims_pin: e.target.value.toUpperCase() }))} placeholder="P0512345678X" />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Branch ID</label>
+                          <input style={fieldStyle} value={etims.etims_branch_id} onChange={e => setEtims(t => ({ ...t, etims_branch_id: e.target.value }))} placeholder="00" />
+                        </div>
+                      </div>
+                      <div>
+                        <label style={labelStyle}>CMC Key</label>
+                        <input style={fieldStyle} type="password" value={etims.etims_cmc_key} onChange={e => setEtims(t => ({ ...t, etims_cmc_key: e.target.value }))} placeholder="Issued when your device is registered with KRA" />
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", background: "#f5f4f0", borderRadius: 8 }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 500 }}>Connection status</div>
+                          <div style={{ fontSize: 12, color: "#9a9a8e", marginTop: 2 }}>
+                            {etims.etims_enabled && etims.etims_pin && etims.etims_cmc_key
+                              ? "Configured — new sales will submit automatically"
+                              : "Not configured — sales are recorded but not sent to KRA"}
+                          </div>
+                        </div>
+                        <span style={{
+                          fontSize: 11, fontWeight: 500, padding: "3px 9px", borderRadius: 100,
+                          background: etims.etims_enabled && etims.etims_pin && etims.etims_cmc_key ? "#dcfce7" : "#f5f4f0",
+                          color:      etims.etims_enabled && etims.etims_pin && etims.etims_cmc_key ? "#166534" : "#9a9a8e",
+                        }}>
+                          {etims.etims_enabled && etims.etims_pin && etims.etims_cmc_key ? "Active" : "Inactive"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <div style={{ display: "flex", justifyContent: "flex-end" }}>
                   <SaveButton onClick={handleSave} loading={saving} />
                 </div>
               </div>
             )}
-
-            {/* ══ NOTIFICATIONS ══ */}
             {activeTab === "Notifications" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                 <div style={cardStyle}>

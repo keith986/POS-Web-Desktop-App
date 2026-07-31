@@ -21,6 +21,10 @@ const DEFAULTS = {
   notif_email:           "",
   low_stock_threshold:   10,
   auto_deduct_inventory: false,
+  etims_enabled:         false,
+  etims_pin:             "",
+  etims_branch_id:       "00",
+  etims_cmc_key:         "",
 };
 
 /* ── GET /api/settings?admin_id=xxx ── */
@@ -50,6 +54,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       timezone:              row.timezone              ?? "Africa/Nairobi",
       low_stock_threshold:   Number(row.low_stock_threshold ?? 10),
       auto_deduct_inventory: Boolean(row.auto_deduct_inventory ?? false),
+      etims_enabled:         Boolean(row.etims_enabled ?? false),
+      etims_pin:             row.etims_pin ?? "",
+      etims_branch_id:       row.etims_branch_id ?? "00",
+      etims_cmc_key:         row.etims_cmc_key ?? "",
     });
   } catch (error) {
     const err = error as Error;
@@ -75,8 +83,9 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
         tax_inclusive, receipt_footer,
         notif_new_order, notif_low_stock, notif_daily_report,
         notif_staff_login, notif_email, low_stock_threshold,
-        auto_deduct_inventory
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        auto_deduct_inventory,
+        etims_enabled, etims_pin, etims_branch_id, etims_cmc_key
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         store_name            = VALUES(store_name),
         domain                = VALUES(domain),
@@ -97,6 +106,10 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
         notif_email           = VALUES(notif_email),
         low_stock_threshold   = VALUES(low_stock_threshold),
         auto_deduct_inventory = VALUES(auto_deduct_inventory),
+        etims_enabled         = VALUES(etims_enabled),
+        etims_pin             = VALUES(etims_pin),
+        etims_branch_id       = VALUES(etims_branch_id),
+        etims_cmc_key         = VALUES(etims_cmc_key),
         updated_at            = NOW()
     `, [
       admin_id,
@@ -110,6 +123,10 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
       body.notif_email,
       Number.isFinite(Number(body.low_stock_threshold)) ? Number(body.low_stock_threshold) : 10,
       body.auto_deduct_inventory ? 1 : 0,
+      body.etims_enabled ? 1 : 0,
+      body.etims_pin || null,
+      body.etims_branch_id || "00",
+      body.etims_cmc_key || null,
     ]);
 
     return NextResponse.json({ success: true });

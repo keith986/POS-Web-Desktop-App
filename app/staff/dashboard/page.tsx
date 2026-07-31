@@ -226,8 +226,9 @@ function buildReceiptHtml(opts: {
   orderNumber: string; dateStr: string; itemLines: string;
   subtotal: number; discountAmount: number; discountCode?: string | null;
   tax: number; total: number; paymentMethod?: string; staffName?: string;
+  etimsInvoiceNumber?: string | null; etimsControlCode?: string | null; etimsStatus?: string | null;
 }): string {
-  const { orderNumber, dateStr, itemLines, subtotal, discountAmount = 0, discountCode, tax, total, paymentMethod, staffName } = opts;
+  const { orderNumber, dateStr, itemLines, subtotal, discountAmount = 0, discountCode, tax, total, paymentMethod, staffName, etimsInvoiceNumber, etimsControlCode, etimsStatus } = opts;
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Receipt - ${orderNumber}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
@@ -236,6 +237,7 @@ function buildReceiptHtml(opts: {
   .sub{font-size:10px;color:#555;margin-bottom:4px}table{width:100%;border-collapse:collapse}th{font-size:10px;color:#888;text-transform:uppercase;padding:4px 0;border-bottom:1px dashed #ccc}
   .total-row td{font-size:13px;font-weight:700;padding-top:6px}.tax-row td{font-size:11px;color:#555}.discount-row td{font-size:11px;color:#d946ef}
   .footer{font-size:10px;color:#888;margin-top:12px}.payment-badge{display:inline-block;background:#111;color:#fff;font-size:10px;padding:2px 8px;border-radius:3px;letter-spacing:1px;margin-top:4px}
+  .etims{font-size:10px;color:#111;margin-top:8px;text-align:center}
   @media print{body{width:280px}button{display:none}}
 </style></head><body>
 <div class="center"><div class="brand">POStore</div><div class="sub">Point of Sale Receipt</div><div class="sub">${dateStr}</div><div class="sub">${orderNumber}</div></div>
@@ -252,6 +254,11 @@ function buildReceiptHtml(opts: {
 <div class="center">
   ${staffName ? `<div class="sub">Served by: <strong>${staffName}</strong></div>` : ""}
   ${paymentMethod ? `<div><span class="payment-badge">${paymentMethod.toUpperCase()}</span></div>` : ""}
+  ${etimsControlCode
+    ? `<div class="etims">KRA Invoice: ${etimsInvoiceNumber}<br/>Control No: ${etimsControlCode}</div>`
+    : etimsStatus === "pending"
+    ? `<div class="etims">eTIMS invoice pending — reprint shortly</div>`
+    : ""}
   <div class="footer" style="margin-top:10px">Thank you for shopping with us!</div>
   <div class="footer">POStore &bull; pos.upendoapps.com</div>
 </div>
