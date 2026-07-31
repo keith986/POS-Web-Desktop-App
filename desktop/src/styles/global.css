@@ -511,6 +511,107 @@ body {
 .analytics-card-donut { display: flex; flex-direction: column; }
 .donut-svg { width: 130px; height: 130px; margin: 4px auto 0; }
 
+/* BARCODE SCANNER */
+.scanner-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 600; padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+.scanner-modal {
+  background: var(--bg-2); border-radius: 16px; width: 100%; max-width: 380px;
+  overflow: hidden; box-shadow: var(--shadow-lg);
+  animation: modalPop 0.18s ease;
+  border: 1px solid var(--border);
+}
+.scanner-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 700; }
+.scanner-close { background: none; border: 1px solid var(--border); color: var(--text-2); width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.scanner-close:hover { border-color: var(--red); color: var(--red); }
+.scanner-viewport { position: relative; width: 100%; height: 260px; background: #000; overflow: hidden; }
+.scanner-video-region { position: absolute; inset: 0; }
+.scanner-video-region video { width: 100% !important; height: 100% !important; object-fit: cover; }
+.scanner-frame {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 250px; height: 140px; pointer-events: none;
+}
+.scanner-corner { position: absolute; width: 22px; height: 22px; border: 3px solid var(--accent); }
+.scanner-corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; border-radius: 6px 0 0 0; }
+.scanner-corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; border-radius: 0 6px 0 0; }
+.scanner-corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; border-radius: 0 0 0 6px; }
+.scanner-corner.br { bottom: 0; right: 0; border-left: none; border-top: none; border-radius: 0 0 6px 0; }
+.scanner-frame-hit .scanner-corner { border-color: var(--green); }
+.scanner-laser {
+  position: absolute; left: 4%; width: 92%; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent) 20%, var(--accent) 80%, transparent);
+  box-shadow: 0 0 8px 1px var(--accent);
+  animation: laserSweep 1.8s ease-in-out infinite;
+}
+@keyframes laserSweep {
+  0% { top: 6%; opacity: 0.3; }
+  50% { top: 94%; opacity: 1; }
+  100% { top: 6%; opacity: 0.3; }
+}
+.scanner-status {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.65); color: #fff; font-size: 11.5px; font-family: 'DM Mono', monospace;
+  padding: 5px 12px; border-radius: 20px; white-space: nowrap; max-width: 90%; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 6px;
+}
+.scanner-status-hit { background: rgba(34, 197, 94, 0.85); }
+.scanner-status-error { background: rgba(239, 68, 68, 0.85); }
+.scanner-hint { padding: 12px 16px 16px; font-size: 12px; color: var(--text-3); text-align: center; }
+.scanner-manual-link { background: none; border: none; color: var(--accent); cursor: pointer; font-family: inherit; font-size: 12px; text-decoration: underline; padding: 0; }
+.scanner-fallback { padding: 14px 16px 16px; display: flex; gap: 8px; }
+.scan-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg-3); border: 1px solid var(--border); color: var(--text);
+  padding: 9px 14px; border-radius: var(--radius); font-size: 13px; font-family: inherit;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.scan-btn:hover { border-color: var(--accent); color: var(--accent); }
+.scan-btn-icon-only { padding: 9px; }
+
+/* TABLE / TAB MANAGEMENT */
+.table-tabs-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.table-tab {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg-3); border: 1px solid var(--border); color: var(--text-2);
+  padding: 6px 8px 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; position: relative;
+}
+.table-tab:hover { border-color: var(--text-3); }
+.table-tab-active { background: rgba(var(--accent-rgb), 0.15); border-color: var(--accent); color: var(--accent); }
+.table-tab-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; }
+.table-tab-occupied .table-tab-dot { background: var(--yellow); }
+.table-tab-count {
+  background: var(--accent); color: #fff; font-size: 10px; font-weight: 700;
+  min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace; padding: 0 4px;
+}
+.table-tab-close {
+  background: none; border: none; color: inherit; opacity: 0.6; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; padding: 0 2px;
+}
+.table-tab-close:hover { opacity: 1; color: var(--red); }
+.table-tab-add {
+  display: flex; align-items: center; gap: 4px;
+  background: none; border: 1px dashed var(--border-light); color: var(--text-3);
+  padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.15s;
+}
+.table-tab-add:hover { border-color: var(--accent); color: var(--accent); }
+.table-tab-input {
+  background: var(--bg-3); border: 1px solid var(--accent); color: var(--text);
+  padding: 6px 12px; border-radius: 20px; font-size: 12px; font-family: inherit; width: 120px;
+}
+
+/* REFUNDS */
+.refund-line { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.refund-line:last-child { border-bottom: none; }
+.refund-line-name { flex: 1; font-size: 13px; }
+.refund-line-meta { font-size: 11px; color: var(--text-3); }
+.refund-qty-input { width: 60px; background: var(--bg-3); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; font-family: inherit; font-size: 13px; text-align: center; }
+.refund-summary-box { background: var(--bg-3); border-radius: 8px; padding: 12px 14px; margin-top: 12px; }
+
 /* SECTION */
 .section { margin-bottom: 32px; }
 .section-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; }

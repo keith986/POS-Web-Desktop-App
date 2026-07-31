@@ -1,7 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import UpdateBanner from "../components/UpdateBanner";
-import { BoxIcon, EyeIcon, CartIcon, CheckCircleIcon } from "../components/Icons";
+import BarcodeScanner from "../components/BarcodeScanner";
+import { BoxIcon, EyeIcon, CartIcon, CheckCircleIcon, XIcon } from "../components/Icons";
+
+const ScanIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+    <line x1="4" y1="12" x2="20" y2="12" />
+  </svg>
+);
+const PlusIcon = ({ size = 12 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
 
 // Payment method icons
 const CashIcon = () => (
@@ -146,6 +159,13 @@ export default function StaffDashboard({ user, onLogout }) {
   const [taxSettings, setTaxSettings] = useState({ taxName: "VAT", taxRate: 16, taxInclusive: false });
   const [inventoryMode, setInventoryMode] = useState("auto");
   const [viewingProduct, setViewingProduct] = useState(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanFeedback, setScanFeedback] = useState(null); // { ok: bool, msg: string }
+  const [tables, setTables] = useState([]);
+  const [activeTableId, setActiveTableId] = useState(null);
+  const [addingTable, setAddingTable] = useState(false);
+  const [newTableName, setNewTableName] = useState("");
+  const tableCartsRef = useRef({}); // { [tableId]: cartArray } — held carts for tables not currently active
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -157,7 +177,62 @@ export default function StaffDashboard({ user, onLogout }) {
     loadTaxSettings();
     loadInventoryMode();
     loadDiscounts();
+    loadTables();
   }, []);
+
+  const loadTables = async () => {
+    const result = await window.electronAPI.queryDatabase("SELECT * FROM store_tables ORDER BY created_at ASC");
+    let rows = result.success ? result.data : [];
+    if (rows.length === 0) {
+      const id = uuidv4();
+      await window.electronAPI.executeDatabase(
+        "INSERT INTO store_tables (id, name, capacity, status) VALUES (?, ?, ?, 'available')",
+        [id, "Walk-in", 999]
+      );
+      rows = [{ id, name: "Walk-in", capacity: 999, status: "available" }];
+    }
+    setTables(rows);
+    if (!activeTableId) setActiveTableId(rows[0].id);
+  };
+
+  const isDefaultTable = (id) => tables[0]?.id === id;
+
+  const switchTable = (id) => {
+    if (id === activeTableId) return;
+    tableCartsRef.current[activeTableId] = cart;
+    setActiveTableId(id);
+    setCart(tableCartsRef.current[id] || []);
+    setSelectedDiscount(null);
+  };
+
+  const createTable = async () => {
+    const name = newTableName.trim();
+    if (!name) { setAddingTable(false); return; }
+    const id = uuidv4();
+    await window.electronAPI.executeDatabase(
+      "INSERT INTO store_tables (id, name, capacity, status) VALUES (?, ?, 2, 'available')",
+      [id, name]
+    );
+    setNewTableName("");
+    setAddingTable(false);
+    await loadTables();
+    switchTable(id);
+  };
+
+  const closeTable = async (id, e) => {
+    e.stopPropagation();
+    if (isDefaultTable(id)) return;
+    const heldCart = id === activeTableId ? cart : (tableCartsRef.current[id] || []);
+    if (heldCart.length > 0 && !window.confirm("This table still has items on it. Close it anyway?")) return;
+    await window.electronAPI.executeDatabase("DELETE FROM store_tables WHERE id = ?", [id]);
+    delete tableCartsRef.current[id];
+    if (id === activeTableId) {
+      const fallback = tables.find((t) => t.id !== id)?.id || tables[0].id;
+      setActiveTableId(fallback);
+      setCart(tableCartsRef.current[fallback] || []);
+    }
+    loadTables();
+  };
 
   const loadDiscounts = () => {
     const stored = localStorage.getItem("postore-discounts");
@@ -202,9 +277,17 @@ export default function StaffDashboard({ user, onLogout }) {
 
   const addToCart = (product) => {
     setCart((prev) => {
-      const existing = prev.find((i) => i.id === product.id);
-      if (existing) return prev.map((i) => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { ...product, qty: 1 }];
+      const wasEmpty = prev.length === 0;
+      const next = (() => {
+        const existing = prev.find((i) => i.id === product.id);
+        if (existing) return prev.map((i) => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+        return [...prev, { ...product, qty: 1 }];
+      })();
+      if (wasEmpty && next.length > 0 && !isDefaultTable(activeTableId)) {
+        window.electronAPI.executeDatabase("UPDATE store_tables SET status='occupied' WHERE id = ?", [activeTableId]);
+        setTables((ts) => ts.map((t) => t.id === activeTableId ? { ...t, status: "occupied" } : t));
+      }
+      return next;
     });
   };
 
@@ -247,6 +330,7 @@ export default function StaffDashboard({ user, onLogout }) {
     if (cart.length === 0) return;
     const orderId = uuidv4();
     const orderNumber = `ORD-${Date.now()}`;
+    const activeTable = tables.find((t) => t.id === activeTableId);
 
     // Standardized database key: "discount_applied"
     // Determine payment breakdown for split
@@ -254,9 +338,9 @@ export default function StaffDashboard({ user, onLogout }) {
     const cash_amt = paymentMethod === 'split' ? Number(cashAmount || 0) : (paymentMethod === 'cash' ? finalTotal : 0);
 
     const orderResult = await window.electronAPI.executeDatabase(
-      `INSERT INTO orders (id, order_number, staff_id, staff_name, subtotal, discount_applied, tax, total, payment_method, mpesa_amount, cash_amount, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')`,
-      [orderId, orderNumber, user.id, user.name, subtotalForReceipt, discountVal, finalTax, finalTotal, paymentMethod, mpesa_amt, cash_amt]
+      `INSERT INTO orders (id, order_number, staff_id, staff_name, subtotal, discount_applied, tax, total, payment_method, mpesa_amount, cash_amount, status, table_id, table_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?)`,
+      [orderId, orderNumber, user.id, user.name, subtotalForReceipt, discountVal, finalTax, finalTotal, paymentMethod, mpesa_amt, cash_amt, activeTable?.id || null, activeTable?.name || null]
     );
 
     if (!orderResult.success) return alert("Error saving order. Make sure 'discount_applied' column exists in database schema.");
@@ -277,10 +361,32 @@ export default function StaffDashboard({ user, onLogout }) {
       discount_applied: discountVal, paymentMethod, mpesa_amount: mpesa_amt, cash_amount: cash_amt, items: cart.map(i => ({ ...i }))
     });
     setCart([]);
+    tableCartsRef.current[activeTableId] = [];
+    if (!isDefaultTable(activeTableId)) {
+      await window.electronAPI.executeDatabase("UPDATE store_tables SET status='available' WHERE id = ?", [activeTableId]);
+      setTables((ts) => ts.map((t) => t.id === activeTableId ? { ...t, status: "available" } : t));
+    }
     setSelectedDiscount(null);
     setOrderComplete(true);
     loadProducts();
     setTimeout(() => setOrderComplete(false), 6000);
+  };
+
+  const handleScanDetected = (code) => {
+    const trimmed = code.trim();
+    const match = products.find((p) => (p.sku || "").toLowerCase() === trimmed.toLowerCase());
+    if (match) {
+      if (match.stock <= 0) {
+        setScanFeedback({ ok: false, msg: `${match.name} is out of stock` });
+      } else {
+        addToCart(match);
+        setScanFeedback({ ok: true, msg: `Added: ${match.name}` });
+      }
+    } else {
+      setScanFeedback({ ok: false, msg: `No product found for code ${trimmed}` });
+    }
+    clearTimeout(handleScanDetected._t);
+    handleScanDetected._t = setTimeout(() => setScanFeedback(null), 2200);
   };
 
   const filteredProducts = products.filter(p => 
@@ -318,8 +424,50 @@ export default function StaffDashboard({ user, onLogout }) {
 
       <div className="pos-body">
         <div className="products-panel">
+          <div className="table-tabs-bar">
+            {tables.map((t) => (
+              <button
+                key={t.id}
+                className={`table-tab ${t.id === activeTableId ? "table-tab-active" : ""} ${t.status === "occupied" ? "table-tab-occupied" : ""}`}
+                onClick={() => switchTable(t.id)}
+              >
+                <span className="table-tab-dot" />
+                {t.name}
+                {(t.id === activeTableId ? cart.length : (tableCartsRef.current[t.id] || []).length) > 0 && (
+                  <span className="table-tab-count">{t.id === activeTableId ? cart.length : (tableCartsRef.current[t.id] || []).length}</span>
+                )}
+                {!isDefaultTable(t.id) && (
+                  <span className="table-tab-close" onClick={(e) => closeTable(t.id, e)}><XIcon size={11} /></span>
+                )}
+              </button>
+            ))}
+            {addingTable ? (
+              <input
+                className="table-tab-input"
+                autoFocus
+                placeholder="Table name…"
+                value={newTableName}
+                onChange={(e) => setNewTableName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") createTable(); if (e.key === "Escape") setAddingTable(false); }}
+                onBlur={createTable}
+              />
+            ) : (
+              <button className="table-tab-add" onClick={() => setAddingTable(true)}><PlusIcon /> Table</button>
+            )}
+          </div>
+
           <div className="products-toolbar">
-            <input type="text" className="pos-search" placeholder="Search products..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <div style={{ display: "flex", gap: 8, position: "relative" }}>
+              <input type="text" className="pos-search" placeholder="Search products..." value={search} onChange={(e) => setSearch(e.target.value)} />
+              <button className="scan-btn scan-btn-icon-only" title="Scan barcode" onClick={() => setScannerOpen(true)}>
+                <ScanIcon />
+              </button>
+              {scanFeedback && (
+                <span className={`stat-delta ${scanFeedback.ok ? "stat-delta-up" : "stat-delta-down"}`} style={{ position: "absolute", top: -26, right: 0 }}>
+                  {scanFeedback.msg}
+                </span>
+              )}
+            </div>
             <div className="category-tabs">
               <button className={`cat-tab ${category === "all" ? "cat-active" : ""}`} onClick={() => setCategory("all")}>All</button>
               {categories.map(c => (
@@ -427,7 +575,7 @@ export default function StaffDashboard({ user, onLogout }) {
 
         <div className="cart-panel">
           <div className="cart-header">
-            <h2>Current Order</h2>
+            <h2>{isDefaultTable(activeTableId) ? "Current Order" : `Order — ${tables.find(t => t.id === activeTableId)?.name || ""}`}</h2>
             {cart.length > 0 && <button className="clear-cart" onClick={() => setCart([])}>Clear</button>}
           </div>
 
@@ -521,6 +669,14 @@ export default function StaffDashboard({ user, onLogout }) {
           )}
         </div>
       </div>
+
+      <BarcodeScanner
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onDetect={handleScanDetected}
+        continuous={true}
+        title="Scan product barcode"
+      />
 
       {showLogoutConfirm && (
         <div className="modal-overlay">

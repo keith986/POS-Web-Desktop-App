@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { AlertIcon } from "../../components/Icons";
 import { SortTh, Pagination, FilterSelect, sortRows, toggleSort } from "../../components/TableControls";
 import ExportMenu from "../../components/ExportMenu";
@@ -45,7 +46,16 @@ function ClipboardIcon() {
   );
 }
 
-export default function Orders() {
+function ReturnIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 14 4 9 9 4"/>
+      <path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
+    </svg>
+  );
+}
+
+export default function Orders({ user }) {
   const [orders, setOrders] = useState([]);
   const [selected, setSelected] = useState(null);
   const [items, setItems] = useState([]);
@@ -56,6 +66,12 @@ export default function Orders() {
   const [sort, setSort] = useState({ key: "created_at", dir: "desc" });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [refundLines, setRefundLines] = useState([]);
+  const [refundReason, setRefundReason] = useState("");
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundBusy, setRefundBusy] = useState(false);
+  const [refundsList, setRefundsList] = useState([]);
+  const [showRefundsHistory, setShowRefundsHistory] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -128,6 +144,91 @@ export default function Orders() {
       [order.id]
     );
     if (result.success) setItems(result.data);
+  };
+
+  const openRefund = async (order) => {
+    await viewOrder(order);
+    const result = await window.electronAPI.queryDatabase(
+      "SELECT * FROM order_items WHERE order_id = ?", [order.id]
+    );
+    const orderItems = result.success ? result.data : [];
+    const already = await window.electronAPI.queryDatabase(
+      `SELECT ri.order_item_id as order_item_id, SUM(ri.quantity) as qty
+       FROM refund_items ri JOIN refunds r ON r.id = ri.refund_id
+       WHERE r.order_id = ? GROUP BY ri.order_item_id`,
+      [order.id]
+    );
+    const refundedMap = {};
+    (already.success ? already.data : []).forEach((r) => { refundedMap[r.order_item_id] = Number(r.qty); });
+
+    setRefundLines(
+      orderItems.map((it) => ({
+        ...it,
+        alreadyRefunded: refundedMap[it.id] || 0,
+        remaining: it.quantity - (refundedMap[it.id] || 0),
+        returnQty: 0,
+      }))
+    );
+    setRefundReason("");
+    setShowRefundModal(true);
+  };
+
+  const refundSubtotal = useMemo(
+    () => refundLines.reduce((sum, l) => sum + l.returnQty * Number(l.unit_price), 0),
+    [refundLines]
+  );
+  const refundTaxRatio = selected && Number(selected.subtotal) > 0 ? Number(selected.tax) / Number(selected.subtotal) : 0;
+  const refundAmount = Math.round(refundSubtotal * (1 + refundTaxRatio) * 100) / 100;
+
+  const setReturnQty = (id, qty) => {
+    setRefundLines((lines) => lines.map((l) => l.id === id ? { ...l, returnQty: Math.max(0, Math.min(l.remaining, qty)) } : l));
+  };
+
+  const submitRefund = async () => {
+    if (!selected) return;
+    const linesToRefund = refundLines.filter((l) => l.returnQty > 0);
+    if (linesToRefund.length === 0) { alert("Select at least one item and quantity to refund."); return; }
+    setRefundBusy(true);
+    try {
+      const refundId = uuidv4();
+      const refundNumber = `RFN-${Date.now()}`;
+      await window.electronAPI.executeDatabase(
+        `INSERT INTO refunds (id, order_id, refund_number, staff_id, staff_name, amount, reason, restocked)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+        [refundId, selected.id, refundNumber, user?.id || null, user?.name || "Admin", refundAmount, refundReason]
+      );
+      for (const line of linesToRefund) {
+        await window.electronAPI.executeDatabase(
+          `INSERT INTO refund_items (id, refund_id, order_item_id, product_id, product_name, quantity, unit_price, total_price)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [uuidv4(), refundId, line.id, line.product_id, line.product_name, line.returnQty, line.unit_price, line.returnQty * line.unit_price]
+        );
+        await window.electronAPI.executeDatabase(
+          "UPDATE products SET stock = stock + ? WHERE id = ?",
+          [line.returnQty, line.product_id]
+        );
+      }
+      const newRefundedTotal = Number(selected.refunded_amount || 0) + refundAmount;
+      const fullyRefunded = newRefundedTotal >= Number(selected.total) - 0.01;
+      await window.electronAPI.executeDatabase(
+        "UPDATE orders SET refunded_amount = ?, status = ? WHERE id = ?",
+        [newRefundedTotal, fullyRefunded ? "refunded" : "partial_refund", selected.id]
+      );
+      setShowRefundModal(false);
+      setSelected(null);
+      await loadOrders();
+      alert(`Refund of Ksh ${refundAmount.toLocaleString()} recorded${fullyRefunded ? " — order fully refunded" : " (partial)"}.`);
+    } catch (err) {
+      console.error("Refund error:", err);
+      alert("Something went wrong recording the refund.");
+    } finally {
+      setRefundBusy(false);
+    }
+  };
+
+  const loadRefundsHistory = async () => {
+    const result = await window.electronAPI.queryDatabase("SELECT * FROM refunds ORDER BY created_at DESC LIMIT 200");
+    if (result.success) setRefundsList(result.data);
   };
 
   const downloadReceipt = async (order) => {
@@ -290,6 +391,13 @@ export default function Orders() {
           <button className="badge" onClick={() => setShowApprovals(!showApprovals)} style={{ padding: "6px 12px", background: pendingApprovals.length > 0 ? "#fffbeb" : "#f5f4f0", color: pendingApprovals.length > 0 ? "#d97706" : "#9a9a8e", cursor: "pointer", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
             <ClipboardIcon /> Pending: {pendingApprovals.length}
           </button>
+          <button
+            className="btn-secondary"
+            style={{ padding: "6px 12px", fontSize: "12px" }}
+            onClick={() => { if (!showRefundsHistory) loadRefundsHistory(); setShowRefundsHistory(!showRefundsHistory); }}
+          >
+            <ReturnIcon /> Refunds
+          </button>
           <ExportMenu onExportExcel={handleExportExcel} onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
         </div>
       </div>
@@ -309,6 +417,36 @@ export default function Orders() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {showRefundsHistory && (
+        <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: "8px", padding: "15px", marginBottom: "20px" }}>
+          <h3 style={{ marginTop: 0, display: "flex", alignItems: "center", gap: 6 }}><ReturnIcon /> Refund History</h3>
+          {refundsList.length === 0 ? (
+            <div className="empty-state">No refunds recorded yet</div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr><th>Refund #</th><th>Order</th><th>Amount</th><th>Reason</th><th>Staff</th><th>Date</th></tr>
+              </thead>
+              <tbody>
+                {refundsList.map((r) => {
+                  const relatedOrder = orders.find((o) => o.id === r.order_id);
+                  return (
+                    <tr key={r.id}>
+                      <td className="order-number">{r.refund_number}</td>
+                      <td>{relatedOrder?.order_number || r.order_id.slice(0, 8)}</td>
+                      <td>Ksh {Number(r.amount).toLocaleString()}</td>
+                      <td>{r.reason || "—"}</td>
+                      <td>{r.staff_name}</td>
+                      <td>{new Date(r.created_at).toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
@@ -345,7 +483,11 @@ export default function Orders() {
               <td>{order.staff_name}</td>
               <td>{order.item_count} items</td>
               <td>Ksh {Number(order.total).toLocaleString()}</td>
-              <td><span className="badge">{order.payment_method}</span></td>
+              <td>
+                <span className="badge">{order.payment_method}</span>{" "}
+                {order.status === "refunded" && <span className="badge badge-error">Refunded</span>}
+                {order.status === "partial_refund" && <span className="badge badge-warning">Partial refund</span>}
+              </td>
               <td>{new Date(order.created_at).toLocaleString()}</td>
               <td><button className="btn-secondary" onClick={() => downloadReceipt(order)} style={{ padding: "4px 8px", fontSize: "12px" }}><DownloadIcon /> Download</button></td>
             </tr>
@@ -385,10 +527,71 @@ export default function Orders() {
               
               <div className="summary-row"><span>Tax</span><span>Ksh {Number(selected.tax).toFixed(2)}</span></div>
               <div className="summary-row summary-total"><span>Total</span><span>Ksh {Number(selected.total).toLocaleString()}</span></div>
+              {Number(selected.refunded_amount || 0) > 0 && (
+                <div className="summary-row" style={{ color: "var(--red)", fontWeight: 600 }}>
+                  <span>Refunded so far</span><span>Ksh {Number(selected.refunded_amount).toLocaleString()}</span>
+                </div>
+              )}
             </div>
-            <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
+            <div style={{ display: "flex", gap: "10px", marginTop: "15px", flexWrap: "wrap" }}>
               <button className="btn-primary" onClick={() => downloadReceipt(selected)}><DownloadIcon /> Download Receipt</button>
+              {Number(selected.refunded_amount || 0) < Number(selected.total) - 0.01 && (
+                <button className="btn-secondary" onClick={() => openRefund(selected)}><ReturnIcon /> Refund</button>
+              )}
               <button className="btn-secondary" onClick={() => setSelected(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRefundModal && selected && (
+        <div className="modal-overlay" onClick={() => !refundBusy && setShowRefundModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            <h2 className="modal-title">Refund — {selected.order_number}</h2>
+            <div style={{ maxHeight: 260, overflowY: "auto" }}>
+              {refundLines.map((line) => (
+                <div key={line.id} className="refund-line">
+                  <div style={{ flex: 1 }}>
+                    <div className="refund-line-name">{line.product_name}</div>
+                    <div className="refund-line-meta">
+                      Bought {line.quantity} · Ksh {Number(line.unit_price).toLocaleString()} each
+                      {line.alreadyRefunded > 0 && ` · ${line.alreadyRefunded} already refunded`}
+                    </div>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    max={line.remaining}
+                    className="refund-qty-input"
+                    value={line.returnQty}
+                    disabled={line.remaining === 0}
+                    onChange={(e) => setReturnQty(line.id, Number(e.target.value))}
+                  />
+                  <span style={{ fontSize: 11, color: "var(--text-3)", minWidth: 50 }}>/ {line.remaining} left</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Reason</label>
+              <input
+                className="form-input"
+                placeholder="e.g. Customer changed their mind, damaged item…"
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+              />
+            </div>
+
+            <div className="refund-summary-box">
+              <div className="summary-row"><span>Items subtotal</span><span>Ksh {refundSubtotal.toLocaleString()}</span></div>
+              <div className="summary-row summary-total"><span>Refund amount</span><span>Ksh {refundAmount.toLocaleString()}</span></div>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
+              <button className="btn-secondary" onClick={() => setShowRefundModal(false)} disabled={refundBusy} style={{ flex: 1 }}>Cancel</button>
+              <button className="btn-primary" onClick={submitRefund} disabled={refundBusy || refundAmount <= 0} style={{ flex: 1 }}>
+                {refundBusy ? "Processing…" : `Refund Ksh ${refundAmount.toLocaleString()}`}
+              </button>
             </div>
           </div>
         </div>

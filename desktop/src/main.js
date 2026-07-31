@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { checkForUpdate, registerUpdaterHandlers } = require("./updater");
@@ -166,6 +166,10 @@ function setupIPC() {
 
 app.on("ready", () => {
   try {
+    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+      if (permission === "media") return callback(true);
+      callback(false);
+    });
     createWindow();
   } catch (err) {
     log.error("CRASH in ready:", err);

@@ -8,6 +8,14 @@ import ImportPreviewModal from "../../components/ImportPreviewModal";
 import { exportToExcel, exportToCSV, readImportFile, downloadTemplate } from "../../utils/excelUtils";
 import { buildPdfReport } from "../../utils/pdfReport";
 import { renderChartImage, CHART_COLORS } from "../../utils/chartImage";
+import BarcodeScanner from "../../components/BarcodeScanner";
+
+const ScanIcon = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+    <line x1="4" y1="12" x2="20" y2="12" />
+  </svg>
+);
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -29,6 +37,8 @@ export default function Products() {
   const [importRows, setImportRows] = useState(null);
   const [importBusy, setImportBusy] = useState(false);
   const [importResult, setImportResult] = useState("");
+  const [scannerMode, setScannerMode] = useState(null); // "lookup" | "sku" | null
+  const [scanNotice, setScanNotice] = useState("");
 
   const handleImagePick = (e) => {
     const file = e.target.files?.[0];
@@ -199,6 +209,24 @@ export default function Products() {
     });
     setImgError("");
     setShowForm(true);
+  };
+
+  const handleScanResult = (code) => {
+    const trimmed = code.trim();
+    if (scannerMode === "sku") {
+      setForm((f) => ({ ...f, sku: trimmed }));
+      setScannerMode(null);
+      return;
+    }
+    // lookup mode: find an existing product by SKU
+    const match = products.find((p) => (p.sku || "").toLowerCase() === trimmed.toLowerCase());
+    if (match) {
+      handleEdit(match);
+      setScannerMode(null);
+    } else {
+      setScanNotice(`No product found for code ${trimmed}`);
+      setTimeout(() => setScanNotice(""), 2500);
+    }
   };
 
   const handleDelete = async (product) => {
@@ -389,6 +417,7 @@ export default function Products() {
       <div className="page-header">
         <h1 className="page-title">Products</h1>
         <div className="toolbar-actions">
+          <button className="scan-btn" onClick={() => setScannerMode("lookup")}><ScanIcon size={15} /> Scan</button>
           <ImportButton label="Import" onFile={handleImportFile} />
           <ExportMenu onExportExcel={handleExportExcel} onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
           <button
@@ -406,6 +435,12 @@ export default function Products() {
           </button>
         </div>
       </div>
+
+      {scanNotice && (
+        <div className="badge badge-error" style={{ display: "inline-flex", marginBottom: 14, padding: "8px 12px" }}>
+          {scanNotice}
+        </div>
+      )}
 
       {importResult && (
         <div className="badge badge-green" style={{ display: "inline-flex", marginBottom: 14, padding: "8px 12px" }} onAnimationEnd={() => {}}>
@@ -527,11 +562,16 @@ export default function Products() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">SKU</label>
-                  <input
-                    className="form-input"
-                    value={form.sku}
-                    onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                  />
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input
+                      className="form-input"
+                      value={form.sku}
+                      onChange={(e) => setForm({ ...form, sku: e.target.value })}
+                    />
+                    <button type="button" className="scan-btn scan-btn-icon-only" title="Scan barcode" onClick={() => setScannerMode("sku")}>
+                      <ScanIcon size={15} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -725,6 +765,14 @@ export default function Products() {
           onClose={() => setImportRows(null)}
         />
       )}
+
+      <BarcodeScanner
+        open={!!scannerMode}
+        onClose={() => setScannerMode(null)}
+        onDetect={handleScanResult}
+        continuous={false}
+        title={scannerMode === "sku" ? "Scan to fill SKU" : "Scan to find product"}
+      />
     </div>
   );
 }

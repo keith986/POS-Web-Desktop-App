@@ -128,8 +128,50 @@ const createTables = () => {
       value      TEXT NOT NULL,
       updated_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS refunds (
+      id             TEXT PRIMARY KEY,
+      order_id       TEXT NOT NULL,
+      refund_number  TEXT UNIQUE NOT NULL,
+      staff_id       TEXT,
+      staff_name     TEXT,
+      amount         REAL NOT NULL,
+      reason         TEXT,
+      restocked      INTEGER DEFAULT 0,
+      created_at     TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS refund_items (
+      id             TEXT PRIMARY KEY,
+      refund_id      TEXT NOT NULL,
+      order_item_id  TEXT,
+      product_id     TEXT,
+      product_name   TEXT,
+      quantity       INTEGER NOT NULL,
+      unit_price     REAL NOT NULL,
+      total_price    REAL NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS store_tables (
+      id          TEXT PRIMARY KEY,
+      name        TEXT NOT NULL,
+      capacity    INTEGER DEFAULT 2,
+      status      TEXT DEFAULT 'available',
+      created_at  TEXT DEFAULT (datetime('now'))
+    );
   `);
   save();
+
+  // Ensure new columns exist in older DBs (safe ALTERs)
+  try {
+    db.run("ALTER TABLE orders ADD COLUMN refunded_amount REAL DEFAULT 0;");
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE orders ADD COLUMN table_id TEXT;");
+  } catch (e) {}
+  try {
+    db.run("ALTER TABLE orders ADD COLUMN table_name TEXT;");
+  } catch (e) {}
 
   // Ensure new columns exist in older DBs (safe ALTERs)
   try {

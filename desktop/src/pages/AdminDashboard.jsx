@@ -418,7 +418,7 @@ export default function AdminDashboard({ user, onLogout }) {
         <AdCarousel />
         <Routes>
           <Route path="overview"      element={<Overview />} />
-          <Route path="orders"        element={<Orders />} />
+          <Route path="orders"        element={<Orders user={user} />} />
           <Route path="products"      element={<Products />} />
           <Route path="suppliers"     element={<Suppliers />} />
           <Route path="staff"         element={<Staff />} />
