@@ -671,6 +671,7 @@ export default function AdminMenuPage() {
                       <div style={{ height: 1, flex: 1, background: "#fde68a" }} />
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.85rem" }}>
+                      {filtered.filter(i => i.is_featured).map(item => (
                         <MenuCard key={item.id} item={item} formatCurrency={formatCurrency}
                           onEdit={() => { setPanelMode("edit"); setEditTarget(item); setPanelOpen(true); }}
                           onDelete={() => handleDelete(item)}

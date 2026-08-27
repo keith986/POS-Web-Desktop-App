@@ -384,7 +384,6 @@ export default function DiscountsPage() {
                 </div>
               </div>
             )}
-          )}
 
           {!loading && discounts.length > 0 && (
             <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid #e2e0d8", fontSize: 12, color: "#9a9a8e", display: "flex", justifyContent: "space-between" }}>
@@ -393,6 +392,7 @@ export default function DiscountsPage() {
             </div>
           )}
           </>
+          )}
         </div>
       </main>
     </>

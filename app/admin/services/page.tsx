@@ -199,7 +199,15 @@ function ServiceFormPanel({ open, onClose, mode, service, onSave, saving }: {
               <label style={labelStyle}>Service Name *</label>
               <input style={fieldStyle} placeholder="e.g. Haircut & Blow Dry" value={form.name} onChange={set("name")} />
             </div>
-            <div>
+        </div>
+      </div>
+      </div>
+    </>
+  );
+}
+
+/*
+           <div>
               <label style={labelStyle}>Category *</label>
               <select style={fieldStyle} value={form.category} onChange={set("category")}>
                 {DEFAULT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -213,7 +221,7 @@ function ServiceFormPanel({ open, onClose, mode, service, onSave, saving }: {
             </div>
           </div>
 
-          {/* Schedule */}
+      
           <div style={{ background: "#f5f4f0", borderRadius: 10, padding: "1rem", display: "flex", flexDirection: "column", gap: "0.85rem" }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: "#4a4a40", textTransform: "uppercase", letterSpacing: "0.5px" }}>Duration</div>
             <div>
@@ -226,7 +234,7 @@ function ServiceFormPanel({ open, onClose, mode, service, onSave, saving }: {
             </div>
           </div>
 
-          {/* Pricing */}
+        
           <div style={{ background: "#f5f4f0", borderRadius: 10, padding: "1rem", display: "flex", flexDirection: "column", gap: "0.85rem" }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: "#4a4a40", textTransform: "uppercase", letterSpacing: "0.5px" }}>Pricing</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
@@ -246,7 +254,7 @@ function ServiceFormPanel({ open, onClose, mode, service, onSave, saving }: {
             )}
           </div>
 
-          {/* Active toggle */}
+          
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f5f4f0", borderRadius: 10, padding: "0.85rem 1rem" }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 500, color: "#141410" }}>Active</div>
@@ -267,6 +275,8 @@ function ServiceFormPanel({ open, onClose, mode, service, onSave, saving }: {
     </>
   );
 }
+
+*/
 
 /* ── Service Card (Grid view) ── */
 function ServiceCard({ service, onEdit, onDelete, onToggle, formatCurrency }: {
@@ -643,3 +653,8 @@ export default function AdminServicesPage() {
               </div>
             </div>
           )}
+        </div>
+      </main>
+    </>
+  );
+}
