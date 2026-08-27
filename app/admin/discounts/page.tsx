@@ -280,6 +280,7 @@ export default function DiscountsPage() {
           ) : discounts.length === 0 ? (
             <div style={{ padding: "3rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No discounts yet. Create your first one above.</div>
           ) : (
+            <>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr>
@@ -391,6 +392,7 @@ export default function DiscountsPage() {
               <span>Total uses: <strong style={{ color: "#141410" }}>{discounts.reduce((s,d) => s + d.usage_count, 0)}</strong></span>
             </div>
           )}
+          </>
         </div>
       </main>
     </>

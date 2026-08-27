@@ -855,6 +855,7 @@ export default function AdminAppointmentsPage() {
             ) : listAppts.length === 0 ? (
               <div style={{ padding: "4rem", textAlign: "center", color: "#9a9a8e", fontSize: 13 }}>No appointments found.</div>
             ) : (
+              <>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr>
@@ -925,6 +926,7 @@ export default function AdminAppointmentsPage() {
                   <button onClick={() => setPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} style={{ width: 28, height: 28, padding: 0, borderRadius: 6, border: "1px solid #c8c6bc", background: "#f5f4f0", color: "#141410", cursor: currentPage === totalPages ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: currentPage === totalPages ? 0.4 : 1, fontFamily: "inherit", fontSize: 12 }}>→</button>
                 </div>
               </div>
+              </>
             )
           )}
         </div>

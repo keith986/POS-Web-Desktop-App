@@ -672,7 +672,6 @@ export default function AdminMenuPage() {
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.85rem" }}>
                         <MenuCard key={item.id} item={item} formatCurrency={formatCurrency}
-                        <MenuCard key={item.id} item={item} formatCurrency={formatCurrency}
                           onEdit={() => { setPanelMode("edit"); setEditTarget(item); setPanelOpen(true); }}
                           onDelete={() => handleDelete(item)}
                           onToggleAvail={() => handleToggleAvail(item)}
