@@ -505,6 +505,8 @@ export default function AdminAppointmentsPage() {
   const [editTarget,  setEditTarget]  = useState<Appointment | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | AppStatus>("all");
   const [typeFilter,   setTypeFilter]   = useState<"all" | "booked" | "walk_in">("all");
+  const [page,        setPage]        = useState(1);
+  const [pageSize,    setPageSize]    = useState(10);
   const [toast,       setToast]       = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [confirm,     setConfirm]     = useState({ open: false, title: "", message: "", danger: false, onConfirm: () => {} });
 
@@ -608,6 +610,13 @@ export default function AdminAppointmentsPage() {
                          .sort((a, b) => a.start_time.localeCompare(b.start_time));
   const weekAppts = appts.filter(a => weekDays.includes(a.date) && filterAppt(a));
   const listAppts = appts.filter(filterAppt).sort((a, b) => a.date.localeCompare(b.date) || a.start_time.localeCompare(b.start_time));
+
+  /* ── Pagination for list view ── */
+  const totalPages = Math.max(1, Math.ceil(listAppts.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedAppts = listAppts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => { setPage(1); }, [statusFilter, typeFilter, pageSize]);
 
   const bulk = useBulkSelect(listAppts.map(a => a.id));
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -858,7 +867,7 @@ export default function AdminAppointmentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {listAppts.map(appt => {
+                  {paginatedAppts.map(appt => {
                     const scfg = STATUS_CFG[appt.status];
                     const pcfg = PAYMENT_CFG[appt.payment_status];
                     return (
@@ -903,6 +912,19 @@ export default function AdminAppointmentsPage() {
                   })}
                 </tbody>
               </table>
+              {/* Pagination footer */}
+              <div style={{ padding: "0.85rem 1.25rem", borderTop: "1px solid #e2e0d8", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: 12 }}>
+                <span style={{ color: "#9a9a8e" }}>
+                  Showing <strong style={{ color: "#141410" }}>{(currentPage - 1) * pageSize + 1}</strong>–<strong style={{ color: "#141410" }}>{Math.min(currentPage * pageSize, listAppts.length)}</strong> of <strong style={{ color: "#141410" }}>{listAppts.length}</strong> appointment{listAppts.length !== 1 ? "s" : ""}
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+                  <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }} style={{ padding: "5px 8px", borderRadius: 6, border: "1px solid #c8c6bc", background: "#f5f4f0", color: "#141410", fontFamily: "inherit", fontSize: 12, cursor: "pointer" }}>
+                    {[5, 10, 25, 50].map(n => <option key={n} value={n}>{n} / page</option>)}
+                  </select>
+                  <button onClick={() => setPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} style={{ width: 28, height: 28, padding: 0, borderRadius: 6, border: "1px solid #c8c6bc", background: "#f5f4f0", color: "#141410", cursor: currentPage === 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: currentPage === 1 ? 0.4 : 1, fontFamily: "inherit", fontSize: 12 }}>←</button>
+                  <button onClick={() => setPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} style={{ width: 28, height: 28, padding: 0, borderRadius: 6, border: "1px solid #c8c6bc", background: "#f5f4f0", color: "#141410", cursor: currentPage === totalPages ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: currentPage === totalPages ? 0.4 : 1, fontFamily: "inherit", fontSize: 12 }}>→</button>
+                </div>
+              </div>
             )
           )}
         </div>

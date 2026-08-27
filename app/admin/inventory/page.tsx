@@ -371,6 +371,8 @@ export default function AdminInventoryPage() {
   const [histLoading,  setHistLoading]  = useState(false);
   const [search,       setSearch]       = useState("");
   const [filter,       setFilter]       = useState<"all" | "low" | "out">("all");
+  const [page,         setPage]         = useState(1);
+  const [pageSize,     setPageSize]     = useState(10);
   const [adjustTarget, setAdjustTarget] = useState<InventoryItem | null>(null);
   const [histTarget,   setHistTarget]   = useState<InventoryItem | null>(null);
   const [toast,        setToast]        = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -455,6 +457,13 @@ export default function AdminInventoryPage() {
       true;
     return matchSearch && matchFilter;
   });
+
+  /* ── Pagination ── */
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  
+  useEffect(() => { setPage(1); }, [search, filter, pageSize]);
 
   /* ── Stats ── */
   const totalValue = inventory.reduce((s, i) => s + i.price * i.stock, 0);
@@ -573,7 +582,7 @@ export default function AdminInventoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(item => (
+                {paginated.map(item => (
                   <tr key={item.product_id}
                     style={{ borderBottom: "1px solid #e2e0d8" }}
                     onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = "#fafaf8"}
@@ -624,11 +633,19 @@ export default function AdminInventoryPage() {
             </table>
           )}
 
-          {/* Footer */}
+          {/* Pagination footer */}
           {!fetching && filtered.length > 0 && (
-            <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid #e2e0d8", fontSize: 12, color: "#9a9a8e", display: "flex", justifyContent: "space-between" }}>
-              <span>Showing {filtered.length} of {inventory.length} product{inventory.length !== 1 ? "s" : ""}</span>
-              <span>Filtered value: <strong style={{ color: "#141410" }}>{formatCurrency(filtered.reduce((s, i) => s + i.price * i.stock, 0))}</strong></span>
+            <div style={{ padding: "0.85rem 1.25rem", borderTop: "1px solid #e2e0d8", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", fontSize: 12 }}>
+              <span style={{ color: "#9a9a8e" }}>
+                Showing <strong style={{ color: "#141410" }}>{(currentPage - 1) * pageSize + 1}</strong>–<strong style={{ color: "#141410" }}>{Math.min(currentPage * pageSize, filtered.length)}</strong> of <strong style={{ color: "#141410" }}>{filtered.length}</strong> product{filtered.length !== 1 ? "s" : ""}
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+                <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }} style={{ padding: "5px 8px", borderRadius: 6, border: "1px solid #c8c6bc", background: "#f5f4f0", color: "#141410", fontFamily: "inherit", fontSize: 12, cursor: "pointer" }}>
+                  {[5, 10, 25, 50].map(n => <option key={n} value={n}>{n} / page</option>)}
+                </select>
+                <button onClick={() => setPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} style={{ width: 28, height: 28, padding: 0, borderRadius: 6, border: "1px solid #c8c6bc", background: "#f5f4f0", color: "#141410", cursor: currentPage === 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: currentPage === 1 ? 0.4 : 1, fontFamily: "inherit", fontSize: 12 }}>←</button>
+                <button onClick={() => setPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} style={{ width: 28, height: 28, padding: 0, borderRadius: 6, border: "1px solid #c8c6bc", background: "#f5f4f0", color: "#141410", cursor: currentPage === totalPages ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: currentPage === totalPages ? 0.4 : 1, fontFamily: "inherit", fontSize: 12 }}>→</button>
+              </div>
             </div>
           )}
         </div>

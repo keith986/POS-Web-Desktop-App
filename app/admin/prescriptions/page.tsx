@@ -626,6 +626,8 @@ export default function AdminPrescriptionsPage() {
   const [formOpen,     setFormOpen]     = useState(false);
   const [formMode,     setFormMode]     = useState<"add" | "edit">("add");
   const [editTarget,   setEditTarget]   = useState<Prescription | null>(null);
+  const [page,         setPage]         = useState(1);
+  const [pageSize,     setPageSize]     = useState(10);
   const [toast,        setToast]        = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [confirm,      setConfirm]      = useState({ open: false, title: "", message: "", danger: false, onConfirm: () => {} });
 
@@ -723,6 +725,12 @@ export default function AdminPrescriptionsPage() {
     const matchPay    = payFilter    === "all" || r.payment_status === payFilter;
     return matchSearch && matchStatus && matchPay;
   });
+  /* ── Pagination ── */
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  
+  useEffect(() => { setPage(1); }, [search, statusFilter, payFilter, pageSize]);
 
   const bulk = useBulkSelect(filtered.map(r => r.id));
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -869,7 +877,7 @@ export default function AdminPrescriptionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(r => {
+                {paginated.map(r => {
                   const scfg    = STATUS_CFG[r.status];
                   const pcfg    = PAYMENT_CFG[r.payment_status];
                   const expired = isExpired(r.expiry_date);
